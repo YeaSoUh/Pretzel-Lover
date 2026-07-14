@@ -1,0 +1,83 @@
+name: Rust CI
+
+on:
+  release:
+    types: published
+
+env:
+  CARGO_TERM_COLOR: always
+
+permissions:
+  contents: write
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Install Rust toolchain
+      uses: actions-rust-lang/setup-rust-toolchain@v1
+      
+    - name: Compile code
+      run: cargo build --release
+      
+    - name: Rename Linux binary for clarity
+      run: |
+        mv target/release/au-finder ./au-finder-linux-amd64 || mv target/release/AU-Finder ./au-finder-linux-amd64
+    
+    - name: Temporary save Linux binary
+      uses: actions/upload-artifact@v4
+      with:
+        name: linux-bin
+        path: au-finder-linux-amd64
+        retention-days: 1
+
+  build-windows:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Install Rust toolchain
+      uses: actions-rust-lang/setup-rust-toolchain@v1
+      
+    - name: Compile code
+      run: cargo build --release
+      
+    - name: Rename Windows binary for clarity
+      shell: bash
+      run: |
+        mv target/release/AU-Finder.exe ./au-finder-windows-amd64.exe || mv target/release/au-finder.exe ./au-finder-windows-amd64.exe
+    
+    - name: Temporary save Windows binary
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-bin
+        path: au-finder-windows-amd64.exe
+        retention-days: 1
+
+  publish:
+    name: Upload Binaries to Release Assets
+    needs: [build-linux, build-windows]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Download Linux binary
+      uses: actions/download-artifact@v4
+      with:
+        name: linux-bin
+
+    - name: Download Windows binary
+      uses: actions/download-artifact@v4
+      with:
+        name: windows-bin
+
+    - name: Upload Assets to GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: |
+          au-finder-linux-amd64
+          au-finder-windows-amd64.exe

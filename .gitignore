@@ -1,0 +1,3 @@
+/target
+# includes bot's token so it is hidden
+configs.json
