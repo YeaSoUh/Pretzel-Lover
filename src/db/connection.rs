@@ -1,9 +1,9 @@
-use std::sync::OnceLock;
+use std::{sync::OnceLock, time::Duration};
 use parking_lot::Mutex;
-use rusqlite::{Connection, OpenFlags};
+use turso::{Builder, Connection};
 
 static DB_READ: OnceLock<Mutex<Connection>> = OnceLock::new();
-static DB_WRITE: OnceLock<Mutex<Connection>> = OnceLock::new();
+static DB_WRITE: OnceLock<Connection> = OnceLock::new();
 
 pub struct Planet {
     id: String,
@@ -11,8 +11,8 @@ pub struct Planet {
     name: String
 }
 
-pub fn establish_connection(database_url: &str) -> anyhow::Result<()> {
-    let conn_write = Connection::open_with_flags(
+pub async fn establish_connection(database_url: &str) -> anyhow::Result<()> {
+    /*let conn_write = Connection::open_with_flags(
         database_url,
         OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_CREATE,
     ).unwrap();
@@ -28,6 +28,17 @@ pub fn establish_connection(database_url: &str) -> anyhow::Result<()> {
 
     DB_WRITE.set(Mutex::new(conn_write)).ok();
     DB_READ.set(Mutex::new(conn_read)).ok();
+    */
+
+    let db = Builder::new_local(database_url).build().await?;
+
+    let conn_write = db.connect()?;
+    conn_write.busy_timeout(Duration::new(3, 0))?;
+    conn_write.pragma_update("journal_mode", "'mvcc'").await?; // enables concurrency writes which is good!
+
+    DB_WRITE.set(conn_write).map_err(|_| anyhow::anyhow!("DB_WRITE already initialized"))?;
+
+    // as for db_read seems like there is no flag for read only so db_read and db_write will be unified
 
     Ok(())
 }
@@ -55,7 +66,7 @@ pub fn search_planets(_input: &str) {
 }
 
 pub fn edit_planet(index: &str, input: &str, _bypass: bool) -> anyhow::Result<()> {
-    let conn = DB_WRITE.get().ok_or_else(|| anyhow::anyhow!("Database not initialized"))?.lock();
+    let conn = DB_WRITE.get().ok_or_else(|| anyhow::anyhow!("Database not initialized"))?;
 
     let binding = normalize(input);
 
@@ -74,7 +85,7 @@ pub fn edit_planet(index: &str, input: &str, _bypass: bool) -> anyhow::Result<()
         }
     }
     
-    conn.execute(
+    conn.execute( // to be replaced
         "
         INSERT INTO users (id, star_id, name)
         VALUES (?1, ?2, COALESCE(?3, DEFAULT))

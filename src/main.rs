@@ -46,7 +46,7 @@ async fn main() -> anyhow::Result<()> {
     };
     client.interaction(application_id).set_global_commands(&get_commands()).await?;
 
-    establish_connection(&configs.database_url)?;
+    establish_connection(&configs.database_url).await?;
 
     let task = tokio::spawn(dispatcher(AppState { client: Arc::clone(&client), configs: Arc::new(configs), application_id: application_id }, shard, shutdown_rx.clone()));
 
