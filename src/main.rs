@@ -5,11 +5,19 @@ use std::sync::Arc;
 
 use serde::Deserialize;
 use tokio::{signal, sync::watch};
-use twilight_gateway::{CloseFrame, Event, EventTypeFlags, Intents, Shard, ShardId, StreamExt as _};
+use twilight_gateway::{
+    CloseFrame, Event, EventTypeFlags, Intents, Shard, ShardId, StreamExt as _,
+};
 use twilight_http::Client;
-use twilight_model::{application::interaction::InteractionData, id::{Id, marker::{ApplicationMarker, ChannelMarker, UserMarker}}};
+use twilight_model::{
+    application::interaction::InteractionData,
+    id::{
+        Id,
+        marker::{ApplicationMarker, ChannelMarker, UserMarker},
+    },
+};
 
-use crate::{commands::get_commands, db::connection::establish_connection};
+use crate::{commands::get_commands, db::connection::establish_database};
 
 #[derive(Deserialize, Clone)]
 pub struct Configs {
@@ -17,19 +25,21 @@ pub struct Configs {
     users_blacklist: Vec<Id<UserMarker>>,
     _sql_blacklist: Vec<String>,
     allowed_channels: Vec<Id<ChannelMarker>>,
-    database_url: String
+    database_url: String,
 }
 
 #[derive(Clone)]
 pub struct AppState {
     client: Arc<Client>,
     configs: Arc<Configs>, // already includes db
-    application_id: Id<ApplicationMarker>
+    application_id: Id<ApplicationMarker>,
 }
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    rustls::crypto::ring::default_provider().install_default().unwrap();
+    rustls::crypto::ring::default_provider()
+        .install_default()
+        .unwrap();
 
     let configs: Configs = {
         let content = std::fs::read("configs.json")?;
@@ -37,18 +47,29 @@ async fn main() -> anyhow::Result<()> {
     };
     let (shutdown_tx, shutdown_rx) = watch::channel(false);
     let client = Arc::new(Client::new(configs.token.clone()));
-    let shard= Shard::new(ShardId::ONE, configs.token.clone(), Intents::empty());
+    let shard = Shard::new(ShardId::ONE, configs.token.clone(), Intents::empty());
 
     let application_id = {
         let response = client.current_user_application().await?;
 
         response.model().await?.id
     };
-    client.interaction(application_id).set_global_commands(&get_commands()).await?;
+    client
+        .interaction(application_id)
+        .set_global_commands(&get_commands())
+        .await?;
 
-    establish_connection(&configs.database_url).await?;
+    establish_database(&configs.database_url).await?;
 
-    let task = tokio::spawn(dispatcher(AppState { client: Arc::clone(&client), configs: Arc::new(configs), application_id: application_id }, shard, shutdown_rx.clone()));
+    let task = tokio::spawn(dispatcher(
+        AppState {
+            client: Arc::clone(&client),
+            configs: Arc::new(configs),
+            application_id: application_id,
+        },
+        shard,
+        shutdown_rx.clone(),
+    ));
 
     signal::ctrl_c().await?;
     _ = shutdown_tx.send(true);

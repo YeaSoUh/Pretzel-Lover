@@ -1,13 +1,20 @@
 // if event.channel.as_ref().is_none_or(|chn| !state.configs._allowed_channels.contains(&chn.id)) { return }
 
 use anyhow::Ok;
-use twilight_model::{application::interaction::{InteractionData, application_command::CommandOptionValue}, gateway::payload::incoming::InteractionCreate};
+use twilight_model::{
+    application::interaction::{InteractionData, application_command::CommandOptionValue},
+    gateway::payload::incoming::InteractionCreate,
+};
 
 use crate::{AppState, commands};
 
 pub async fn run(state: AppState, event: &Box<InteractionCreate>) -> anyhow::Result<()> {
     commands::defer(state.clone(), &event, false).await?;
-    if event.channel.as_ref().is_none_or(|chn| !state.configs.allowed_channels.contains(&chn.id)) {
+    if event
+        .channel
+        .as_ref()
+        .is_none_or(|chn| !state.configs.allowed_channels.contains(&chn.id))
+    {
         state
             .client
             .interaction(state.application_id)
@@ -33,19 +40,24 @@ pub async fn run(state: AppState, event: &Box<InteractionCreate>) -> anyhow::Res
                 _ => {}
             }
         }
-    } else { return Err(anyhow::anyhow!("No options")); }
+    } else {
+        return Err(anyhow::anyhow!("No options"));
+    }
 
     let _index = index.ok_or_else(|| anyhow::anyhow!("Missing index option"))?;
-    let _input = input.ok_or_else(|| anyhow::anyhow!("Missing inpuut option"))?;
-    
-    if event.author_id().is_none_or(|id| state.configs.users_blacklist.contains(&id)) {
+    let _input = input.ok_or_else(|| anyhow::anyhow!("Missing input option"))?;
+
+    if event
+        .author_id()
+        .is_none_or(|id| state.configs.users_blacklist.contains(&id))
+    {
         state
             .client
             .interaction(state.application_id)
             .create_followup(&event.token)
             .content("Blacklisted")
             .await?;
-        return Ok(())
+        return Ok(());
     }
 
     state

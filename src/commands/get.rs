@@ -1,10 +1,17 @@
-use twilight_model::{application::interaction::{InteractionData, application_command::CommandOptionValue}, gateway::payload::incoming::InteractionCreate};
+use twilight_model::{
+    application::interaction::{InteractionData, application_command::CommandOptionValue},
+    gateway::payload::incoming::InteractionCreate,
+};
 
-use crate::{AppState, db::connection, commands};
+use crate::{AppState, commands, db::connection};
 
 pub async fn run(state: AppState, event: &Box<InteractionCreate>) -> anyhow::Result<()> {
     commands::defer(state.clone(), &event, false).await?;
-    if event.channel.as_ref().is_none_or(|chn| !state.configs.allowed_channels.contains(&chn.id)) {
+    if event
+        .channel
+        .as_ref()
+        .is_none_or(|chn| !state.configs.allowed_channels.contains(&chn.id))
+    {
         state
             .client
             .interaction(state.application_id)
@@ -26,11 +33,13 @@ pub async fn run(state: AppState, event: &Box<InteractionCreate>) -> anyhow::Res
                 _ => {}
             }
         }
-    } else { return Err(anyhow::anyhow!("No options")); }
+    } else {
+        return Err(anyhow::anyhow!("No options"));
+    }
 
     let id = id.ok_or_else(|| anyhow::anyhow!("Missing id option"))?;
 
-    let planet = match tokio::task::spawn_blocking(move || connection::get_planet(&id)).await? {
+    let planet = match connection::get_planet(&id).await? {
         Ok(planet) => planet,
         Err(_) => {
             state
