@@ -2,7 +2,8 @@ use std::{
     sync::{Arc, OnceLock},
     time::Duration,
 };
-use turso::{Builder, Connection, Database, Row};
+use turso::{Builder, Connection, Database};
+use twilight_model::http::attachment::Attachment;
 
 static DB: OnceLock<Arc<Database>> = OnceLock::new();
 
@@ -38,12 +39,27 @@ pub async fn get_planet(index: &str) -> anyhow::Result<Planet> {
     Err(anyhow::anyhow!("Planet wasn't found"))
 }
 
-pub fn search_planets(_input: &str) {}
+pub async fn search_planets(input: &mut str) -> anyhow::Result<Attachment> {
+    let conn = establish_connection().await?;
+    normalize(input);
+
+    let mut planets = conn.query(format!("SELECT * FROM planets WHERE {}", input), ()).await?;
+
+    let mut file_content = "".to_owned();
+
+    while let Some(row) = planets.next().await? {
+        file_content.push_str(&format_response(Planet {
+            id: row.get(0)?,
+            star_id: row.get::<i64>(1)?,
+            name: row.get(2)?,
+        }));
+    }
+
+    Ok(Attachment::from_bytes("result.txt".to_owned(), file_content.into_bytes(), 0))
+}
 
 pub async fn edit_planet(index: &str, input: &str, _bypass: bool) -> anyhow::Result<()> {
     let conn = establish_connection().await?;
-
-    let binding = normalize(input);
 
     let star_id = index
         .split('-')
@@ -53,7 +69,7 @@ pub async fn edit_planet(index: &str, input: &str, _bypass: bool) -> anyhow::Res
 
     let mut name: Option<&str> = None;
 
-    for part in binding.split('|') {
+    for part in input.split('|') {
         let part = part.trim();
 
         if let Some((k, v)) = part.split_once('=') {
@@ -98,26 +114,9 @@ async fn establish_connection() -> anyhow::Result<Connection> {
     Ok(conn)
 }
 
-fn normalize(input: &str) -> String {
-    let mut out = String::with_capacity(input.len());
-
-    let mut chars = input.chars().peekable();
-
-    while let Some(c) = chars.next() {
-        match c {
-            '&' if chars.peek() == Some(&'&') => {
-                chars.next();
-                out.push_str("and");
-            }
-            '|' if chars.peek() == Some(&'|') => {
-                chars.next();
-                out.push_str("or");
-            }
-            _ => out.push(c),
-        }
-    }
-
-    out
+fn normalize(input: &mut str) {
+    input.replace("&&", "and");
+    input.replace("||", "or");
 }
 
 /*fn validate(_input: &str) -> anyhow::Result<()> {
