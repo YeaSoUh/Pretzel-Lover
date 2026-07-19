@@ -2,13 +2,13 @@ use std::{
     sync::{Arc, OnceLock},
     time::Duration,
 };
-use turso::{Builder, Connection, Database};
+use turso::{Builder, Connection, Database, Row};
 
 static DB: OnceLock<Arc<Database>> = OnceLock::new();
 
 pub struct Planet {
     id: String,
-    star_id: isize,
+    star_id: i64,
     name: String,
 }
 
@@ -23,19 +23,19 @@ pub async fn establish_database(database_url: &str) -> anyhow::Result<()> {
 pub async fn get_planet(index: &str) -> anyhow::Result<Planet> {
     let conn = establish_connection().await?;
 
-    let planet = conn.query_row(
-        "SELECT * FROM planets WHERE id = ?1",
-        rusqlite::params![index],
-        |row| {
-            Ok(Planet {
-                id: row.get(0)?,
-                star_id: row.get(1)?,
-                name: row.get(2)?,
-            })
-        },
-    )?;
+    let mut planets = conn
+        .query("SELECT * FROM planets WHERE id = ?1", [index])
+        .await?;
 
-    Ok(planet)
+    if let Some(row) = planets.next().await? {
+        return Ok(Planet {
+            id: row.get(0)?,
+            star_id: row.get::<i64>(1)?,
+            name: row.get(2)?,
+        });
+    }
+
+    Err(anyhow::anyhow!("Planet wasn't found"))
 }
 
 pub fn search_planets(_input: &str) {}
