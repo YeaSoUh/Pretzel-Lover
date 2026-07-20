@@ -2,7 +2,7 @@ use std::{
     sync::{Arc, OnceLock},
     time::Duration,
 };
-use turso::{Builder, Connection, Database};
+use turso::{Builder, Connection, Database, Row};
 use twilight_model::http::attachment::Attachment;
 
 static DB: OnceLock<Arc<Database>> = OnceLock::new();
@@ -29,11 +29,7 @@ pub async fn get_planet(index: &str) -> anyhow::Result<Planet> {
         .await?;
 
     if let Some(row) = planets.next().await? {
-        return Ok(Planet {
-            id: row.get(0)?,
-            star_id: row.get::<i64>(1)?,
-            name: row.get(2)?,
-        });
+        return Ok(construct_planet(row)?);
     }
 
     Err(anyhow::anyhow!("Planet wasn't found"))
@@ -43,19 +39,21 @@ pub async fn search_planets(input: &mut str) -> anyhow::Result<Attachment> {
     let conn = establish_connection().await?;
     normalize(input);
 
-    let mut planets = conn.query(format!("SELECT * FROM planets WHERE {}", input), ()).await?;
+    let mut planets = conn
+        .query(format!("SELECT * FROM planets WHERE {}", input), ())
+        .await?;
 
     let mut file_content = "".to_owned();
 
     while let Some(row) = planets.next().await? {
-        file_content.push_str(&format_response(Planet {
-            id: row.get(0)?,
-            star_id: row.get::<i64>(1)?,
-            name: row.get(2)?,
-        }));
+        file_content.push_str(&format_response(construct_planet(row)?));
     }
 
-    Ok(Attachment::from_bytes("result.txt".to_owned(), file_content.into_bytes(), 0))
+    Ok(Attachment::from_bytes(
+        "result.txt".to_owned(),
+        file_content.into_bytes(),
+        0,
+    ))
 }
 
 pub async fn edit_planet(index: &str, input: &str, _bypass: bool) -> anyhow::Result<()> {
@@ -67,38 +65,7 @@ pub async fn edit_planet(index: &str, input: &str, _bypass: bool) -> anyhow::Res
         .ok_or_else(|| anyhow::anyhow!("invalid id format"))?
         .parse::<isize>()?;
 
-    let mut name: Option<&str> = None;
-
-    for part in input.split('|') {
-        let part = part.trim();
-
-        if let Some((k, v)) = part.split_once('=') {
-            match k.trim() {
-                "name" => name = Some(v.trim()),
-                _ => {}
-            }
-        }
-    }
-
-    conn.execute(
-        // to be replaced
-        "
-        INSERT INTO users (id, star_id, name)
-        VALUES (?1, ?2, COALESCE(?3, DEFAULT))
-        ON CONFLICT(id) DO UPDATE SET
-            name = COALESCE(excluded.name, name)
-        ",
-        rusqlite::params![index, star_id, name],
-    )?;
-
     Ok(())
-}
-
-pub fn format_response(planet: Planet) -> String {
-    format!(
-        "ID: {}\nStar Id: {}, Name: {}",
-        planet.id, planet.star_id, planet.name
-    )
 }
 
 async fn establish_connection() -> anyhow::Result<Connection> {
@@ -114,9 +81,24 @@ async fn establish_connection() -> anyhow::Result<Connection> {
     Ok(conn)
 }
 
+fn construct_planet(row: Row) -> anyhow::Result<Planet> {
+    Ok(Planet {
+        id: row.get(0)?,
+        star_id: row.get::<i64>(1)?,
+        name: row.get(2)?,
+    })
+} // i will eventually make it as impl
+
+pub fn format_response(planet: Planet) -> String {
+    format!(
+        "ID: {}\nStar Id: {}, Name: {}",
+        planet.id, planet.star_id, planet.name
+    )
+}
+
 fn normalize(input: &mut str) {
-    input.replace("&&", "and");
-    input.replace("||", "or");
+    let _ = input.replace("&&", "and");
+    let _ = input.replace("||", "or");
 }
 
 /*fn validate(_input: &str) -> anyhow::Result<()> {
