@@ -29,7 +29,7 @@ pub async fn run(state: AppState, event: &Box<InteractionCreate>) -> anyhow::Res
 
     let _options = match event.data.as_ref() {
         Some(InteractionData::ApplicationCommand(data)) => data.options.clone(),
-        _ => return Err(anyhow::anyhow!("No options (shouldn't happen)")),
+        _ => anyhow::bail!("No options (shouldn't happen)"),
     };
 
     Ok(())

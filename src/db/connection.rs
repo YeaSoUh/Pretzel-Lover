@@ -5,12 +5,27 @@ use std::{
 use turso::{Builder, Connection, Database, Row};
 use twilight_model::http::attachment::Attachment;
 
+use crate::AppState;
+
 static DB: OnceLock<Arc<Database>> = OnceLock::new();
 
+#[derive(sea_query::Iden)]
+enum Planets {
+    Table,
+    Id,
+    StarId,
+    Name,
+    Resources,
+    Moon,
+}
+
+#[allow(dead_code)] // yes
 pub struct Planet {
     id: String,
     star_id: i64,
     name: String,
+    resources: String,
+    moon: bool,
 }
 
 pub async fn establish_database(database_url: &str) -> anyhow::Result<()> {
@@ -35,7 +50,9 @@ pub async fn get_planet(index: &str) -> anyhow::Result<Planet> {
     Err(anyhow::anyhow!("Planet wasn't found"))
 }
 
-pub async fn search_planets(input: &mut str) -> anyhow::Result<Attachment> {
+pub async fn search_planets(input: &mut str, state: AppState) -> anyhow::Result<Attachment> {
+    if check_sql(input, state) { anyhow::bail!("Blacklisted sql"); }
+
     let conn = establish_connection().await?;
     normalize(input);
 
@@ -56,14 +73,81 @@ pub async fn search_planets(input: &mut str) -> anyhow::Result<Attachment> {
     ))
 }
 
-pub async fn edit_planet(index: &str, input: &str, _bypass: bool) -> anyhow::Result<()> {
+pub async fn edit_planet(index: &str, input: &str, bypass: bool) -> anyhow::Result<()> {
     let conn = establish_connection().await?;
-
-    let star_id = index
-        .split('-')
+    
+    let mut split_iter = index.split('-');
+    let star_id = split_iter
         .next()
-        .ok_or_else(|| anyhow::anyhow!("invalid id format"))?
-        .parse::<isize>()?;
+        .ok_or_else(|| anyhow::anyhow!("invalid star id format"))?
+        .parse::<i64>()?;
+        
+    let planet_id = split_iter
+        .next()
+        .ok_or_else(|| anyhow::anyhow!("missing planet id in index"))?;
+
+    // i don't really need a moon id, just need to verify if it is a moon
+    let mut is_moon = split_iter.next();
+
+    let mut name: Option<String> = None;
+    let mut resources: Option<String> = None;
+
+    for expr in input.split("|") {
+        let expr = expr.trim();
+        if expr.is_empty() { continue; }
+
+        let (key, value) = expr.split_once("=").ok_or(anyhow::anyhow!("deformed input"))?; // idk i may improve it later
+        match key {
+            "name" => name = Some(value.to_string()),
+            "resources" => resources = Some(value.to_string()),
+            "moon" if bypass => is_moon = Some(value),
+            _ => continue,
+        }
+    }
+
+    let mut columns = vec![Planets::Id, Planets::StarId];
+    let mut values: Vec<sea_query::SimpleExpr> = vec![planet_id.into(), star_id.into()];
+
+    let mut conflict = sea_query::OnConflict::new();
+
+    if let Some(name) = name {
+        columns.push(Planets::Name);
+        values.push(name.clone().into());
+        conflict.update_column(Planets::Name);
+    }
+
+    if let Some(resources) = resources {
+        columns.push(Planets::Resources);
+        values.push(resources.clone().into());
+        conflict.update_column(Planets::Resources);
+    }
+
+    columns.push(Planets::Moon);
+    conflict.update_column(Planets::Moon);
+    match is_moon {
+        Some(_is_moon) => values.push(sea_query::Expr::value(true)),
+        None => values.push(sea_query::Expr::value(false)),
+    }
+
+    let (sql, query_values) = sea_query::Query::insert()
+        .into_table(Planets::Table)
+        .columns(columns)
+        .values(values)?
+        .on_conflict(conflict)
+        .build(sea_query::SqliteQueryBuilder);
+
+    let turso_params: Vec<turso::Value> = query_values
+        .into_iter()
+        .map(|v| match v {
+            sea_query::Value::Int(Some(i)) => turso::Value::Integer(i as i64),
+            sea_query::Value::BigInt(Some(i)) => turso::Value::Integer(i),
+            sea_query::Value::String(Some(s)) => turso::Value::Text(s),
+            sea_query::Value::Bool(Some(b)) => turso::Value::Integer(if b { 1 } else { 0 }),
+            _ => turso::Value::Null,
+        })
+        .collect();
+
+    conn.execute(&sql, turso_params).await?;
 
     Ok(())
 }
@@ -86,8 +170,14 @@ fn construct_planet(row: Row) -> anyhow::Result<Planet> {
         id: row.get(0)?,
         star_id: row.get::<i64>(1)?,
         name: row.get(2)?,
+        resources: row.get(3)?,
+        moon: row.get(4)?,
     })
 } // i will eventually make it as impl
+
+fn check_sql(input: &str, state: AppState) -> bool {
+    state.configs.sql_blacklist.iter().any(|sql| input.contains(sql))
+}
 
 pub fn format_response(planet: Planet) -> String {
     format!(

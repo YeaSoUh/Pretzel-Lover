@@ -34,7 +34,7 @@ pub async fn run(state: AppState, event: &Box<InteractionCreate>) -> anyhow::Res
             }
         }
     } else {
-        return Err(anyhow::anyhow!("No options"));
+        anyhow::bail!("No options");
     }
 
     let id = id.ok_or_else(|| anyhow::anyhow!("Missing id option"))?;

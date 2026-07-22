@@ -41,7 +41,7 @@ pub async fn run(state: AppState, event: &Box<InteractionCreate>) -> anyhow::Res
             }
         }
     } else {
-        return Err(anyhow::anyhow!("No options"));
+        anyhow::bail!("No options");
     }
 
     let _index = index.ok_or_else(|| anyhow::anyhow!("Missing index option"))?;

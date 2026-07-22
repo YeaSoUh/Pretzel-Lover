@@ -23,7 +23,7 @@ use crate::{commands::get_commands, db::connection::establish_database};
 pub struct Configs {
     token: String,
     users_blacklist: Vec<Id<UserMarker>>,
-    _sql_blacklist: Vec<String>,
+    sql_blacklist: Vec<String>,
     allowed_channels: Vec<Id<ChannelMarker>>,
     database_url: String,
 }
