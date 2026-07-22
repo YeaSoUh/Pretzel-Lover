@@ -51,7 +51,9 @@ pub async fn get_planet(index: &str) -> anyhow::Result<Planet> {
 }
 
 pub async fn search_planets(input: &mut str, state: AppState) -> anyhow::Result<Attachment> {
-    if check_sql(input, state) { anyhow::bail!("Blacklisted sql"); }
+    if check_sql(input, state) {
+        anyhow::bail!("Blacklisted sql");
+    }
 
     let conn = establish_connection().await?;
     normalize(input);
@@ -75,13 +77,13 @@ pub async fn search_planets(input: &mut str, state: AppState) -> anyhow::Result<
 
 pub async fn edit_planet(index: &str, input: &str, bypass: bool) -> anyhow::Result<()> {
     let conn = establish_connection().await?;
-    
+
     let mut split_iter = index.split('-');
     let star_id = split_iter
         .next()
         .ok_or_else(|| anyhow::anyhow!("invalid star id format"))?
         .parse::<i64>()?;
-        
+
     let planet_id = split_iter
         .next()
         .ok_or_else(|| anyhow::anyhow!("missing planet id in index"))?;
@@ -94,9 +96,16 @@ pub async fn edit_planet(index: &str, input: &str, bypass: bool) -> anyhow::Resu
 
     for expr in input.split("|") {
         let expr = expr.trim();
-        if expr.is_empty() { continue; }
+        if expr.is_empty() {
+            continue;
+        }
 
-        let (key, value) = expr.split_once("=").ok_or(anyhow::anyhow!("deformed input"))?; // idk i may improve it later
+        let (mut key, mut value) = expr
+            .split_once("=")
+            .ok_or(anyhow::anyhow!("deformed input"))?; // idk i may improve it later
+        key = key.trim();
+        value = value.trim();
+
         match key {
             "name" => name = Some(value.to_string()),
             "resources" => resources = Some(value.to_string()),
@@ -112,13 +121,13 @@ pub async fn edit_planet(index: &str, input: &str, bypass: bool) -> anyhow::Resu
 
     if let Some(name) = name {
         columns.push(Planets::Name);
-        values.push(name.clone().into());
+        values.push(name.into());
         conflict.update_column(Planets::Name);
     }
 
     if let Some(resources) = resources {
         columns.push(Planets::Resources);
-        values.push(resources.clone().into());
+        values.push(resources.into());
         conflict.update_column(Planets::Resources);
     }
 
@@ -176,7 +185,11 @@ fn construct_planet(row: Row) -> anyhow::Result<Planet> {
 } // i will eventually make it as impl
 
 fn check_sql(input: &str, state: AppState) -> bool {
-    state.configs.sql_blacklist.iter().any(|sql| input.contains(sql))
+    state
+        .configs
+        .sql_blacklist
+        .iter()
+        .any(|sql| input.contains(sql))
 }
 
 pub fn format_response(planet: Planet) -> String {
