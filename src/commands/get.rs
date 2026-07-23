@@ -56,7 +56,7 @@ pub async fn run(state: AppState, event: &Box<InteractionCreate>) -> anyhow::Res
         .client
         .interaction(state.application_id)
         .create_followup(&event.token)
-        .content(&connection::format_response(planet))
+        .content(&connection::format_response(&planet))
         .await?;
 
     Ok(())

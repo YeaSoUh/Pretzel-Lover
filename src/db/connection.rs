@@ -15,8 +15,27 @@ enum Planets {
     Id,
     StarId,
     Name,
-    Resources,
-    Moon,
+    Radius,
+    Gravity,
+    Temperature,
+    Tectonics,
+    Atmosphere,
+    Oceans,
+    Rings,
+    Trees,
+    Life,
+    IsMoon,
+    Moons,
+    Malachite,
+    Hematite,
+    Petroleum,
+    Coal,
+    Gummite,
+    Tektite,
+    Bauxite,
+    Cerussite,
+    Lime,
+    Quartz,
 }
 
 #[allow(dead_code)] // yes
@@ -24,8 +43,30 @@ pub struct Planet {
     id: String,
     star_id: i64,
     name: String,
-    resources: String,
-    moon: bool,
+    // default: 0 for radius, gravity and temp
+    radius: f64,
+    gravity: f64,
+    temperature: i64,
+    tectonics: String,
+    atmosphere: Option<String>,
+    oceans: Option<String>,
+    rings: Option<String>,
+    trees: Option<String>,
+    life: bool,
+    is_moon: bool,
+    moons: Option<i8>,
+
+    malachite: Option<i8>,
+    hematite: Option<f64>,
+    petroleum: Option<i8>,
+    coal: Option<i8>,
+    gummite: Option<i8>,
+    tektite: Option<i8>,
+    bauxite: Option<i8>,
+    cerussite: Option<i8>,
+
+    lime: Option<bool>,
+    quartz: Option<bool>,
 }
 
 pub async fn establish_database(database_url: &str) -> anyhow::Result<()> {
@@ -65,7 +106,7 @@ pub async fn search_planets(input: &mut str, state: AppState) -> anyhow::Result<
     let mut file_content = "".to_owned();
 
     while let Some(row) = planets.next().await? {
-        file_content.push_str(&format_response(construct_planet(row)?));
+        file_content.push_str(&format!("\n{}", format_response(&construct_planet(row)?)));
     }
 
     Ok(Attachment::from_bytes(
@@ -79,20 +120,20 @@ pub async fn edit_planet(index: &str, input: &str, bypass: bool) -> anyhow::Resu
     let conn = establish_connection().await?;
 
     let mut split_iter = index.split('-');
-    let star_id = split_iter
+    let star_id: i64 = split_iter
         .next()
         .ok_or_else(|| anyhow::anyhow!("invalid star id format"))?
-        .parse::<i64>()?;
+        .parse()?;
 
-    let planet_id = split_iter
+    split_iter
         .next()
         .ok_or_else(|| anyhow::anyhow!("missing planet id in index"))?;
 
-    // i don't really need a moon id, just need to verify if it is a moon
-    let mut is_moon = split_iter.next();
+    let mut is_moon = split_iter.next().is_some();
 
     let mut name: Option<String> = None;
-    let mut resources: Option<String> = None;
+    let mut radius: Option<f64> = None;
+    let mut gravity: Option<f64> = None;
 
     for expr in input.split("|") {
         let expr = expr.trim();
@@ -108,14 +149,15 @@ pub async fn edit_planet(index: &str, input: &str, bypass: bool) -> anyhow::Resu
 
         match key {
             "name" => name = Some(value.to_string()),
-            "resources" => resources = Some(value.to_string()),
-            "moon" if bypass => is_moon = Some(value),
+            "radius" => radius = Some(value.parse::<f64>()?),
+            "gravity" => gravity = Some(value.parse::<f64>()?),
+            "moon" if bypass => is_moon = value.parse::<bool>()?,
             _ => continue,
         }
     }
 
     let mut columns = vec![Planets::Id, Planets::StarId];
-    let mut values: Vec<sea_query::SimpleExpr> = vec![planet_id.into(), star_id.into()];
+    let mut values: Vec<sea_query::SimpleExpr> = vec![index.into(), star_id.into()];
 
     let mut conflict = sea_query::OnConflict::new();
 
@@ -124,19 +166,20 @@ pub async fn edit_planet(index: &str, input: &str, bypass: bool) -> anyhow::Resu
         values.push(name.into());
         conflict.update_column(Planets::Name);
     }
-
-    if let Some(resources) = resources {
-        columns.push(Planets::Resources);
-        values.push(resources.into());
-        conflict.update_column(Planets::Resources);
+    if let Some(radius) = radius {
+        columns.push(Planets::Radius);
+        values.push(radius.into());
+        conflict.update_column(Planets::Radius);
+    }
+    if let Some(gravity) = gravity {
+        columns.push(Planets::Gravity);
+        values.push(gravity.into());
+        conflict.update_column(Planets::Gravity);
     }
 
-    columns.push(Planets::Moon);
-    conflict.update_column(Planets::Moon);
-    match is_moon {
-        Some(_is_moon) => values.push(sea_query::Expr::value(true)),
-        None => values.push(sea_query::Expr::value(false)),
-    }
+    columns.push(Planets::IsMoon);
+    conflict.update_column(Planets::IsMoon);
+    values.push(is_moon.into());
 
     let (sql, query_values) = sea_query::Query::insert()
         .into_table(Planets::Table)
@@ -150,6 +193,7 @@ pub async fn edit_planet(index: &str, input: &str, bypass: bool) -> anyhow::Resu
         .map(|v| match v {
             sea_query::Value::Int(Some(i)) => turso::Value::Integer(i as i64),
             sea_query::Value::BigInt(Some(i)) => turso::Value::Integer(i),
+            sea_query::Value::Double(Some(f)) => turso::Value::Real(f),
             sea_query::Value::String(Some(s)) => turso::Value::Text(s),
             sea_query::Value::Bool(Some(b)) => turso::Value::Integer(if b { 1 } else { 0 }),
             _ => turso::Value::Null,
@@ -177,12 +221,31 @@ async fn establish_connection() -> anyhow::Result<Connection> {
 fn construct_planet(row: Row) -> anyhow::Result<Planet> {
     Ok(Planet {
         id: row.get(0)?,
-        star_id: row.get::<i64>(1)?,
+        star_id: row.get(1)?,
         name: row.get(2)?,
-        resources: row.get(3)?,
-        moon: row.get(4)?,
+        radius: row.get(3)?,
+        gravity: row.get(4)?,
+        temperature: row.get(5)?,
+        tectonics: row.get(6)?,
+        atmosphere: row.get(7)?,
+        oceans: row.get(8)?,
+        rings: row.get(9)?,
+        trees: row.get(10)?,
+        life: row.get(11)?,
+        is_moon: row.get(12)?,
+        moons: row.get::<Option<i64>>(13)?.map(|v| v as i8),
+        malachite: row.get::<Option<i64>>(14)?.map(|v| v as i8),
+        hematite: row.get(15)?,
+        petroleum: row.get::<Option<i64>>(16)?.map(|v| v as i8),
+        coal: row.get::<Option<i64>>(17)?.map(|v| v as i8),
+        gummite: row.get::<Option<i64>>(18)?.map(|v| v as i8),
+        tektite: row.get::<Option<i64>>(19)?.map(|v| v as i8),
+        bauxite: row.get::<Option<i64>>(20)?.map(|v| v as i8),
+        cerussite: row.get::<Option<i64>>(21)?.map(|v| v as i8),
+        lime: row.get(22)?,
+        quartz: row.get(23)?,
     })
-} // i will eventually make it as impl
+}
 
 fn check_sql(input: &str, state: AppState) -> bool {
     state
@@ -192,11 +255,69 @@ fn check_sql(input: &str, state: AppState) -> bool {
         .any(|sql| input.contains(sql))
 }
 
-pub fn format_response(planet: Planet) -> String {
-    format!(
-        "ID: {}\nStar Id: {}, Name: {}",
-        planet.id, planet.star_id, planet.name
-    )
+pub fn format_response(planet: &Planet) -> String { // will get rewritten
+    let mut out = String::from("");
+
+    out.push_str(&format!(
+        "ID: {}\nStar Id: {}, Name: {}\nRadius: {}\nGravity: {}\nTemperature: {}\nTectonics: {}",
+        planet.id, planet.star_id, planet.name, planet.radius, planet.gravity, planet.temperature, planet.tectonics
+    ));
+
+    if let Some(atmosphere) = &planet.atmosphere {
+        out.push_str(&format!("Atmosphere: {}", atmosphere))
+    }
+    if let Some(oceans) = &planet.oceans {
+        out.push_str(&format!("Oceans: {}", oceans))
+    }
+    if let Some(rings) = &planet.rings {
+        out.push_str(&format!("Rings: {}", rings))
+    }
+    if let Some(trees) = &planet.trees {
+        out.push_str(&format!("Trees: {}", trees))
+    }
+    out.push_str(&format!(
+        "Life: {}\nIs Moon: {}",
+        planet.life, planet.is_moon
+    ));
+    if let Some(moons) = &planet.moons {
+        out.push_str(&format!("Moons: {}", moons))
+    }
+    out.push_str("\n");
+
+    if let Some(malachite) = &planet.malachite {
+        out.push_str(&format!("Malachite: {}", malachite))
+    }
+    if let Some(hematite) = &planet.hematite {
+        out.push_str(&format!("Hematite: {}", hematite))
+    }
+    if let Some(petroleum) = &planet.petroleum {
+        out.push_str(&format!("Petroleum: {}", petroleum))
+    }
+    if let Some(coal) = &planet.coal {
+        out.push_str(&format!("Coal: {}", coal))
+    }
+    if let Some(gummite) = &planet.gummite {
+        out.push_str(&format!("Gummite: {}", gummite))
+    }
+    if let Some(tektite) = &planet.tektite {
+        out.push_str(&format!("Tektite: {}", tektite))
+    }
+    if let Some(bauxite) = &planet.bauxite {
+        out.push_str(&format!("Bauxite: {}", bauxite))
+    }
+    if let Some(cerussite) = &planet.cerussite {
+        out.push_str(&format!("Cerussite: {}", cerussite))
+    }
+    out.push_str("\n");
+
+    if let Some(lime) = &planet.lime {
+        out.push_str(&format!("Lime: {}", lime))
+    }
+    if let Some(quartz) = &planet.quartz {
+        out.push_str(&format!("Quartz: {}", quartz))
+    }
+
+    out
 }
 
 fn normalize(input: &mut str) {
