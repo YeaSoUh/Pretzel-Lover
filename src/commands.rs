@@ -76,16 +76,20 @@ pub async fn cmd_handler(
     event: Box<InteractionCreate>,
     data: Box<CommandData>,
 ) -> anyhow::Result<()> {
-    match data.name.as_str() {
-        "edit_db" => commands::edit::run(state, &event).await?,
-        "get_db" => commands::get::run(state, &event).await?,
-        "search_db" => commands::search::run(state, &event).await?,
+    let result = match data.name.as_str() {
+        "edit_db" => commands::edit::run(state, &event).await,
+        "get_db" => commands::get::run(state, &event).await,
+        "search_db" => commands::search::run(state, &event).await,
         "say" => todo!(),
         "edit" => todo!(),
         "channel_manager" => todo!(),
         "kitty" => todo!(),
         "doge" => todo!(),
         _ => unreachable!("Non existent command"),
+    };
+
+    if let Err(e) = &result {
+        println!("AN ERROR!!!!!!!!!!! HERE:\n{e}")
     }
-    Ok(())
+    result
 }

@@ -2,11 +2,10 @@
 
 use anyhow::Ok;
 use twilight_model::{
-    application::interaction::{InteractionData, application_command::CommandOptionValue},
-    gateway::payload::incoming::InteractionCreate,
+    application::interaction::{InteractionData, application_command::CommandOptionValue}, gateway::payload::incoming::InteractionCreate, id::Id,
 };
 
-use crate::{AppState, commands};
+use crate::{AppState, commands, db::connection};
 
 pub async fn run(state: AppState, event: &Box<InteractionCreate>) -> anyhow::Result<()> {
     commands::defer(state.clone(), &event, false).await?;
@@ -23,6 +22,20 @@ pub async fn run(state: AppState, event: &Box<InteractionCreate>) -> anyhow::Res
             .await?;
         return Ok(());
     }
+
+    if event
+        .author_id()
+        .is_none_or(|id| state.configs.users_blacklist.contains(&id))
+    {
+        state
+            .client
+            .interaction(state.application_id)
+            .create_followup(&event.token)
+            .content("Blacklisted")
+            .await?;
+        return Ok(());
+    }
+
     let mut index: Option<String> = None;
     let mut input: Option<String> = None;
 
@@ -44,27 +57,17 @@ pub async fn run(state: AppState, event: &Box<InteractionCreate>) -> anyhow::Res
         anyhow::bail!("No options");
     }
 
-    let _index = index.ok_or_else(|| anyhow::anyhow!("Missing index option"))?;
-    let _input = input.ok_or_else(|| anyhow::anyhow!("Missing input option"))?;
+    let index = index.ok_or_else(|| anyhow::anyhow!("Missing index option"))?;
+    let mut input = input.ok_or_else(|| anyhow::anyhow!("Missing input option"))?;
+    let bypass = &event.author_id().ok_or_else(|| anyhow::anyhow!("shouldn't happen in edit.rs no user id who initiated this command"))? == &Id::new(1021835061433225296);
 
-    if event
-        .author_id()
-        .is_none_or(|id| state.configs.users_blacklist.contains(&id))
-    {
-        state
-            .client
-            .interaction(state.application_id)
-            .create_followup(&event.token)
-            .content("Blacklisted")
-            .await?;
-        return Ok(());
-    }
+    connection::edit_planet(&index, &mut input, bypass).await?;
 
     state
         .client
         .interaction(state.application_id)
         .create_followup(&event.token)
-        .content("TODO command")
+        .content("Data was successfully edited!")
         .await?;
 
     Ok(())

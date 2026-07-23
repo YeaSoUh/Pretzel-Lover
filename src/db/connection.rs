@@ -116,8 +116,10 @@ pub async fn search_planets(input: &mut str, state: AppState) -> anyhow::Result<
     ))
 }
 
-pub async fn edit_planet(index: &str, input: &str, bypass: bool) -> anyhow::Result<()> {
+pub async fn edit_planet(index: &str, input: &mut str, bypass: bool) -> anyhow::Result<()> {
     let conn = establish_connection().await?;
+
+    normalize(input);
 
     let mut split_iter = index.split('-');
     let star_id: i64 = split_iter
@@ -193,128 +195,130 @@ pub async fn edit_planet(index: &str, input: &str, bypass: bool) -> anyhow::Resu
         }
     }
 
-    let mut columns = vec![Planets::Id, Planets::StarId];
-    let mut values: Vec<sea_query::SimpleExpr> = vec![index.into(), star_id.into()];
+    let (sql, query_values) = {
+        let mut columns = vec![Planets::Id, Planets::StarId];
+        let mut values: Vec<sea_query::SimpleExpr> = vec![sea_query::Value::String(Some(index.to_string())).into(), star_id.into()];
 
-    let mut conflict = sea_query::OnConflict::new();
+        let mut conflict = sea_query::OnConflict::new();
 
-    if let Some(name) = name {
-        columns.push(Planets::Name);
-        values.push(name.into());
-        conflict.update_column(Planets::Name);
-    }
-    if let Some(radius) = radius {
-        columns.push(Planets::Radius);
-        values.push(radius.into());
-        conflict.update_column(Planets::Radius);
-    }
-    if let Some(gravity) = gravity {
-        columns.push(Planets::Gravity);
-        values.push(gravity.into());
-        conflict.update_column(Planets::Gravity);
-    }
-    if let Some(temperature) = temperature {
-        columns.push(Planets::Temperature);
-        values.push(temperature.into());
-        conflict.update_column(Planets::Temperature);
-    }
-    if let Some(tectonics) = tectonics {
-        columns.push(Planets::Tectonics);
-        values.push(tectonics.into());
-        conflict.update_column(Planets::Tectonics);
-    }
-    if let Some(atmosphere) = atmosphere {
-        columns.push(Planets::Atmosphere);
-        values.push(atmosphere.into());
-        conflict.update_column(Planets::Atmosphere);
-    }
-    if let Some(oceans) = oceans {
-        columns.push(Planets::Oceans);
-        values.push(oceans.into());
-        conflict.update_column(Planets::Oceans);
-    }
-    if let Some(rings) = rings {
-        columns.push(Planets::Rings);
-        values.push(rings.into());
-        conflict.update_column(Planets::Rings);
-    }
-    if let Some(trees) = trees {
-        columns.push(Planets::Trees);
-        values.push(trees.into());
-        conflict.update_column(Planets::Trees);
-    }
-    if let Some(life) = life {
-        columns.push(Planets::Life);
-        values.push(life.into());
-        conflict.update_column(Planets::Life);
-    }
-    if let Some(moons) = moons {
-        columns.push(Planets::Moons);
-        values.push(moons.into());
-        conflict.update_column(Planets::Moons);
-    }
-    if let Some(malachite) = malachite {
-        columns.push(Planets::Malachite);
-        values.push(malachite.into());
-        conflict.update_column(Planets::Malachite);
-    }
-    if let Some(hematite) = hematite {
-        columns.push(Planets::Hematite);
-        values.push(hematite.into());
-        conflict.update_column(Planets::Hematite);
-    }
-    if let Some(petroleum) = petroleum {
-        columns.push(Planets::Petroleum);
-        values.push(petroleum.into());
-        conflict.update_column(Planets::Petroleum);
-    }
-    if let Some(coal) = coal {
-        columns.push(Planets::Coal);
-        values.push(coal.into());
-        conflict.update_column(Planets::Coal);
-    }
-    if let Some(gummite) = gummite {
-        columns.push(Planets::Gummite);
-        values.push(gummite.into());
-        conflict.update_column(Planets::Gummite);
-    }
-    if let Some(tektite) = tektite {
-        columns.push(Planets::Tektite);
-        values.push(tektite.into());
-        conflict.update_column(Planets::Tektite);
-    }
-    if let Some(bauxite) = bauxite {
-        columns.push(Planets::Bauxite);
-        values.push(bauxite.into());
-        conflict.update_column(Planets::Bauxite);
-    }
-    if let Some(cerussite) = cerussite {
-        columns.push(Planets::Cerussite);
-        values.push(cerussite.into());
-        conflict.update_column(Planets::Cerussite);
-    }
+        if let Some(name) = name {
+            columns.push(Planets::Name);
+            values.push(sea_query::Value::String(Some(name)).into());
+            conflict.update_column(Planets::Name);
+        }
+        if let Some(radius) = radius {
+            columns.push(Planets::Radius);
+            values.push(radius.into());
+            conflict.update_column(Planets::Radius);
+        }
+        if let Some(gravity) = gravity {
+            columns.push(Planets::Gravity);
+            values.push(gravity.into());
+            conflict.update_column(Planets::Gravity);
+        }
+        if let Some(temperature) = temperature {
+            columns.push(Planets::Temperature);
+            values.push(temperature.into());
+            conflict.update_column(Planets::Temperature);
+        }
+        if let Some(tectonics) = tectonics {
+            columns.push(Planets::Tectonics);
+            values.push(sea_query::Value::String(Some(tectonics)).into());
+            conflict.update_column(Planets::Tectonics);
+        }
+        if let Some(atmosphere) = atmosphere {
+            columns.push(Planets::Atmosphere);
+            values.push(sea_query::Value::String(Some(atmosphere)).into());
+            conflict.update_column(Planets::Atmosphere);
+        }
+        if let Some(oceans) = oceans {
+            columns.push(Planets::Oceans);
+            values.push(sea_query::Value::String(Some(oceans)).into());
+            conflict.update_column(Planets::Oceans);
+        }
+        if let Some(rings) = rings {
+            columns.push(Planets::Rings);
+            values.push(sea_query::Value::String(Some(rings)).into());
+            conflict.update_column(Planets::Rings);
+        }
+        if let Some(trees) = trees {
+            columns.push(Planets::Trees);
+            values.push(sea_query::Value::String(Some(trees)).into());
+            conflict.update_column(Planets::Trees);
+        }
+        if let Some(life) = life {
+            columns.push(Planets::Life);
+            values.push(life.into());
+            conflict.update_column(Planets::Life);
+        }
+        if let Some(moons) = moons {
+            columns.push(Planets::Moons);
+            values.push(moons.into());
+            conflict.update_column(Planets::Moons);
+        }
+        if let Some(malachite) = malachite {
+            columns.push(Planets::Malachite);
+            values.push(malachite.into());
+            conflict.update_column(Planets::Malachite);
+        }
+        if let Some(hematite) = hematite {
+            columns.push(Planets::Hematite);
+            values.push(hematite.into());
+            conflict.update_column(Planets::Hematite);
+        }
+        if let Some(petroleum) = petroleum {
+            columns.push(Planets::Petroleum);
+            values.push(petroleum.into());
+            conflict.update_column(Planets::Petroleum);
+        }
+        if let Some(coal) = coal {
+            columns.push(Planets::Coal);
+            values.push(coal.into());
+            conflict.update_column(Planets::Coal);
+        }
+        if let Some(gummite) = gummite {
+            columns.push(Planets::Gummite);
+            values.push(gummite.into());
+            conflict.update_column(Planets::Gummite);
+        }
+        if let Some(tektite) = tektite {
+            columns.push(Planets::Tektite);
+            values.push(tektite.into());
+            conflict.update_column(Planets::Tektite);
+        }
+        if let Some(bauxite) = bauxite {
+            columns.push(Planets::Bauxite);
+            values.push(bauxite.into());
+            conflict.update_column(Planets::Bauxite);
+        }
+        if let Some(cerussite) = cerussite {
+            columns.push(Planets::Cerussite);
+            values.push(cerussite.into());
+            conflict.update_column(Planets::Cerussite);
+        }
 
-    if let Some(lime) = lime {
-        columns.push(Planets::Lime);
-        values.push(lime.into());
-        conflict.update_column(Planets::Lime);
-    }
-    if let Some(quartz) = quartz {
-        columns.push(Planets::Quartz);
-        values.push(quartz.into());
-        conflict.update_column(Planets::Quartz);
-    }
+        if let Some(lime) = lime {
+            columns.push(Planets::Lime);
+            values.push(lime.into());
+            conflict.update_column(Planets::Lime);
+        }
+        if let Some(quartz) = quartz {
+            columns.push(Planets::Quartz);
+            values.push(quartz.into());
+            conflict.update_column(Planets::Quartz);
+        }
 
-    columns.push(Planets::IsMoon);
-    conflict.update_column(Planets::IsMoon);
-    values.push(is_moon.into());
+        columns.push(Planets::IsMoon);
+        conflict.update_column(Planets::IsMoon);
+        values.push(is_moon.into());
 
-    let (sql, query_values) = sea_query::Query::insert()
-        .into_table(Planets::Table)
-        .columns(columns)
-        .values(values)?
-        .on_conflict(conflict)
-        .build(sea_query::SqliteQueryBuilder);
+        sea_query::Query::insert()
+            .into_table(Planets::Table)
+            .columns(columns)
+            .values(values)?
+            .on_conflict(conflict)
+            .build(sea_query::SqliteQueryBuilder)
+    };
 
     let turso_params: Vec<turso::Value> = query_values
         .into_iter()
@@ -457,7 +461,10 @@ fn validate(key: &str, value: &str) -> anyhow::Result<()> {
     match key {
         "malachite" | "hematite" | "petroleum" | "coal" | "gummite" | "tektite" | "bauxite" | "cerussite" => {
             let concentration = value.parse::<i8>()?;
-            if concentration < 0 || concentration > 3 {anyhow::bail!("Wrong concentration information")}
+            if concentration < 0 || concentration > 3 {anyhow::bail!(format!("Wrong concentration information in {}", key))}
+        }
+        "life" | "lime" | "quartz" => {
+            if value != "true" || value != "false" {anyhow::bail!(format!("{} is supposed to have true/false value", key))}
         }
         _ => {}
     }
