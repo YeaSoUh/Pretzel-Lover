@@ -116,7 +116,7 @@ pub async fn search_planets(input: &mut str, state: AppState) -> anyhow::Result<
     ))
 }
 
-pub async fn edit_planet(index: &str, input: &mut str, bypass: bool) -> anyhow::Result<()> {
+pub async fn edit_planet(index: &str, input: &str, bypass: bool) -> anyhow::Result<()> {
     let conn = establish_connection().await?;
 
     normalize(input);
@@ -452,7 +452,7 @@ pub fn format_response(planet: &Planet) -> String { // will get rewritten
     out
 }
 
-fn normalize(input: &mut str) {
+fn normalize(input: &str) {
     let _ = input.replace("&&", "and");
     let _ = input.replace("||", "or");
 }

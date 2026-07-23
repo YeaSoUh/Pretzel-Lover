@@ -58,10 +58,10 @@ pub async fn run(state: AppState, event: &Box<InteractionCreate>) -> anyhow::Res
     }
 
     let index = index.ok_or_else(|| anyhow::anyhow!("Missing index option"))?;
-    let mut input = input.ok_or_else(|| anyhow::anyhow!("Missing input option"))?;
+    let input = input.ok_or_else(|| anyhow::anyhow!("Missing input option"))?;
     let bypass = &event.author_id().ok_or_else(|| anyhow::anyhow!("shouldn't happen in edit.rs no user id who initiated this command"))? == &Id::new(1021835061433225296);
 
-    connection::edit_planet(&index, &mut input, bypass).await?;
+    connection::edit_planet(&index, &input, bypass).await?;
 
     state
         .client
