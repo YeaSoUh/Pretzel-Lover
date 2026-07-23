@@ -134,6 +134,24 @@ pub async fn edit_planet(index: &str, input: &str, bypass: bool) -> anyhow::Resu
     let mut name: Option<String> = None;
     let mut radius: Option<f64> = None;
     let mut gravity: Option<f64> = None;
+    let mut temperature: Option<i64> = None;
+    let mut tectonics: Option<String> = None;
+    let mut atmosphere: Option<String> = None;
+    let mut oceans: Option<String> = None;
+    let mut rings: Option<String> = None;
+    let mut trees: Option<String> = None;
+    let mut life: Option<bool> = None;
+    let mut moons: Option<i8> = None;
+    let mut malachite: Option<i8> = None;
+    let mut hematite: Option<f64> = None;
+    let mut petroleum: Option<i8> = None;
+    let mut coal: Option<i8> = None;
+    let mut gummite: Option<i8> = None;
+    let mut tektite: Option<i8> = None;
+    let mut bauxite: Option<i8> = None;
+    let mut cerussite: Option<i8> = None;
+    let mut lime: Option<bool> = None;
+    let mut quartz: Option<bool> = None;
 
     for expr in input.split("|") {
         let expr = expr.trim();
@@ -147,10 +165,29 @@ pub async fn edit_planet(index: &str, input: &str, bypass: bool) -> anyhow::Resu
         key = key.trim();
         value = value.trim();
 
+        validate(key, value)?;
         match key {
             "name" => name = Some(value.to_string()),
             "radius" => radius = Some(value.parse::<f64>()?),
             "gravity" => gravity = Some(value.parse::<f64>()?),
+            "temperature" => temperature = Some(value.parse::<i64>()?),
+            "tectonics" => tectonics = Some(value.to_string()),
+            "atmosphere" => atmosphere = Some(value.to_string()),
+            "oceans" => oceans = Some(value.to_string()),
+            "rings" => rings = Some(value.to_string()),
+            "trees" => trees = Some(value.to_string()),
+            "life" => life = Some(value.parse::<bool>()?),
+            "moons" => moons = Some(value.parse()?),
+            "malachite" => malachite = Some(value.parse()?),
+            "hematite" => hematite = Some(value.parse()?),
+            "petroleum" => petroleum = Some(value.parse()?),
+            "coal" => coal = Some(value.parse()?),
+            "gummite" => gummite = Some(value.parse()?),
+            "tektite" => tektite = Some(value.parse()?),
+            "bauxite" => bauxite = Some(value.parse()?),
+            "cerussite" => cerussite = Some(value.parse()?),
+            "lime" => lime = Some(value.parse()?),
+            "quartz" => quartz = Some(value.parse()?),
             "moon" if bypass => is_moon = value.parse::<bool>()?,
             _ => continue,
         }
@@ -175,6 +212,97 @@ pub async fn edit_planet(index: &str, input: &str, bypass: bool) -> anyhow::Resu
         columns.push(Planets::Gravity);
         values.push(gravity.into());
         conflict.update_column(Planets::Gravity);
+    }
+    if let Some(temperature) = temperature {
+        columns.push(Planets::Temperature);
+        values.push(temperature.into());
+        conflict.update_column(Planets::Temperature);
+    }
+    if let Some(tectonics) = tectonics {
+        columns.push(Planets::Tectonics);
+        values.push(tectonics.into());
+        conflict.update_column(Planets::Tectonics);
+    }
+    if let Some(atmosphere) = atmosphere {
+        columns.push(Planets::Atmosphere);
+        values.push(atmosphere.into());
+        conflict.update_column(Planets::Atmosphere);
+    }
+    if let Some(oceans) = oceans {
+        columns.push(Planets::Oceans);
+        values.push(oceans.into());
+        conflict.update_column(Planets::Oceans);
+    }
+    if let Some(rings) = rings {
+        columns.push(Planets::Rings);
+        values.push(rings.into());
+        conflict.update_column(Planets::Rings);
+    }
+    if let Some(trees) = trees {
+        columns.push(Planets::Trees);
+        values.push(trees.into());
+        conflict.update_column(Planets::Trees);
+    }
+    if let Some(life) = life {
+        columns.push(Planets::Life);
+        values.push(life.into());
+        conflict.update_column(Planets::Life);
+    }
+    if let Some(moons) = moons {
+        columns.push(Planets::Moons);
+        values.push(moons.into());
+        conflict.update_column(Planets::Moons);
+    }
+    if let Some(malachite) = malachite {
+        columns.push(Planets::Malachite);
+        values.push(malachite.into());
+        conflict.update_column(Planets::Malachite);
+    }
+    if let Some(hematite) = hematite {
+        columns.push(Planets::Hematite);
+        values.push(hematite.into());
+        conflict.update_column(Planets::Hematite);
+    }
+    if let Some(petroleum) = petroleum {
+        columns.push(Planets::Petroleum);
+        values.push(petroleum.into());
+        conflict.update_column(Planets::Petroleum);
+    }
+    if let Some(coal) = coal {
+        columns.push(Planets::Coal);
+        values.push(coal.into());
+        conflict.update_column(Planets::Coal);
+    }
+    if let Some(gummite) = gummite {
+        columns.push(Planets::Gummite);
+        values.push(gummite.into());
+        conflict.update_column(Planets::Gummite);
+    }
+    if let Some(tektite) = tektite {
+        columns.push(Planets::Tektite);
+        values.push(tektite.into());
+        conflict.update_column(Planets::Tektite);
+    }
+    if let Some(bauxite) = bauxite {
+        columns.push(Planets::Bauxite);
+        values.push(bauxite.into());
+        conflict.update_column(Planets::Bauxite);
+    }
+    if let Some(cerussite) = cerussite {
+        columns.push(Planets::Cerussite);
+        values.push(cerussite.into());
+        conflict.update_column(Planets::Cerussite);
+    }
+
+    if let Some(lime) = lime {
+        columns.push(Planets::Lime);
+        values.push(lime.into());
+        conflict.update_column(Planets::Lime);
+    }
+    if let Some(quartz) = quartz {
+        columns.push(Planets::Quartz);
+        values.push(quartz.into());
+        conflict.update_column(Planets::Quartz);
     }
 
     columns.push(Planets::IsMoon);
@@ -264,7 +392,7 @@ pub fn format_response(planet: &Planet) -> String { // will get rewritten
     ));
 
     if let Some(atmosphere) = &planet.atmosphere {
-        out.push_str(&format!("Atmosphere: {}", atmosphere))
+        out.push_str(&format!("Atmosphere: {}°C", atmosphere))
     }
     if let Some(oceans) = &planet.oceans {
         out.push_str(&format!("Oceans: {}", oceans))
@@ -288,7 +416,7 @@ pub fn format_response(planet: &Planet) -> String { // will get rewritten
         out.push_str(&format!("Malachite: {}", malachite))
     }
     if let Some(hematite) = &planet.hematite {
-        out.push_str(&format!("Hematite: {}", hematite))
+        out.push_str(&format!("Hematite: {:.3}", hematite))
     }
     if let Some(petroleum) = &planet.petroleum {
         out.push_str(&format!("Petroleum: {}", petroleum))
@@ -325,6 +453,14 @@ fn normalize(input: &mut str) {
     let _ = input.replace("||", "or");
 }
 
-/*fn validate(_input: &str) -> anyhow::Result<()> {
+fn validate(key: &str, value: &str) -> anyhow::Result<()> {
+    match key {
+        "malachite" | "hematite" | "petroleum" | "coal" | "gummite" | "tektite" | "bauxite" | "cerussite" => {
+            let concentration = value.parse::<i8>()?;
+            if concentration < 0 || concentration > 3 {anyhow::bail!("Wrong concentration information")}
+        }
+        _ => {}
+    }
+
     Ok(())
-}*/
+}
