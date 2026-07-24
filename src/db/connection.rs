@@ -18,11 +18,13 @@ enum Planets {
     Radius,
     Gravity,
     Temperature,
+    Sector,
     Tectonics,
     Atmosphere,
     Oceans,
     Rings,
     Trees,
+    SubTrees,
     Life,
     IsMoon,
     Moons,
@@ -37,6 +39,7 @@ enum Planets {
     Lime,
     Quartz,
     Ice,
+    Note,
 }
 
 #[allow(dead_code)] // yes
@@ -49,12 +52,14 @@ pub struct Planet {
     radius: f64,
     gravity: f64,
     temperature: i64,
-    // Default: "Unknown"
+    // Default: "Unknown" for both sector and tectonics
+    sector: String,
     tectonics: String,
     atmosphere: Option<String>,
     oceans: Option<String>,
     rings: Option<String>,
     trees: Option<String>,
+    sub_trees: Option<String>,
     // default: false (only for life)
     life: bool,
     is_moon: bool,
@@ -72,7 +77,93 @@ pub struct Planet {
     lime: Option<bool>,
     quartz: Option<bool>,
     ice: Option<bool>,
+
+    note: Option<String>,
 }
+
+const SECTORS: [&str; 6] = [
+    "Terrestrial",
+    "Jovian",
+    "Binary Terrestrial",
+    "Binary Jovian",
+    "Dwarf Planet",
+    "Dwarf Planet Swarm",
+];
+
+const TECTONICS: [&str; 15] = [
+    "Mafic",
+    "Basaltic",
+    "Continental",
+    "Solid",
+    "Shell",
+    "Sponge",
+    "Ancient",
+    "Ancient Basins",
+    "Small Volcanic",
+    "Small Mafic",
+    "Small Basaltic",
+    "Jovian",
+    "Floating",
+    "Double",
+    "Melange",
+];
+
+const ATMOSPHERES: [&str; 17] = [
+    "Gaian",
+    "Martian",
+    "Venusian",
+    "Titanian",
+    "Steam",
+    "Jovian",
+    "Neptunian",
+    "Alkali",
+    "Silicate",
+    "None",
+    "Turbulent",
+    "Tenuous",
+    "Hadean",
+    "Halide",
+    "Fumic",
+    "Ephemeral",
+    "Snowfall",
+];
+
+const OCEANS: [&str; 17] = [
+    "Water",
+    "Acid",
+    "Blood",
+    "Methane",
+    "Ammonia",
+    "Lava",
+    "Iron",
+    "Oxygen",
+    "Nitrogen",
+    "Tar",
+    "Retinal",
+    "Primordial",
+    "Algae",
+    "Salty",
+    "Sulfuric",
+    "Carbon Dioxide",
+    "Nitric",
+];
+
+const TREES: [&str; 6] = [
+    "Ajisa",
+    "Birch",
+    "Baobab",
+    "Creepvine",
+    "Chlorophyta",
+    "False Baobab",
+];
+
+const SUB_TREES: [&str; 5] = [
+    "Paintbrush Tulips",
+    "Autumn Leaved Trees",
+    "Cactoida",
+    "Cactoida Cortexum",
+    "Cactoida Somboreum",
+];
 
 pub async fn establish_database(database_url: &str) -> anyhow::Result<()> {
     let db = Builder::new_local(database_url).build().await?;
@@ -116,7 +207,10 @@ pub async fn search_planets(input: &str, state: AppState) -> anyhow::Result<Atta
     let mut file_content = "".to_owned();
 
     while let Some(row) = planets.next().await? {
-        file_content.push_str(&format!("\n{}", format_response(&construct_planet(row)?, false)));
+        file_content.push_str(&format!(
+            "\n{}",
+            format_response(&construct_planet(row)?, false)
+        ));
     }
 
     Ok(Attachment::from_bytes(
@@ -147,13 +241,16 @@ pub async fn edit_planet(index: &str, input: &str, bypass: bool) -> anyhow::Resu
     let mut radius: Option<f64> = None;
     let mut gravity: Option<f64> = None;
     let mut temperature: Option<i64> = None;
+    let mut sector: Option<String> = None;
     let mut tectonics: Option<String> = None;
     let mut atmosphere: Option<String> = None;
     let mut oceans: Option<String> = None;
     let mut rings: Option<String> = None;
     let mut trees: Option<String> = None;
+    let mut sub_trees: Option<String> = None;
     let mut life: Option<bool> = None;
     let mut moons: Option<i8> = None;
+
     let mut malachite: Option<i8> = None;
     let mut hematite: Option<f64> = None;
     let mut petroleum: Option<i8> = None;
@@ -162,9 +259,12 @@ pub async fn edit_planet(index: &str, input: &str, bypass: bool) -> anyhow::Resu
     let mut tektite: Option<i8> = None;
     let mut bauxite: Option<i8> = None;
     let mut cerussite: Option<i8> = None;
+
     let mut lime: Option<bool> = None;
     let mut quartz: Option<bool> = None;
     let mut ice: Option<bool> = None;
+
+    let mut note: Option<String> = None;
 
     for expr in input.split("|") {
         let expr = expr.trim();
@@ -184,11 +284,13 @@ pub async fn edit_planet(index: &str, input: &str, bypass: bool) -> anyhow::Resu
             "radius" => radius = Some(value.parse::<f64>()?),
             "gravity" => gravity = Some(value.parse::<f64>()?),
             "temperature" => temperature = Some(value.parse::<i64>()?),
+            "sector" => sector = Some(value.to_string()),
             "tectonics" => tectonics = Some(value.to_string()),
             "atmosphere" => atmosphere = Some(value.to_string()),
             "oceans" => oceans = Some(value.to_string()),
             "rings" => rings = Some(value.to_string()),
             "trees" => trees = Some(value.to_string()),
+            "sub_trees" => sub_trees = Some(value.to_string()),
             "life" => life = Some(value.parse::<bool>()?),
             "moons" => moons = Some(value.parse()?),
             "malachite" => malachite = Some(value.parse()?),
@@ -202,6 +304,7 @@ pub async fn edit_planet(index: &str, input: &str, bypass: bool) -> anyhow::Resu
             "lime" => lime = Some(value.parse()?),
             "quartz" => quartz = Some(value.parse()?),
             "ice" => ice = Some(value.parse()?),
+            "note" => note = Some(value.to_string()),
             "moon" if bypass => is_moon = value.parse::<bool>()?,
             _ => continue,
         }
@@ -238,6 +341,11 @@ pub async fn edit_planet(index: &str, input: &str, bypass: bool) -> anyhow::Resu
             values.push(tectonics.into());
             conflict.update_column(Planets::Tectonics);
         }
+        if let Some(sector) = sector {
+            columns.push(Planets::Sector);
+            values.push(sector.into());
+            conflict.update_column(Planets::Sector);
+        }
         if let Some(atmosphere) = atmosphere {
             columns.push(Planets::Atmosphere);
             values.push(atmosphere.into());
@@ -257,6 +365,11 @@ pub async fn edit_planet(index: &str, input: &str, bypass: bool) -> anyhow::Resu
             columns.push(Planets::Trees);
             values.push(trees.into());
             conflict.update_column(Planets::Trees);
+        }
+        if let Some(sub_trees) = sub_trees {
+            columns.push(Planets::SubTrees);
+            values.push(sub_trees.into());
+            conflict.update_column(Planets::SubTrees);
         }
         if let Some(life) = life {
             columns.push(Planets::Life);
@@ -325,6 +438,12 @@ pub async fn edit_planet(index: &str, input: &str, bypass: bool) -> anyhow::Resu
             conflict.update_column(Planets::Ice);
         }
 
+        if let Some(note) = note {
+            columns.push(Planets::Note);
+            values.push(note.into());
+            conflict.update_column(Planets::Note);
+        }
+
         columns.push(Planets::IsMoon);
         values.push(is_moon.into());
         conflict.update_column(Planets::IsMoon);
@@ -375,28 +494,30 @@ fn construct_planet(row: Row) -> anyhow::Result<Planet> {
         radius: row.get(3)?,
         gravity: row.get(4)?,
         temperature: row.get(5)?,
-        tectonics: row.get(6)?,
-        atmosphere: row.get(7)?,
-        oceans: row.get(8)?,
-        rings: row.get(9)?,
-        trees: row.get(10)?,
-        life: row.get::<i64>(11)? != 0,
-        is_moon: row.get::<i64>(12)? != 0,
-        moons: row.get::<Option<i64>>(13)?.map(|v| v as i8),
-        malachite: row.get::<Option<i64>>(14)?.map(|v| v as i8),
-        hematite: row.get(15)?,
-        petroleum: row.get::<Option<i64>>(16)?.map(|v| v as i8),
-        coal: row.get::<Option<i64>>(17)?.map(|v| v as i8),
-        gummite: row.get::<Option<i64>>(18)?.map(|v| v as i8),
-        tektite: row.get::<Option<i64>>(19)?.map(|v| v as i8),
-        bauxite: row.get::<Option<i64>>(20)?.map(|v| v as i8),
-        cerussite: row.get::<Option<i64>>(21)?.map(|v| v as i8),
-        lime: row.get::<Option<i64>>(22)?.map(|v| v != 0),
-        quartz: row.get::<Option<i64>>(23)?.map(|v| v != 0),
-        ice: row.get::<Option<i64>>(24)?.map(|v| v != 0),
+        sector: row.get(6)?,
+        tectonics: row.get(7)?,
+        atmosphere: row.get(8)?,
+        oceans: row.get(9)?,
+        rings: row.get(10)?,
+        trees: row.get(11)?,
+        sub_trees: row.get(12)?,
+        life: row.get::<i64>(13)? != 0,
+        is_moon: row.get::<i64>(14)? != 0,
+        moons: row.get::<Option<i64>>(15)?.map(|v| v as i8),
+        malachite: row.get::<Option<i64>>(16)?.map(|v| v as i8),
+        hematite: row.get(17)?,
+        petroleum: row.get::<Option<i64>>(18)?.map(|v| v as i8),
+        coal: row.get::<Option<i64>>(19)?.map(|v| v as i8),
+        gummite: row.get::<Option<i64>>(20)?.map(|v| v as i8),
+        tektite: row.get::<Option<i64>>(21)?.map(|v| v as i8),
+        bauxite: row.get::<Option<i64>>(22)?.map(|v| v as i8),
+        cerussite: row.get::<Option<i64>>(23)?.map(|v| v as i8),
+        lime: row.get::<Option<i64>>(24)?.map(|v| v != 0),
+        quartz: row.get::<Option<i64>>(25)?.map(|v| v != 0),
+        ice: row.get::<Option<i64>>(26)?.map(|v| v != 0),
+        note: row.get(27)?,
     })
 }
-
 fn check_sql(input: &str, state: AppState) -> bool {
     state
         .configs
@@ -414,14 +535,15 @@ pub fn format_response(planet: &Planet, prettier: bool) -> String {
     }
 
     out.push_str(&format!(
-        "ID: {}\nStar Id: {}\nName: {}\nRadius: {}\nGravity: {}\nTemperature: {}\nTectonics: {}",
+        "ID: {}\nStar Id: {}\nName: {}\nRadius: {}\nGravity: {}\nTemperature: {}°C\nSector: {}\nTectonics: {}",
         planet.id,
         planet.star_id,
         planet.name,
         planet.radius,
         planet.gravity,
         planet.temperature,
-        planet.tectonics
+        planet.sector,
+        planet.tectonics,
     ));
 
     if let Some(atmosphere) = &planet.atmosphere {
@@ -481,6 +603,10 @@ pub fn format_response(planet: &Planet, prettier: bool) -> String {
         out.push_str(&format!("\nIce: {}", ice));
     }
 
+    if let Some(note) = &planet.note {
+        out.push_str(&format!("\n\nNote: {}", note));
+    }
+
     if prettier {
         out.push_str("\n```");
     }
@@ -504,6 +630,31 @@ fn validate(key: &str, value: &str) -> anyhow::Result<()> {
         "life" | "lime" | "quartz" | "ice" => {
             if value != "true" && value != "false" {
                 anyhow::bail!("{} is supposed to have true/false value", key);
+            }
+        }
+        "sector" => {
+            if !SECTORS.contains(&value) {
+                anyhow::bail!(format!("Sector type '{}' isn't in the game", value))
+            }
+        }
+        "tectonics" => {
+            if !TECTONICS.contains(&value) {
+                anyhow::bail!(format!("Tectonic type '{}' isn't in the game", value))
+            }
+        }
+        "atmosphere" => {
+            if !ATMOSPHERES.contains(&value) {
+                anyhow::bail!(format!("Atmospheric type '{}' isn't in the game", value))
+            }
+        }
+        "oceans" => {
+            if !OCEANS.contains(&value) {
+                anyhow::bail!(format!("Oceans type '{}' isn't in the game", value))
+            }
+        }
+        "trees" | "sub_trees" => {
+            if !TREES.contains(&value) && !SUB_TREES.contains(&value) {
+                anyhow::bail!(format!("Tree type '{}' isn't in the game", value))
             }
         }
         _ => {}
