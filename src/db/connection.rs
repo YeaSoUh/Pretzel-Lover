@@ -414,7 +414,7 @@ pub fn format_response(planet: &Planet, prettier: bool) -> String {
     }
 
     out.push_str(&format!(
-        "ID: {}\nStar Id: {}\nName: {}\nRadius: {}\nGravity: {}\nTemperature: {}\nTectonics: {}\n",
+        "ID: {}\nStar Id: {}\nName: {}\nRadius: {}\nGravity: {}\nTemperature: {}\nTectonics: {}",
         planet.id,
         planet.star_id,
         planet.name,
