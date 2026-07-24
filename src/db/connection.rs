@@ -377,8 +377,8 @@ fn construct_planet(row: Row) -> anyhow::Result<Planet> {
         oceans: row.get(8)?,
         rings: row.get(9)?,
         trees: row.get(10)?,
-        life: row.get(11)?,
-        is_moon: row.get(12)?,
+        life: row.get::<i64>(11)? != 0,
+        is_moon: row.get::<i64>(12)? != 0,
         moons: row.get::<Option<i64>>(13)?.map(|v| v as i8),
         malachite: row.get::<Option<i64>>(14)?.map(|v| v as i8),
         hematite: row.get(15)?,
@@ -388,9 +388,9 @@ fn construct_planet(row: Row) -> anyhow::Result<Planet> {
         tektite: row.get::<Option<i64>>(19)?.map(|v| v as i8),
         bauxite: row.get::<Option<i64>>(20)?.map(|v| v as i8),
         cerussite: row.get::<Option<i64>>(21)?.map(|v| v as i8),
-        lime: row.get(22)?,
-        quartz: row.get(23)?,
-        ice: row.get(24)?,
+        lime: row.get::<Option<i64>>(22)?.map(|v| v != 0),
+        quartz: row.get::<Option<i64>>(23)?.map(|v| v != 0),
+        ice: row.get::<Option<i64>>(24)?.map(|v| v != 0),
     })
 }
 

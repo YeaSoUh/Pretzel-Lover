@@ -21,15 +21,15 @@ pub async fn run(state: AppState, event: &Box<InteractionCreate>) -> anyhow::Res
             .await?;
         return Ok(());
     }
-    let mut id: Option<String> = None;
+    let mut index: Option<String> = None;
 
     if let Some(InteractionData::ApplicationCommand(cmd_box)) = &event.data {
         let cmd = cmd_box.as_ref();
 
         for option in &cmd.options {
             match (&*option.name, &option.value) {
-                ("id", CommandOptionValue::String(id2)) => {
-                    id = Some(id2.clone());
+                ("index", CommandOptionValue::String(index2)) => {
+                    index = Some(index2.clone());
                 }
                 _ => {}
             }
@@ -38,7 +38,7 @@ pub async fn run(state: AppState, event: &Box<InteractionCreate>) -> anyhow::Res
         anyhow::bail!("No options");
     }
 
-    let id = id.ok_or_else(|| anyhow::anyhow!("Missing id option"))?;
+    let id = index.ok_or_else(|| anyhow::anyhow!("Missing id option"))?;
 
     let planet = match connection::get_planet(&id, state.clone()).await {
         Ok(planet) => planet,
