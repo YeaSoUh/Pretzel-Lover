@@ -492,8 +492,8 @@ fn validate(key: &str, value: &str) -> anyhow::Result<()> {
             }
         }
         "life" | "lime" | "quartz" | "ice" => {
-            if value != "true" || value != "false" {
-                anyhow::bail!(format!("{} is supposed to have true/false value", key))
+            if value != "true" && value != "false" {
+                anyhow::bail!("{} is supposed to have true/false value", key);
             }
         }
         _ => {}
