@@ -63,16 +63,16 @@ pub struct Planet {
     // default: false (only for life)
     life: bool,
     is_moon: bool,
-    moons: Option<i8>,
+    moons: Option<i32>,
 
-    malachite: Option<i8>,
+    malachite: Option<i32>,
     hematite: Option<f64>,
-    petroleum: Option<i8>,
-    coal: Option<i8>,
-    gummite: Option<i8>,
-    tektite: Option<i8>,
-    bauxite: Option<i8>,
-    cerussite: Option<i8>,
+    petroleum: Option<i32>,
+    coal: Option<i32>,
+    gummite: Option<i32>,
+    tektite: Option<i32>,
+    bauxite: Option<i32>,
+    cerussite: Option<i32>,
 
     lime: Option<bool>,
     quartz: Option<bool>,
@@ -251,14 +251,14 @@ pub async fn edit_planet(index: &str, input: &str, bypass: bool) -> anyhow::Resu
     let mut life: Option<bool> = None;
     let mut moons: Option<i8> = None;
 
-    let mut malachite: Option<i8> = None;
+    let mut malachite: Option<i32> = None;
     let mut hematite: Option<f64> = None;
-    let mut petroleum: Option<i8> = None;
-    let mut coal: Option<i8> = None;
-    let mut gummite: Option<i8> = None;
-    let mut tektite: Option<i8> = None;
-    let mut bauxite: Option<i8> = None;
-    let mut cerussite: Option<i8> = None;
+    let mut petroleum: Option<i32> = None;
+    let mut coal: Option<i32> = None;
+    let mut gummite: Option<i32> = None;
+    let mut tektite: Option<i32> = None;
+    let mut bauxite: Option<i32> = None;
+    let mut cerussite: Option<i32> = None;
 
     let mut lime: Option<bool> = None;
     let mut quartz: Option<bool> = None;
@@ -281,9 +281,9 @@ pub async fn edit_planet(index: &str, input: &str, bypass: bool) -> anyhow::Resu
         validate(&key, value)?;
         match key.as_str() {
             "name" => name = Some(value.to_string()),
-            "radius" => radius = Some(value.parse::<f64>()?),
-            "gravity" => gravity = Some(value.parse::<f64>()?),
-            "temperature" => temperature = Some(value.parse::<i64>()?),
+            "radius" => radius = Some(value.parse()?),
+            "gravity" => gravity = Some(value.parse()?),
+            "temperature" => temperature = Some(value.parse()?),
             "sector" => sector = Some(value.to_string()),
             "tectonics" => tectonics = Some(value.to_string()),
             "atmosphere" => atmosphere = Some(value.to_string()),
@@ -503,21 +503,22 @@ fn construct_planet(row: Row) -> anyhow::Result<Planet> {
         sub_trees: row.get(12)?,
         life: row.get::<i64>(13)? != 0,
         is_moon: row.get::<i64>(14)? != 0,
-        moons: row.get::<Option<i64>>(15)?.map(|v| v as i8),
-        malachite: row.get::<Option<i64>>(16)?.map(|v| v as i8),
+        moons: row.get::<Option<i32>>(15)?.map(|v| v),
+        malachite: row.get::<Option<i32>>(16)?.map(|v| v),
         hematite: row.get(17)?,
-        petroleum: row.get::<Option<i64>>(18)?.map(|v| v as i8),
-        coal: row.get::<Option<i64>>(19)?.map(|v| v as i8),
-        gummite: row.get::<Option<i64>>(20)?.map(|v| v as i8),
-        tektite: row.get::<Option<i64>>(21)?.map(|v| v as i8),
-        bauxite: row.get::<Option<i64>>(22)?.map(|v| v as i8),
-        cerussite: row.get::<Option<i64>>(23)?.map(|v| v as i8),
+        petroleum: row.get::<Option<i32>>(18)?.map(|v| v),
+        coal: row.get::<Option<i32>>(19)?.map(|v| v),
+        gummite: row.get::<Option<i32>>(20)?.map(|v| v),
+        tektite: row.get::<Option<i32>>(21)?.map(|v| v),
+        bauxite: row.get::<Option<i32>>(22)?.map(|v| v),
+        cerussite: row.get::<Option<i32>>(23)?.map(|v| v),
         lime: row.get::<Option<i64>>(24)?.map(|v| v != 0),
         quartz: row.get::<Option<i64>>(25)?.map(|v| v != 0),
         ice: row.get::<Option<i64>>(26)?.map(|v| v != 0),
         note: row.get(27)?,
     })
 }
+
 fn check_sql(input: &str, state: AppState) -> bool {
     state
         .configs
@@ -527,7 +528,6 @@ fn check_sql(input: &str, state: AppState) -> bool {
 }
 
 pub fn format_response(planet: &Planet, prettier: bool) -> String {
-    // will get rewritten
     let mut out = String::from("");
 
     if prettier {
@@ -583,7 +583,7 @@ pub fn format_response(planet: &Planet, prettier: bool) -> String {
         out.push_str(&format!("\nGummite: {}", gummite))
     }
     if let Some(tektite) = &planet.tektite {
-        out.push_str(&format!("T\nektite: {}", tektite))
+        out.push_str(&format!("\nTektite: {}", tektite))
     }
     if let Some(bauxite) = &planet.bauxite {
         out.push_str(&format!("\nBauxite: {}", bauxite))
