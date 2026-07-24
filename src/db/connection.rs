@@ -425,7 +425,7 @@ pub fn format_response(planet: &Planet, prettier: bool) -> String {
     ));
 
     if let Some(atmosphere) = &planet.atmosphere {
-        out.push_str(&format!("\nAtmosphere: {}°C", atmosphere))
+        out.push_str(&format!("\nAtmosphere: {}", atmosphere))
     }
     if let Some(oceans) = &planet.oceans {
         out.push_str(&format!("\nOceans: {}", oceans))
