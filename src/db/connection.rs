@@ -43,16 +43,19 @@ enum Planets {
 pub struct Planet {
     id: String,
     star_id: i64,
+    // default: "Unknown"
     name: String,
     // default: 0 for radius, gravity and temp
     radius: f64,
     gravity: f64,
     temperature: i64,
+    // Default: "Unknown"
     tectonics: String,
     atmosphere: Option<String>,
     oceans: Option<String>,
     rings: Option<String>,
     trees: Option<String>,
+    // default: false (only for life)
     life: bool,
     is_moon: bool,
     moons: Option<i8>,
@@ -407,7 +410,7 @@ pub fn format_response(planet: &Planet) -> String {
     let mut out = String::from("");
 
     out.push_str(&format!(
-        "ID: {}\nStar Id: {}, Name: {}\nRadius: {}\nGravity: {}\nTemperature: {}\nTectonics: {}",
+        "```ID: {}\nStar Id: {}\nName: {}\nRadius: {}\nGravity: {}\nTemperature: {}\nTectonics: {}\n",
         planet.id,
         planet.star_id,
         planet.name,
@@ -418,23 +421,23 @@ pub fn format_response(planet: &Planet) -> String {
     ));
 
     if let Some(atmosphere) = &planet.atmosphere {
-        out.push_str(&format!("Atmosphere: {}°C", atmosphere))
+        out.push_str(&format!("\nAtmosphere: {}°C", atmosphere))
     }
     if let Some(oceans) = &planet.oceans {
-        out.push_str(&format!("Oceans: {}", oceans))
+        out.push_str(&format!("\nOceans: {}", oceans))
     }
     if let Some(rings) = &planet.rings {
-        out.push_str(&format!("Rings: {}", rings))
+        out.push_str(&format!("\nRings: {}", rings))
     }
     if let Some(trees) = &planet.trees {
-        out.push_str(&format!("Trees: {}", trees))
+        out.push_str(&format!("\nTrees: {}", trees))
     }
     out.push_str(&format!(
-        "Life: {}\nIs Moon: {}",
+        "\nLife: {}\nIs Moon: {}",
         planet.life, planet.is_moon
     ));
     if let Some(moons) = &planet.moons {
-        out.push_str(&format!("Moons: {}", moons))
+        out.push_str(&format!("\nMoons: {}", moons))
     }
     out.push_str("\n");
 
@@ -442,25 +445,25 @@ pub fn format_response(planet: &Planet) -> String {
         out.push_str(&format!("Malachite: {}", malachite))
     }
     if let Some(hematite) = &planet.hematite {
-        out.push_str(&format!("Hematite: {:.4}", hematite))
+        out.push_str(&format!("\nHematite: {:.4}", hematite))
     }
     if let Some(petroleum) = &planet.petroleum {
-        out.push_str(&format!("Petroleum: {}", petroleum))
+        out.push_str(&format!("\nPetroleum: {}", petroleum))
     }
     if let Some(coal) = &planet.coal {
-        out.push_str(&format!("Coal: {}", coal))
+        out.push_str(&format!("\nCoal: {}", coal))
     }
     if let Some(gummite) = &planet.gummite {
-        out.push_str(&format!("Gummite: {}", gummite))
+        out.push_str(&format!("\nGummite: {}", gummite))
     }
     if let Some(tektite) = &planet.tektite {
-        out.push_str(&format!("Tektite: {}", tektite))
+        out.push_str(&format!("T\nektite: {}", tektite))
     }
     if let Some(bauxite) = &planet.bauxite {
-        out.push_str(&format!("Bauxite: {}", bauxite))
+        out.push_str(&format!("\nBauxite: {}", bauxite))
     }
     if let Some(cerussite) = &planet.cerussite {
-        out.push_str(&format!("Cerussite: {}", cerussite))
+        out.push_str(&format!("\nCerussite: {}", cerussite))
     }
     out.push_str("\n");
 
@@ -468,12 +471,13 @@ pub fn format_response(planet: &Planet) -> String {
         out.push_str(&format!("Lime: {}", lime))
     }
     if let Some(quartz) = &planet.quartz {
-        out.push_str(&format!("Quartz: {}", quartz))
+        out.push_str(&format!("\nQuartz: {}", quartz))
     }
     if let Some(ice) = &planet.ice {
-        out.push_str(&format!("Ice: {}", ice));
+        out.push_str(&format!("\nIce: {}", ice));
     }
 
+    out.push_str("\n```");
     out
 }
 
