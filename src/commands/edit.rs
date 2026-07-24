@@ -74,7 +74,7 @@ pub async fn run(state: AppState, event: &Box<InteractionCreate>) -> anyhow::Res
             .interaction(state.application_id)
             .create_followup(&event.token)
             .content(&format!(
-                "There was an error while getting a planet:\n{}",
+                "There was an error while editing a planet:\n{}",
                 e.to_string()
             ))
             .flags(MessageFlags::EPHEMERAL)

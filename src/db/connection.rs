@@ -568,7 +568,7 @@ pub fn format_response(planet: &Planet, prettier: bool) -> String {
     out.push_str("\n");
 
     if let Some(malachite) = &planet.malachite {
-        out.push_str(&format!("Malachite: {}", malachite))
+        out.push_str(&format!("\nMalachite: {}", malachite))
     }
     if let Some(hematite) = &planet.hematite {
         out.push_str(&format!("\nHematite: {:.4}", hematite))
