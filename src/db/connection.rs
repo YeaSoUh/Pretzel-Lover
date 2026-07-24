@@ -116,7 +116,7 @@ pub async fn search_planets(input: &str, state: AppState) -> anyhow::Result<Atta
     let mut file_content = "".to_owned();
 
     while let Some(row) = planets.next().await? {
-        file_content.push_str(&format!("\n{}", format_response(&construct_planet(row)?)));
+        file_content.push_str(&format!("\n{}", format_response(&construct_planet(row)?, false)));
     }
 
     Ok(Attachment::from_bytes(
@@ -405,12 +405,16 @@ fn check_sql(input: &str, state: AppState) -> bool {
         .any(|sql| input.contains(sql))
 }
 
-pub fn format_response(planet: &Planet) -> String {
+pub fn format_response(planet: &Planet, prettier: bool) -> String {
     // will get rewritten
     let mut out = String::from("");
 
+    if prettier {
+        out.push_str("```");
+    }
+
     out.push_str(&format!(
-        "```ID: {}\nStar Id: {}\nName: {}\nRadius: {}\nGravity: {}\nTemperature: {}\nTectonics: {}\n",
+        "ID: {}\nStar Id: {}\nName: {}\nRadius: {}\nGravity: {}\nTemperature: {}\nTectonics: {}\n",
         planet.id,
         planet.star_id,
         planet.name,
@@ -477,7 +481,9 @@ pub fn format_response(planet: &Planet) -> String {
         out.push_str(&format!("\nIce: {}", ice));
     }
 
-    out.push_str("\n```");
+    if prettier {
+        out.push_str("\n```");
+    }
     out
 }
 
