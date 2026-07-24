@@ -36,6 +36,7 @@ enum Planets {
     Cerussite,
     Lime,
     Quartz,
+    Ice,
 }
 
 #[allow(dead_code)] // yes
@@ -67,6 +68,7 @@ pub struct Planet {
 
     lime: Option<bool>,
     quartz: Option<bool>,
+    ice: Option<bool>,
 }
 
 pub async fn establish_database(database_url: &str) -> anyhow::Result<()> {
@@ -159,6 +161,7 @@ pub async fn edit_planet(index: &str, input: &str, bypass: bool) -> anyhow::Resu
     let mut cerussite: Option<i8> = None;
     let mut lime: Option<bool> = None;
     let mut quartz: Option<bool> = None;
+    let mut ice: Option<bool> = None;
 
     for expr in input.split("|") {
         let expr = expr.trim();
@@ -166,14 +169,14 @@ pub async fn edit_planet(index: &str, input: &str, bypass: bool) -> anyhow::Resu
             continue;
         }
 
-        let (mut key, mut value) = expr
+        let (key, mut value) = expr
             .split_once("=")
             .ok_or(anyhow::anyhow!("deformed input"))?; // idk i may improve it later
-        key = key.trim();
+        let key = key.trim().to_lowercase();
         value = value.trim();
 
-        validate(key, value)?;
-        match key {
+        validate(&key, value)?;
+        match key.as_str() {
             "name" => name = Some(value.to_string()),
             "radius" => radius = Some(value.parse::<f64>()?),
             "gravity" => gravity = Some(value.parse::<f64>()?),
@@ -195,6 +198,7 @@ pub async fn edit_planet(index: &str, input: &str, bypass: bool) -> anyhow::Resu
             "cerussite" => cerussite = Some(value.parse()?),
             "lime" => lime = Some(value.parse()?),
             "quartz" => quartz = Some(value.parse()?),
+            "ice" => ice = Some(value.parse()?),
             "moon" if bypass => is_moon = value.parse::<bool>()?,
             _ => continue,
         }
@@ -312,6 +316,11 @@ pub async fn edit_planet(index: &str, input: &str, bypass: bool) -> anyhow::Resu
             values.push(quartz.into());
             conflict.update_column(Planets::Quartz);
         }
+        if let Some(ice) = ice {
+            columns.push(Planets::Ice);
+            values.push(ice.into());
+            conflict.update_column(Planets::Ice);
+        }
 
         columns.push(Planets::IsMoon);
         values.push(is_moon.into());
@@ -381,6 +390,7 @@ fn construct_planet(row: Row) -> anyhow::Result<Planet> {
         cerussite: row.get::<Option<i64>>(21)?.map(|v| v as i8),
         lime: row.get(22)?,
         quartz: row.get(23)?,
+        ice: row.get(24)?,
     })
 }
 
@@ -432,7 +442,7 @@ pub fn format_response(planet: &Planet) -> String {
         out.push_str(&format!("Malachite: {}", malachite))
     }
     if let Some(hematite) = &planet.hematite {
-        out.push_str(&format!("Hematite: {:.3}", hematite))
+        out.push_str(&format!("Hematite: {:.4}", hematite))
     }
     if let Some(petroleum) = &planet.petroleum {
         out.push_str(&format!("Petroleum: {}", petroleum))
@@ -460,6 +470,9 @@ pub fn format_response(planet: &Planet) -> String {
     if let Some(quartz) = &planet.quartz {
         out.push_str(&format!("Quartz: {}", quartz))
     }
+    if let Some(ice) = &planet.ice {
+        out.push_str(&format!("Ice: {}", ice));
+    }
 
     out
 }
@@ -478,7 +491,7 @@ fn validate(key: &str, value: &str) -> anyhow::Result<()> {
                 anyhow::bail!(format!("Wrong concentration information in {}", key))
             }
         }
-        "life" | "lime" | "quartz" => {
+        "life" | "lime" | "quartz" | "ice" => {
             if value != "true" || value != "false" {
                 anyhow::bail!(format!("{} is supposed to have true/false value", key))
             }
