@@ -2,7 +2,10 @@
 
 use anyhow::Ok;
 use twilight_model::{
-    application::interaction::{InteractionData, application_command::CommandOptionValue}, gateway::payload::incoming::InteractionCreate, id::Id,
+    application::interaction::{InteractionData, application_command::CommandOptionValue},
+    channel::message::MessageFlags,
+    gateway::payload::incoming::InteractionCreate,
+    id::Id,
 };
 
 use crate::{AppState, commands, db::connection};
@@ -59,9 +62,25 @@ pub async fn run(state: AppState, event: &Box<InteractionCreate>) -> anyhow::Res
 
     let index = index.ok_or_else(|| anyhow::anyhow!("Missing index option"))?;
     let input = input.ok_or_else(|| anyhow::anyhow!("Missing input option"))?;
-    let bypass = &event.author_id().ok_or_else(|| anyhow::anyhow!("shouldn't happen in edit.rs no user id who initiated this command"))? == &Id::new(1021835061433225296);
+    let bypass = &event.author_id().ok_or_else(|| {
+        anyhow::anyhow!("shouldn't happen in edit.rs no user id who initiated this command")
+    })? == &Id::new(1021835061433225296);
 
-    connection::edit_planet(&index, &input, bypass).await?;
+    let result = connection::edit_planet(&index, &input, bypass).await;
+
+    if let Err(e) = result {
+        state
+            .client
+            .interaction(state.application_id)
+            .create_followup(&event.token)
+            .content(&format!(
+                "There was an error while getting a planet:\n{}",
+                e.to_string()
+            ))
+            .flags(MessageFlags::EPHEMERAL)
+            .await?;
+        return Err(e);
+    }
 
     state
         .client

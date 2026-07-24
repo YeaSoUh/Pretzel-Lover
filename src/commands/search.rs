@@ -1,5 +1,7 @@
 use twilight_model::{
-    application::interaction::{InteractionData, application_command::CommandOptionValue}, gateway::payload::incoming::InteractionCreate,
+    application::interaction::{InteractionData, application_command::CommandOptionValue},
+    channel::message::MessageFlags,
+    gateway::payload::incoming::InteractionCreate,
 };
 
 use crate::{AppState, commands, db::connection};
@@ -37,8 +39,30 @@ pub async fn run(state: AppState, event: &Box<InteractionCreate>) -> anyhow::Res
         anyhow::bail!("No options");
     }
 
-    let attachment = connection::search_planets(&mut input.unwrap(), state.clone()).await?;
+    let result = connection::search_planets(
+        &input.ok_or(anyhow::anyhow!("No input option provided"))?,
+        state.clone(),
+    )
+    .await;
+    let mut error_occurred = false;
 
+    if let Err(e) = &result {
+        state
+            .client
+            .interaction(state.application_id)
+            .create_followup(&event.token)
+            .content(&format!("An error happened:\n{}", e.to_string()))
+            .flags(MessageFlags::EPHEMERAL)
+            .await?;
+        error_occurred = true
+    }
+    if error_occurred {
+        if let Err(e) = result {
+            return Err(e);
+        }
+    }
+
+    let attachment = result?;
     state
         .client
         .interaction(state.application_id)

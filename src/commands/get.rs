@@ -1,5 +1,6 @@
 use twilight_model::{
     application::interaction::{InteractionData, application_command::CommandOptionValue},
+    channel::message::MessageFlags,
     gateway::payload::incoming::InteractionCreate,
 };
 
@@ -39,14 +40,15 @@ pub async fn run(state: AppState, event: &Box<InteractionCreate>) -> anyhow::Res
 
     let id = id.ok_or_else(|| anyhow::anyhow!("Missing id option"))?;
 
-    let planet = match connection::get_planet(&id).await {
+    let planet = match connection::get_planet(&id, state.clone()).await {
         Ok(planet) => planet,
         Err(_) => {
             state
                 .client
                 .interaction(state.application_id)
                 .create_followup(&event.token)
-                .content("Planet doesn't exist in database")
+                .content("Planet doesn't exist in database or an error happened internally that was reported")
+                .flags(MessageFlags::EPHEMERAL)
                 .await?;
             return Ok(());
         }

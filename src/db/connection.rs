@@ -77,7 +77,12 @@ pub async fn establish_database(database_url: &str) -> anyhow::Result<()> {
     Ok(())
 }
 
-pub async fn get_planet(index: &str) -> anyhow::Result<Planet> {
+// i will maybe replace it with search_planets later
+pub async fn get_planet(index: &str, state: AppState) -> anyhow::Result<Planet> {
+    if check_sql(index, state) {
+        anyhow::bail!("Blacklisted sql");
+    }
+
     let conn = establish_connection().await?;
 
     let mut planets = conn
@@ -91,7 +96,7 @@ pub async fn get_planet(index: &str) -> anyhow::Result<Planet> {
     Err(anyhow::anyhow!("Planet wasn't found"))
 }
 
-pub async fn search_planets(input: &mut str, state: AppState) -> anyhow::Result<Attachment> {
+pub async fn search_planets(input: &str, state: AppState) -> anyhow::Result<Attachment> {
     if check_sql(input, state) {
         anyhow::bail!("Blacklisted sql");
     }
@@ -124,12 +129,12 @@ pub async fn edit_planet(index: &str, input: &str, bypass: bool) -> anyhow::Resu
     let mut split_iter = index.split('-');
     let star_id: i64 = split_iter
         .next()
-        .ok_or_else(|| anyhow::anyhow!("invalid star id format"))?
+        .ok_or_else(|| anyhow::anyhow!("Invalid star id format"))?
         .parse()?;
 
     split_iter
         .next()
-        .ok_or_else(|| anyhow::anyhow!("missing planet id in index"))?;
+        .ok_or_else(|| anyhow::anyhow!("Missing planet id in index"))?;
 
     let mut is_moon = split_iter.next().is_some();
 
@@ -197,13 +202,13 @@ pub async fn edit_planet(index: &str, input: &str, bypass: bool) -> anyhow::Resu
 
     let (sql, query_values) = {
         let mut columns = vec![Planets::Id, Planets::StarId];
-        let mut values: Vec<sea_query::SimpleExpr> = vec![sea_query::Value::String(Some(index.to_string())).into(), star_id.into()];
+        let mut values: Vec<sea_query::SimpleExpr> = vec![index.into(), star_id.into()];
 
         let mut conflict = sea_query::OnConflict::new();
 
         if let Some(name) = name {
             columns.push(Planets::Name);
-            values.push(sea_query::Value::String(Some(name)).into());
+            values.push(name.into());
             conflict.update_column(Planets::Name);
         }
         if let Some(radius) = radius {
@@ -223,27 +228,27 @@ pub async fn edit_planet(index: &str, input: &str, bypass: bool) -> anyhow::Resu
         }
         if let Some(tectonics) = tectonics {
             columns.push(Planets::Tectonics);
-            values.push(sea_query::Value::String(Some(tectonics)).into());
+            values.push(tectonics.into());
             conflict.update_column(Planets::Tectonics);
         }
         if let Some(atmosphere) = atmosphere {
             columns.push(Planets::Atmosphere);
-            values.push(sea_query::Value::String(Some(atmosphere)).into());
+            values.push(atmosphere.into());
             conflict.update_column(Planets::Atmosphere);
         }
         if let Some(oceans) = oceans {
             columns.push(Planets::Oceans);
-            values.push(sea_query::Value::String(Some(oceans)).into());
+            values.push(oceans.into());
             conflict.update_column(Planets::Oceans);
         }
         if let Some(rings) = rings {
             columns.push(Planets::Rings);
-            values.push(sea_query::Value::String(Some(rings)).into());
+            values.push(rings.into());
             conflict.update_column(Planets::Rings);
         }
         if let Some(trees) = trees {
             columns.push(Planets::Trees);
-            values.push(sea_query::Value::String(Some(trees)).into());
+            values.push(trees.into());
             conflict.update_column(Planets::Trees);
         }
         if let Some(life) = life {
@@ -309,8 +314,8 @@ pub async fn edit_planet(index: &str, input: &str, bypass: bool) -> anyhow::Resu
         }
 
         columns.push(Planets::IsMoon);
-        conflict.update_column(Planets::IsMoon);
         values.push(is_moon.into());
+        conflict.update_column(Planets::IsMoon);
 
         sea_query::Query::insert()
             .into_table(Planets::Table)
@@ -387,12 +392,19 @@ fn check_sql(input: &str, state: AppState) -> bool {
         .any(|sql| input.contains(sql))
 }
 
-pub fn format_response(planet: &Planet) -> String { // will get rewritten
+pub fn format_response(planet: &Planet) -> String {
+    // will get rewritten
     let mut out = String::from("");
 
     out.push_str(&format!(
         "ID: {}\nStar Id: {}, Name: {}\nRadius: {}\nGravity: {}\nTemperature: {}\nTectonics: {}",
-        planet.id, planet.star_id, planet.name, planet.radius, planet.gravity, planet.temperature, planet.tectonics
+        planet.id,
+        planet.star_id,
+        planet.name,
+        planet.radius,
+        planet.gravity,
+        planet.temperature,
+        planet.tectonics
     ));
 
     if let Some(atmosphere) = &planet.atmosphere {
@@ -459,12 +471,17 @@ fn normalize(input: &str) {
 
 fn validate(key: &str, value: &str) -> anyhow::Result<()> {
     match key {
-        "malachite" | "hematite" | "petroleum" | "coal" | "gummite" | "tektite" | "bauxite" | "cerussite" => {
+        "malachite" | "hematite" | "petroleum" | "coal" | "gummite" | "tektite" | "bauxite"
+        | "cerussite" => {
             let concentration = value.parse::<i8>()?;
-            if concentration < 0 || concentration > 3 {anyhow::bail!(format!("Wrong concentration information in {}", key))}
+            if concentration < 0 || concentration > 3 {
+                anyhow::bail!(format!("Wrong concentration information in {}", key))
+            }
         }
         "life" | "lime" | "quartz" => {
-            if value != "true" || value != "false" {anyhow::bail!(format!("{} is supposed to have true/false value", key))}
+            if value != "true" || value != "false" {
+                anyhow::bail!(format!("{} is supposed to have true/false value", key))
+            }
         }
         _ => {}
     }
