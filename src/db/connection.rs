@@ -53,6 +53,7 @@ enum Planets {
     Bauxite,
     Cerussite,
     Lime,
+    Saltpeter,
     Quartz,
     Ice,
     Note,
@@ -91,6 +92,7 @@ pub struct Planet {
     cerussite: Option<i32>,
 
     lime: Option<bool>,
+    saltpeter: Option<bool>,
     quartz: Option<bool>,
     ice: Option<bool>,
 
@@ -201,6 +203,7 @@ pub async fn edit_planet(index: &str, input: &str, bypass: bool) -> anyhow::Resu
     let mut cerussite: Option<i32> = None;
 
     let mut lime: Option<bool> = None;
+    let mut saltpeter: Option<bool> = None;
     let mut quartz: Option<bool> = None;
     let mut ice: Option<bool> = None;
 
@@ -242,6 +245,7 @@ pub async fn edit_planet(index: &str, input: &str, bypass: bool) -> anyhow::Resu
             "bauxite" => bauxite = Some(value.parse()?),
             "cerussite" => cerussite = Some(value.parse()?),
             "lime" => lime = Some(value.parse()?),
+            "saltpeter" => saltpeter = Some(value.parse()?),
             "quartz" => quartz = Some(value.parse()?),
             "ice" => ice = Some(value.parse()?),
             "note" => note = Some(value.to_string()),
@@ -367,6 +371,11 @@ pub async fn edit_planet(index: &str, input: &str, bypass: bool) -> anyhow::Resu
             values.push(lime.into());
             conflict.update_column(Planets::Lime);
         }
+        if let Some(saltpeter) = saltpeter {
+            columns.push(Planets::Saltpeter);
+            values.push(saltpeter.into());
+            conflict.update_column(Planets::Saltpeter);
+        }
         if let Some(quartz) = quartz {
             columns.push(Planets::Quartz);
             values.push(quartz.into());
@@ -453,9 +462,10 @@ fn construct_planet(row: Row) -> anyhow::Result<Planet> {
         bauxite: row.get::<Option<i32>>(22)?.map(|v| v),
         cerussite: row.get::<Option<i32>>(23)?.map(|v| v),
         lime: row.get::<Option<i64>>(24)?.map(|v| v != 0),
-        quartz: row.get::<Option<i64>>(25)?.map(|v| v != 0),
-        ice: row.get::<Option<i64>>(26)?.map(|v| v != 0),
-        note: row.get(27)?,
+        saltpeter: row.get::<Option<i64>>(25)?.map(|v| v != 0),
+        quartz: row.get::<Option<i64>>(26)?.map(|v| v != 0),
+        ice: row.get::<Option<i64>>(27)?.map(|v| v != 0),
+        note: row.get(28)?,
     })
 }
 
@@ -538,6 +548,9 @@ pub fn format_response(planet: &Planet, prettier: bool) -> String {
 
     if let Some(lime) = &planet.lime {
         out.push_str(&format!("Lime: {}", lime))
+    }
+    if let Some(saltpeter) = &planet.saltpeter {
+        out.push_str(&format!("Saltpeter: {}", saltpeter))
     }
     if let Some(quartz) = &planet.quartz {
         out.push_str(&format!("\nQuartz: {}", quartz))
