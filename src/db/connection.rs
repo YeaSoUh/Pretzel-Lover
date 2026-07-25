@@ -154,8 +154,7 @@ pub async fn remove_planet(index: &str, state: AppState) -> anyhow::Result<()> {
 
     let conn = establish_connection().await?;
 
-    conn.query("DELETE FROM planets WHERE id = ?1", (index,))
-        .await?;
+    conn.execute("DELETE FROM planets WHERE id = ?1", (index,)).await?;
 
     Ok(())
 }
