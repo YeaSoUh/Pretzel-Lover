@@ -512,13 +512,14 @@ fn check_sql(input: &str, state: AppState) -> bool {
 
 pub fn format_response(planet: &Planet, prettier: bool) -> String {
     let mut out = String::from("");
+    let mut include_space = false;
 
     if prettier {
         out.push_str("```");
     }
 
     out.push_str(&format!(
-        "\nID: {}\nStar Id: {}\nName: {}\nRadius: {:.2} studs\nGravity: {:.2}g\nTemperature: {}°C",
+        "ID: {}\nStar Id: {}\nName: {}\nRadius: {:.2} studs\nGravity: {:.2}g\nTemperature: {}°C",
         &planet.id,
         &planet.star_id,
         &planet.name,
@@ -556,49 +557,73 @@ pub fn format_response(planet: &Planet, prettier: bool) -> String {
     out.push_str("\n");
 
     if let Some(malachite) = &planet.malachite {
-        out.push_str(&format!("\nMalachite: {}", malachite))
+        out.push_str(&format!("\nMalachite: {}", malachite));
+        include_space = true;
     }
     if let Some(hematite) = &planet.hematite {
-        out.push_str(&format!("\nHematite: {:.4}", hematite))
+        out.push_str(&format!("\nHematite: {:.4}", hematite));
+        include_space = true;
     }
     if let Some(petroleum) = &planet.petroleum {
-        out.push_str(&format!("\nPetroleum: {}", petroleum))
+        out.push_str(&format!("\nPetroleum: {}", petroleum));
+        include_space = true;
     }
     if let Some(coal) = &planet.coal {
-        out.push_str(&format!("\nCoal: {}", coal))
+        out.push_str(&format!("\nCoal: {}", coal));
+        include_space = true;
     }
     if let Some(gummite) = &planet.gummite {
-        out.push_str(&format!("\nGummite: {}", gummite))
+        out.push_str(&format!("\nGummite: {}", gummite));
+        include_space = true;
     }
     if let Some(tektite) = &planet.tektite {
-        out.push_str(&format!("\nTektite: {}", tektite))
+        out.push_str(&format!("\nTektite: {}", tektite));
+        include_space = true;
     }
     if let Some(bauxite) = &planet.bauxite {
-        out.push_str(&format!("\nBauxite: {}", bauxite))
+        out.push_str(&format!("\nBauxite: {}", bauxite));
+        include_space = true;
     }
     if let Some(gold) = &planet.gold {
-        out.push_str(&format!("\nGold: {}", gold))
+        out.push_str(&format!("\nGold: {}", gold));
+        include_space = true;
     }
     if let Some(cerussite) = &planet.cerussite {
-        out.push_str(&format!("\nCerussite: {}", cerussite))
+        out.push_str(&format!("\nCerussite: {}", cerussite));
+        include_space = true;
     }
-    out.push_str("\n");
+    if include_space {
+        out.push_str("\n");
+        include_space = false;
+    }
 
     if let Some(lime) = &planet.lime {
-        out.push_str(&format!("Lime: {}", lime))
+        out.push_str(&format!("\nLime: {}", lime));
+        include_space = true;
     }
     if let Some(saltpeter) = &planet.saltpeter {
-        out.push_str(&format!("Saltpeter: {}", saltpeter))
+        out.push_str(&format!("\nSaltpeter: {}", saltpeter));
+        include_space = true;
     }
     if let Some(quartz) = &planet.quartz {
-        out.push_str(&format!("\nQuartz: {}", quartz))
+        out.push_str(&format!("\nQuartz: {}", quartz));
+        include_space = true;
     }
     if let Some(ice) = &planet.ice {
         out.push_str(&format!("\nIce: {}", ice));
+        include_space = true;
     }
 
+    #[allow(unused_assignments)]
+    if include_space {
+        out.push_str("\n");
+        include_space = true;
+    }
+
+    #[allow(unused_assignments)]
     if let Some(note) = &planet.note {
-        out.push_str(&format!("\n\nNote: {}", note));
+        out.push_str(&format!("\nNote: {}", note));
+        include_space = true;
     }
 
     if prettier {
