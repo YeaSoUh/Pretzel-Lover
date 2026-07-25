@@ -1,3 +1,4 @@
+use serde::Deserialize;
 use std::{
     sync::{Arc, OnceLock},
     time::Duration,
@@ -8,6 +9,21 @@ use twilight_model::http::attachment::Attachment;
 use crate::AppState;
 
 static DB: OnceLock<Arc<Database>> = OnceLock::new();
+static CHECKS: OnceLock<Checks> = OnceLock::new();
+
+#[derive(Deserialize)]
+struct Checks {
+    #[serde(rename = "allowed_sectors")]
+    sectors: Vec<String>,
+    #[serde(rename = "allowed_tectonics")]
+    tectonics: Vec<String>,
+    #[serde(rename = "allowed_atmospheres")]
+    atmospheres: Vec<String>,
+    #[serde(rename = "allowed_oceans")]
+    oceans: Vec<String>,
+    #[serde(rename = "allowed_trees")]
+    trees: Vec<String>,
+}
 
 #[derive(sea_query::Iden)]
 enum Planets {
@@ -81,94 +97,18 @@ pub struct Planet {
     note: Option<String>,
 }
 
-const SECTORS: [&str; 6] = [
-    "Terrestrial",
-    "Jovian",
-    "Binary Terrestrial",
-    "Binary Jovian",
-    "Dwarf Planet",
-    "Dwarf Planet Swarm",
-];
-
-const TECTONICS: [&str; 15] = [
-    "Mafic",
-    "Basaltic",
-    "Continental",
-    "Solid",
-    "Shell",
-    "Sponge",
-    "Ancient",
-    "Ancient Basins",
-    "Small Volcanic",
-    "Small Mafic",
-    "Small Basaltic",
-    "Jovian",
-    "Floating",
-    "Double",
-    "Melange",
-];
-
-const ATMOSPHERES: [&str; 17] = [
-    "Gaian",
-    "Martian",
-    "Venusian",
-    "Titanian",
-    "Steam",
-    "Jovian",
-    "Neptunian",
-    "Alkali",
-    "Silicate",
-    "None",
-    "Turbulent",
-    "Tenuous",
-    "Hadean",
-    "Halide",
-    "Fumic",
-    "Ephemeral",
-    "Snowfall",
-];
-
-const OCEANS: [&str; 17] = [
-    "Water",
-    "Acid",
-    "Blood",
-    "Methane",
-    "Ammonia",
-    "Lava",
-    "Iron",
-    "Oxygen",
-    "Nitrogen",
-    "Tar",
-    "Retinal",
-    "Primordial",
-    "Algae",
-    "Salty",
-    "Sulfuric",
-    "Carbon Dioxide",
-    "Nitric",
-];
-
-const TREES: [&str; 6] = [
-    "Ajisa",
-    "Birch",
-    "Baobab",
-    "Creepvine",
-    "Chlorophyta",
-    "False Baobab",
-];
-
-const SUB_TREES: [&str; 5] = [
-    "Paintbrush Tulips",
-    "Autumn Leaved Trees",
-    "Cactoida",
-    "Cactoida Cortexum",
-    "Cactoida Somboreum",
-];
-
 pub async fn establish_database(database_url: &str) -> anyhow::Result<()> {
     let db = Builder::new_local(database_url).build().await?;
     DB.set(Arc::new(db))
         .map_err(|_| anyhow::anyhow!("DB is already initialized"))?;
+
+    let check: Checks = {
+        let content = std::fs::read("configs.json")?;
+        serde_json::from_slice(&content)?
+    };
+    CHECKS
+        .set(check)
+        .map_err(|_| anyhow::anyhow!("CHECKS is already initialized"))?;
 
     Ok(())
 }
@@ -290,7 +230,7 @@ pub async fn edit_planet(index: &str, input: &str, bypass: bool) -> anyhow::Resu
             "oceans" => oceans = Some(value.to_string()),
             "rings" => rings = Some(value.to_string()),
             "trees" => trees = Some(value.to_string()),
-            "sub_trees" => sub_trees = Some(value.to_string()),
+            "sub trees" => sub_trees = Some(value.to_string()),
             "life" => life = Some(value.parse::<bool>()?),
             "moons" => moons = Some(value.parse()?),
             "malachite" => malachite = Some(value.parse()?),
@@ -558,6 +498,9 @@ pub fn format_response(planet: &Planet, prettier: bool) -> String {
     if let Some(trees) = &planet.trees {
         out.push_str(&format!("\nTrees: {}", trees))
     }
+    if let Some(sub_trees) = &planet.sub_trees {
+        out.push_str(&format!("\nSub trees: {}", sub_trees))
+    }
     out.push_str(&format!(
         "\nLife: {}\nIs Moon: {}",
         planet.life, planet.is_moon
@@ -633,27 +576,52 @@ fn validate(key: &str, value: &str) -> anyhow::Result<()> {
             }
         }
         "sector" => {
-            if !SECTORS.contains(&value) {
+            if !CHECKS
+                .get()
+                .ok_or(anyhow::anyhow!("CHECKS isn't initialized"))?
+                .sectors
+                .contains(&value.to_string())
+            {
                 anyhow::bail!(format!("Sector type '{}' isn't in the game", value))
             }
         }
         "tectonics" => {
-            if !TECTONICS.contains(&value) {
+            if !CHECKS
+                .get()
+                .ok_or(anyhow::anyhow!("CHECKS isn't initialized"))?
+                .tectonics
+                .contains(&value.to_string())
+            {
                 anyhow::bail!(format!("Tectonic type '{}' isn't in the game", value))
             }
         }
         "atmosphere" => {
-            if !ATMOSPHERES.contains(&value) {
+            if !CHECKS
+                .get()
+                .ok_or(anyhow::anyhow!("CHECKS isn't initialized"))?
+                .atmospheres
+                .contains(&value.to_string())
+            {
                 anyhow::bail!(format!("Atmospheric type '{}' isn't in the game", value))
             }
         }
         "oceans" => {
-            if !OCEANS.contains(&value) {
+            if !CHECKS
+                .get()
+                .ok_or(anyhow::anyhow!("CHECKS isn't initialized"))?
+                .oceans
+                .contains(&value.to_string())
+            {
                 anyhow::bail!(format!("Oceans type '{}' isn't in the game", value))
             }
         }
-        "trees" | "sub_trees" => {
-            if !TREES.contains(&value) && !SUB_TREES.contains(&value) {
+        "trees" | "sub trees" => {
+            if !CHECKS
+                .get()
+                .ok_or(anyhow::anyhow!("CHECKS isn't initialized"))?
+                .trees
+                .contains(&value.to_string())
+            {
                 anyhow::bail!(format!("Tree type '{}' isn't in the game", value))
             }
         }
