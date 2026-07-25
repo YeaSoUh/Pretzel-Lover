@@ -16,6 +16,7 @@ use crate::{AppState, commands};
 
 pub mod edit;
 pub mod get;
+pub mod remove;
 pub mod search;
 
 pub async fn defer(
@@ -79,6 +80,7 @@ pub async fn cmd_handler(
     let result = match data.name.as_str() {
         "edit_db" => commands::edit::run(state, &event).await,
         "get_db" => commands::get::run(state, &event).await,
+        "remove_db" => commands::remove::run(state, &event).await,
         "search_db" => commands::search::run(state, &event).await,
         "say" => todo!(),
         "edit" => todo!(),

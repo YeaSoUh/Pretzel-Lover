@@ -44,31 +44,27 @@ pub async fn run(state: AppState, event: &Box<InteractionCreate>) -> anyhow::Res
         state.clone(),
     )
     .await;
-    let mut error_occurred = false;
 
-    if let Err(e) = &result {
-        state
-            .client
-            .interaction(state.application_id)
-            .create_followup(&event.token)
-            .content(&format!("An error happened:\n{}", e.to_string()))
-            .flags(MessageFlags::EPHEMERAL)
-            .await?;
-        error_occurred = true
-    }
-    if error_occurred {
-        if let Err(e) = result {
+    match result {
+        Ok(attachment) => {
+            state
+                .client
+                .interaction(state.application_id)
+                .create_followup(&event.token)
+                .attachments(&[attachment])
+                .await?;
+        },
+        Err(e) => {
+            state
+                .client
+                .interaction(state.application_id)
+                .create_followup(&event.token)
+                .content(&format!("An error happened:\n{}", e.to_string()))
+                .flags(MessageFlags::EPHEMERAL)
+                .await?;
             return Err(e);
         }
     }
-
-    let attachment = result?;
-    state
-        .client
-        .interaction(state.application_id)
-        .create_followup(&event.token)
-        .attachments(&[attachment])
-        .await?;
 
     Ok(())
 }

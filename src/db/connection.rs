@@ -136,6 +136,29 @@ pub async fn get_planet(index: &str, state: AppState) -> anyhow::Result<Planet> 
     Err(anyhow::anyhow!("Planet wasn't found"))
 }
 
+pub async fn remove_planet(index: &str, state: AppState) -> anyhow::Result<()> {
+    if check_sql(index, state) {
+        anyhow::bail!("Blacklisted sql");
+    }
+
+    // 2nd check: parser checker idk as extra check if check_sql fails
+    match index.split_once("-") {
+        Some((num1, num2)) => {
+            num1.parse::<i64>().map_err(|_| anyhow::anyhow!("Blacklisted sql"))?;
+            num2.parse::<i64>().map_err(|_| anyhow::anyhow!("Blacklisted sql"))?;
+        },
+        None => anyhow::bail!("Blacklisted sql"),
+    }
+
+    let conn = establish_connection().await?;
+
+    conn
+        .query("DELETE FROM planets WHERE id = ?1", (index,))
+        .await?;
+
+    Ok(())
+}
+
 pub async fn search_planets(input: &str, state: AppState) -> anyhow::Result<Attachment> {
     if check_sql(input, state) {
         anyhow::bail!("Blacklisted sql");
