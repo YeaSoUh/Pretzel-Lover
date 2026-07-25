@@ -70,8 +70,8 @@ pub struct Planet {
     radius: f64,
     gravity: f64,
     temperature: i64,
-    // Default: "Unknown" for both sector and tectonics
-    sector: String,
+    sector: Option<String>,
+    // Default: "Unknown" for tectonics
     tectonics: String,
     atmosphere: Option<String>,
     oceans: Option<String>,
@@ -495,16 +495,18 @@ pub fn format_response(planet: &Planet, prettier: bool) -> String {
     }
 
     out.push_str(&format!(
-        "ID: {}\nStar Id: {}\nName: {}\nRadius: {}\nGravity: {}g\nTemperature: {}°C\nSector: {}\nTectonics: {}",
-        planet.id,
-        planet.star_id,
-        planet.name,
-        planet.radius,
-        planet.gravity,
-        planet.temperature,
-        planet.sector,
-        planet.tectonics,
+        "ID: {}\nStar Id: {}\nName: {}\nRadius: {}\nGravity: {}g\nTemperature: {}°C",
+        &planet.id,
+        &planet.star_id,
+        &planet.name,
+        &planet.radius,
+        &planet.gravity,
+        &planet.temperature,
     ));
+    if let Some(sector) = &planet.sector {
+        out.push_str(&format!("\nSector: {}", sector));
+    }
+    out.push_str(&format!("\nTectonics: {}", &planet.tectonics));
 
     if let Some(atmosphere) = &planet.atmosphere {
         out.push_str(&format!("\nAtmosphere: {}", atmosphere))
