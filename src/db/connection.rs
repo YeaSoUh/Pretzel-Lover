@@ -625,10 +625,12 @@ pub fn format_response(planet: &Planet, prettier: bool) -> String {
         out.push_str(&format!("\nNote: {}", note));
         include_space = true;
     }
-
+    
     if prettier {
         out.push_str("\n```");
     }
+
+    out.push_str("\n");
     out
 }
 
