@@ -519,7 +519,7 @@ pub fn format_response(planet: &Planet, prettier: bool) -> String {
     }
 
     out.push_str(&format!(
-        "ID: {}\nStar Id: {}\nName: {}\nRadius: {:.2} studs\nGravity: {:.2}g\nTemperature: {}°C",
+        "ID: {}\nStar Id: {}\nName: {}\nRadius: {} studs\nGravity: {:.2}g\nTemperature: {}°C",
         &planet.id,
         &planet.star_id,
         &planet.name,
