@@ -144,16 +144,17 @@ pub async fn remove_planet(index: &str, state: AppState) -> anyhow::Result<()> {
     // 2nd check: parser checker idk as extra check if check_sql fails
     match index.split_once("-") {
         Some((num1, num2)) => {
-            num1.parse::<i64>().map_err(|_| anyhow::anyhow!("Blacklisted sql"))?;
-            num2.parse::<i64>().map_err(|_| anyhow::anyhow!("Blacklisted sql"))?;
-        },
+            num1.parse::<i64>()
+                .map_err(|_| anyhow::anyhow!("Blacklisted sql"))?;
+            num2.parse::<i64>()
+                .map_err(|_| anyhow::anyhow!("Blacklisted sql"))?;
+        }
         None => anyhow::bail!("Blacklisted sql"),
     }
 
     let conn = establish_connection().await?;
 
-    conn
-        .query("DELETE FROM planets WHERE id = ?1", (index,))
+    conn.query("DELETE FROM planets WHERE id = ?1", (index,))
         .await?;
 
     Ok(())

@@ -53,7 +53,7 @@ pub async fn run(state: AppState, event: &Box<InteractionCreate>) -> anyhow::Res
                 .create_followup(&event.token)
                 .attachments(&[attachment])
                 .await?;
-        },
+        }
         Err(e) => {
             state
                 .client

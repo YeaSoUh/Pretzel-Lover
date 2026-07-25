@@ -1,4 +1,8 @@
-use twilight_model::{application::interaction::{InteractionData, application_command::CommandOptionValue}, channel::message::MessageFlags, gateway::payload::incoming::InteractionCreate};
+use twilight_model::{
+    application::interaction::{InteractionData, application_command::CommandOptionValue},
+    channel::message::MessageFlags,
+    gateway::payload::incoming::InteractionCreate,
+};
 
 use crate::{AppState, commands, db::connection};
 

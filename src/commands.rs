@@ -50,26 +50,36 @@ pub async fn defer(
         .await
 }
 
-pub fn get_commands() -> Vec<Command> {
-    vec![
+pub fn get_commands() -> anyhow::Result<Vec<Command>> {
+    Ok(vec![
         CommandBuilder::new("edit_db", "Edit a planet/moon", CommandType::ChatInput)
             .option(StringBuilder::new("index", "What planet/moon to edit").required(true))
-            .option(StringBuilder::new("input", "Self explanatory").required(true))
+            .option(StringBuilder::new("input", "An input for the command").required(true))
             .contexts(vec![InteractionContextType::Guild])
+            .validate()?
             .build(),
         CommandBuilder::new("get_db", "Get a planet/moon", CommandType::ChatInput)
-            .option(StringBuilder::new("index", "What planet/moon to get").required(true))
+            .option(StringBuilder::new("index", "An index of a planet/moon to get").required(true))
             .contexts(vec![InteractionContextType::Guild])
+            .validate()?
+            .build(),
+        CommandBuilder::new("remove_db", "Remove a planet/moon", CommandType::ChatInput)
+            .option(
+                StringBuilder::new("index", "An index of a planet/moon to remove").required(true),
+            )
+            .contexts(vec![InteractionContextType::Guild])
+            .validate()?
             .build(),
         CommandBuilder::new(
             "search_db",
             "Search for planets/moons",
             CommandType::ChatInput,
         )
-        .option(StringBuilder::new("input", "Self explanatory").required(true))
+        .option(StringBuilder::new("input", "An input for the command").required(true))
         .contexts(vec![InteractionContextType::Guild])
+        .validate()?
         .build(),
-    ]
+    ])
 }
 
 pub async fn cmd_handler(
