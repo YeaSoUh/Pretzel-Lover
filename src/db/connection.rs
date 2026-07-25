@@ -51,6 +51,7 @@ enum Planets {
     Gummite,
     Tektite,
     Bauxite,
+    Gold,
     Cerussite,
     Lime,
     Saltpeter,
@@ -89,6 +90,7 @@ pub struct Planet {
     gummite: Option<i32>,
     tektite: Option<i32>,
     bauxite: Option<i32>,
+    gold: Option<i32>,
     cerussite: Option<i32>,
 
     lime: Option<bool>,
@@ -200,6 +202,7 @@ pub async fn edit_planet(index: &str, input: &str, bypass: bool) -> anyhow::Resu
     let mut gummite: Option<i32> = None;
     let mut tektite: Option<i32> = None;
     let mut bauxite: Option<i32> = None;
+    let mut gold: Option<i32> = None;
     let mut cerussite: Option<i32> = None;
 
     let mut lime: Option<bool> = None;
@@ -243,6 +246,7 @@ pub async fn edit_planet(index: &str, input: &str, bypass: bool) -> anyhow::Resu
             "gummite" => gummite = Some(value.parse()?),
             "tektite" => tektite = Some(value.parse()?),
             "bauxite" => bauxite = Some(value.parse()?),
+            "gold" => gold = Some(value.parse()?),
             "cerussite" => cerussite = Some(value.parse()?),
             "lime" => lime = Some(value.parse()?),
             "saltpeter" => saltpeter = Some(value.parse()?),
@@ -360,6 +364,11 @@ pub async fn edit_planet(index: &str, input: &str, bypass: bool) -> anyhow::Resu
             values.push(bauxite.into());
             conflict.update_column(Planets::Bauxite);
         }
+        if let Some(gold) = gold {
+            columns.push(Planets::Gold);
+            values.push(gold.into());
+            conflict.update_column(Planets::Gold);
+        }
         if let Some(cerussite) = cerussite {
             columns.push(Planets::Cerussite);
             values.push(cerussite.into());
@@ -460,12 +469,13 @@ fn construct_planet(row: Row) -> anyhow::Result<Planet> {
         gummite: row.get::<Option<i32>>(20)?.map(|v| v),
         tektite: row.get::<Option<i32>>(21)?.map(|v| v),
         bauxite: row.get::<Option<i32>>(22)?.map(|v| v),
-        cerussite: row.get::<Option<i32>>(23)?.map(|v| v),
-        lime: row.get::<Option<i64>>(24)?.map(|v| v != 0),
-        saltpeter: row.get::<Option<i64>>(25)?.map(|v| v != 0),
-        quartz: row.get::<Option<i64>>(26)?.map(|v| v != 0),
-        ice: row.get::<Option<i64>>(27)?.map(|v| v != 0),
-        note: row.get(28)?,
+        gold: row.get::<Option<i32>>(23)?.map(|v| v),
+        cerussite: row.get::<Option<i32>>(24)?.map(|v| v),
+        lime: row.get::<Option<i64>>(25)?.map(|v| v != 0),
+        saltpeter: row.get::<Option<i64>>(26)?.map(|v| v != 0),
+        quartz: row.get::<Option<i64>>(27)?.map(|v| v != 0),
+        ice: row.get::<Option<i64>>(28)?.map(|v| v != 0),
+        note: row.get(29)?,
     })
 }
 
@@ -485,7 +495,7 @@ pub fn format_response(planet: &Planet, prettier: bool) -> String {
     }
 
     out.push_str(&format!(
-        "ID: {}\nStar Id: {}\nName: {}\nRadius: {}\nGravity: {}\nTemperature: {}°C\nSector: {}\nTectonics: {}",
+        "ID: {}\nStar Id: {}\nName: {}\nRadius: {}\nGravity: {}g\nTemperature: {}°C\nSector: {}\nTectonics: {}",
         planet.id,
         planet.star_id,
         planet.name,
@@ -541,6 +551,9 @@ pub fn format_response(planet: &Planet, prettier: bool) -> String {
     if let Some(bauxite) = &planet.bauxite {
         out.push_str(&format!("\nBauxite: {}", bauxite))
     }
+    if let Some(gold) = &planet.gold {
+        out.push_str(&format!("\nGold: {}", gold))
+    }
     if let Some(cerussite) = &planet.cerussite {
         out.push_str(&format!("\nCerussite: {}", cerussite))
     }
@@ -577,13 +590,13 @@ fn normalize(input: &str) {
 fn validate(key: &str, value: &str) -> anyhow::Result<()> {
     match key {
         "malachite" | "hematite" | "petroleum" | "coal" | "gummite" | "tektite" | "bauxite"
-        | "cerussite" => {
+        | "gold" | "cerussite" => {
             let concentration = value.parse::<i8>()?;
             if concentration < 0 || concentration > 3 {
                 anyhow::bail!(format!("Wrong concentration information in {}", key))
             }
         }
-        "life" | "lime" | "quartz" | "ice" => {
+        "life" | "lime" | "saltpeter" | "quartz" | "ice" => {
             if value != "true" && value != "false" {
                 anyhow::bail!("{} is supposed to have true/false value", key);
             }
