@@ -146,8 +146,11 @@ pub async fn remove_planet(index: &str, state: AppState) -> anyhow::Result<()> {
         Some((num1, num2)) => {
             num1.parse::<i64>()
                 .map_err(|_| anyhow::anyhow!("Blacklisted sql"))?;
-            num2.parse::<i64>()
-                .map_err(|_| anyhow::anyhow!("Blacklisted sql"))?;
+            if let Err(_) = num2.parse::<i64>() {
+                if num2.split_once("-").is_none() {
+                    anyhow::bail!("Blacklisted sql")
+                }
+            }
         }
         None => anyhow::bail!("Blacklisted sql"),
     }
