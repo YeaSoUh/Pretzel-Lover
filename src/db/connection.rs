@@ -228,7 +228,7 @@ pub async fn edit_planet(index: &str, input: &str, bypass: bool) -> anyhow::Resu
     let mut trees: Option<String> = None;
     let mut sub_trees: Option<String> = None;
     let mut life: Option<bool> = None;
-    let mut moons: Option<i8> = None;
+    let mut moons: Option<i32> = None;
 
     let mut malachite: Option<i32> = None;
     let mut hematite: Option<f64> = None;
