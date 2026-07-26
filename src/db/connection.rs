@@ -1,7 +1,6 @@
 use serde::Deserialize;
 use std::{
-    sync::{Arc, OnceLock},
-    time::Duration,
+    sync::{Arc, OnceLock}, time::Duration,
 };
 use turso::{Builder, Connection, Database, Row};
 use twilight_model::http::attachment::Attachment;
@@ -201,11 +200,21 @@ pub async fn edit_planet(index: &str, input: &str, bypass: bool) -> anyhow::Resu
         .ok_or_else(|| anyhow::anyhow!("Invalid star id format"))?
         .parse()?;
 
-    if split_iter.next().is_some_and(|x| x.parse::<i64>().is_err()) {
+    if split_iter.next().unwrap_or("None").parse::<i64>().is_err() {
         anyhow::bail!("Invalid planet id format");
     }
 
-    let mut is_moon = split_iter.next().is_some_and(|x| x.parse::<i64>().is_ok());
+    let mut is_moon = match split_iter.next() {
+        Some(s) => {
+            s.parse::<i64>()?;
+            true
+        }
+        None => false,
+    };
+
+    if split_iter.next().is_some() {
+        anyhow::bail!("Invalid id format");
+    }
 
     let mut name: Option<String> = None;
     let mut radius: Option<f64> = None;
