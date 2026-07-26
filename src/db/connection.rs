@@ -201,11 +201,11 @@ pub async fn edit_planet(index: &str, input: &str, bypass: bool) -> anyhow::Resu
         .ok_or_else(|| anyhow::anyhow!("Invalid star id format"))?
         .parse()?;
 
-    split_iter
-        .next()
-        .ok_or_else(|| anyhow::anyhow!("Missing planet id in index"))?;
+    if split_iter.next().is_some_and(|x| x.parse::<i64>().is_err()) {
+        anyhow::bail!("Invalid planet id format");
+    }
 
-    let mut is_moon = split_iter.next().is_some();
+    let mut is_moon = split_iter.next().is_some_and(|x| x.parse::<i64>().is_ok());
 
     let mut name: Option<String> = None;
     let mut radius: Option<f64> = None;
