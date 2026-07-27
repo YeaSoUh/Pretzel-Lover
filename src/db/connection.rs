@@ -630,7 +630,7 @@ pub fn format_response(planet: &Planet, prettier: bool) -> String {
 
     if include_space {
         out.push_str("\n");
-        include_space = true;
+        include_space = false;
     }
 
     if let Some(note) = &planet.note {
