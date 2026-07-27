@@ -173,13 +173,21 @@ pub async fn search_planets(input: &str, state: AppState) -> anyhow::Result<Atta
         .query(format!("SELECT * FROM planets WHERE {}", input), ())
         .await?;
 
-    let mut file_content = "".to_owned();
+    let results_limit = 100;
+    let mut results_showed = 0;
+    let mut file_content = format!("Only showing first {results_limit} results\n");
 
     while let Some(row) = planets.next().await? {
+        if results_showed >= results_limit {
+            break;
+        }
+
         file_content.push_str(&format!(
             "\n{}",
             format_response(&construct_planet(row)?, false)
         ));
+
+        results_showed += 1;
     }
 
     Ok(Attachment::from_bytes(
@@ -635,7 +643,7 @@ pub fn format_response(planet: &Planet, prettier: bool) -> String {
 
     if let Some(note) = &planet.note {
         out.push_str(&format!("\nNote: {}", note));
-        include_space = true;
+        // include_space = true;
     }
     
     if prettier {
