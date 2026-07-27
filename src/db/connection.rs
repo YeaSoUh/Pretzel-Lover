@@ -527,7 +527,9 @@ pub fn format_response(planet: &Planet, prettier: bool) -> String {
     let mut include_space = false;
 
     if prettier {
-        out.push_str("```\n#-----------------------------------------#");
+        out.push_str("```");
+    } else {
+        out.push_str("#-----------------------------------------#\n");
     }
 
     out.push_str(&format!(
@@ -626,23 +628,25 @@ pub fn format_response(planet: &Planet, prettier: bool) -> String {
         include_space = true;
     }
 
-    #[allow(unused_assignments)]
     if include_space {
         out.push_str("\n");
         include_space = true;
     }
 
-    #[allow(unused_assignments)]
     if let Some(note) = &planet.note {
         out.push_str(&format!("\nNote: {}", note));
         include_space = true;
     }
     
     if prettier {
-        out.push_str("\n#-----------------------------------------#\n```");
+        out.push_str("\n```");
+    } else {
+        out.push_str("\n#-----------------------------------------#");
     }
 
-    out.push_str("\n");
+    if include_space {
+        out.push_str("\n");
+    }
     out
 }
 
