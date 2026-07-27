@@ -527,7 +527,7 @@ pub fn format_response(planet: &Planet, prettier: bool) -> String {
     let mut include_space = false;
 
     if prettier {
-        out.push_str("```");
+        out.push_str("```\n#-----------------------------------------#");
     }
 
     out.push_str(&format!(
@@ -639,7 +639,7 @@ pub fn format_response(planet: &Planet, prettier: bool) -> String {
     }
     
     if prettier {
-        out.push_str("\n```");
+        out.push_str("\n#-----------------------------------------#\n```");
     }
 
     out.push_str("\n");
