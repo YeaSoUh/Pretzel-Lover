@@ -1,13 +1,254 @@
 use serde::Deserialize;
 use std::{
-    sync::{Arc, OnceLock}, time::Duration,
+    sync::{Arc, OnceLock},
+    time::Duration,
 };
 use turso::{Builder, Connection, Database, Row};
 use twilight_model::http::attachment::Attachment;
 
 use crate::AppState;
 
-static DB: OnceLock<Arc<Database>> = OnceLock::new();
+pub enum InputStyle {
+    Edit,
+    Read,
+}
+
+#[derive(Default)]
+pub struct PlanetQuery {
+    input: Option<&str>,
+    index: Option<&str>,
+    input_style: Option<InputStyle>,
+}
+
+impl PlanetQuery {
+    fn validate(key: &str, value: &str) -> anyhow::Result<()> {
+        match key {
+            "malachite" | "hematite" | "petroleum" | "coal" | "gummite" | "tektite" | "bauxite"
+            | "gold" | "cerussite" => {
+                let concentration = value.parse::<i8>()?;
+                if concentration < 0 || concentration > 3 {
+                    anyhow::bail!(format!("Wrong concentration information in {}", key))
+                }
+            }
+            "life" | "lime" | "saltpeter" | "quartz" | "ice" => {
+                if value != "true" && value != "false" {
+                    anyhow::bail!("{} is supposed to have true/false value", key);
+                }
+            }
+            "sector" => {
+                if !CHECKS
+                    .get()
+                    .ok_or(anyhow::anyhow!("CHECKS isn't initialized"))?
+                    .sectors
+                    .contains(&value.to_string())
+                {
+                    anyhow::bail!(format!("Sector type '{}' isn't in the game", value))
+                }
+            }
+            "tectonics" => {
+                if !CHECKS
+                    .get()
+                    .ok_or(anyhow::anyhow!("CHECKS isn't initialized"))?
+                    .tectonics
+                    .contains(&value.to_string())
+                {
+                    anyhow::bail!(format!("Tectonic type '{}' isn't in the game", value))
+                }
+            }
+            "atmosphere" => {
+                if !CHECKS
+                    .get()
+                    .ok_or(anyhow::anyhow!("CHECKS isn't initialized"))?
+                    .atmospheres
+                    .contains(&value.to_string())
+                {
+                    anyhow::bail!(format!("Atmospheric type '{}' isn't in the game", value))
+                }
+            }
+            "oceans" => {
+                if !CHECKS
+                    .get()
+                    .ok_or(anyhow::anyhow!("CHECKS isn't initialized"))?
+                    .oceans
+                    .contains(&value.to_string())
+                {
+                    anyhow::bail!(format!("Oceans type '{}' isn't in the game", value))
+                }
+            }
+            /*"trees" | "sub trees" => {
+                if !CHECKS
+                    .get()
+                    .ok_or(anyhow::anyhow!("CHECKS isn't initialized"))?
+                    .trees
+                    .contains(&value.to_string())
+                {
+                    anyhow::bail!(format!("Tree type '{}' isn't in the game", value))
+                }
+            }*/
+            _ => {}
+        }
+
+        Ok(())
+    }
+}
+
+struct PlanetResult {
+    results: Vec<Row>,
+    planet: Planet,
+}
+
+impl PlanetResult {
+    fn format(&self, prettier: bool) -> String {
+        let planet = self.planet;
+
+        let mut out = String::from("");
+        let mut include_space = false;
+
+        if prettier {
+            out.push_str("```");
+        } else {
+            out.push_str("#-----------------------------------------#\n");
+        }
+
+        out.push_str(&format!(
+            "ID: {}\nStar Id: {}\nName: {}\nRadius: {} studs\nGravity: {:.2}g\nTemperature: {}°C",
+            &planet.id,
+            &planet.star_id,
+            &planet.name,
+            &planet.radius,
+            &planet.gravity,
+            &planet.temperature,
+        ));
+        if let Some(sector) = &planet.sector {
+            out.push_str(&format!("\nSector: {}", sector));
+        }
+        out.push_str(&format!("\nTectonics: {}", &planet.tectonics));
+
+        if let Some(atmosphere) = &planet.atmosphere {
+            out.push_str(&format!("\nAtmosphere: {}", atmosphere))
+        }
+        if let Some(oceans) = &planet.oceans {
+            out.push_str(&format!("\nOceans: {}", oceans))
+        }
+        if let Some(rings) = &planet.rings {
+            out.push_str(&format!("\nRings: {}", rings))
+        }
+        if let Some(trees) = &planet.trees {
+            out.push_str(&format!("\nTrees: {}", trees))
+        }
+        if let Some(sub_trees) = &planet.sub_trees {
+            out.push_str(&format!("\nSub trees: {}", sub_trees))
+        }
+        out.push_str(&format!(
+            "\nLife: {}\nIs Moon: {}",
+            planet.life, planet.is_moon
+        ));
+        if let Some(moons) = &planet.moons {
+            out.push_str(&format!("\nMoons: {}", moons))
+        }
+        out.push_str("\n");
+
+        if let Some(malachite) = &planet.malachite {
+            out.push_str(&format!("\nMalachite: {}", malachite));
+            include_space = true;
+        }
+        if let Some(hematite) = &planet.hematite {
+            out.push_str(&format!("\nHematite: {:.4}", hematite));
+            include_space = true;
+        }
+        if let Some(petroleum) = &planet.petroleum {
+            out.push_str(&format!("\nPetroleum: {}", petroleum));
+            include_space = true;
+        }
+        if let Some(coal) = &planet.coal {
+            out.push_str(&format!("\nCoal: {}", coal));
+            include_space = true;
+        }
+        if let Some(gummite) = &planet.gummite {
+            out.push_str(&format!("\nGummite: {}", gummite));
+            include_space = true;
+        }
+        if let Some(tektite) = &planet.tektite {
+            out.push_str(&format!("\nTektite: {}", tektite));
+            include_space = true;
+        }
+        if let Some(bauxite) = &planet.bauxite {
+            out.push_str(&format!("\nBauxite: {}", bauxite));
+            include_space = true;
+        }
+        if let Some(gold) = &planet.gold {
+            out.push_str(&format!("\nGold: {}", gold));
+            include_space = true;
+        }
+        if let Some(cerussite) = &planet.cerussite {
+            out.push_str(&format!("\nCerussite: {}", cerussite));
+            include_space = true;
+        }
+        if include_space {
+            out.push_str("\n");
+            include_space = false;
+        }
+
+        if let Some(lime) = &planet.lime {
+            out.push_str(&format!("\nLime: {}", lime));
+            include_space = true;
+        }
+        if let Some(saltpeter) = &planet.saltpeter {
+            out.push_str(&format!("\nSaltpeter: {}", saltpeter));
+            include_space = true;
+        }
+        if let Some(quartz) = &planet.quartz {
+            out.push_str(&format!("\nQuartz: {}", quartz));
+            include_space = true;
+        }
+        if let Some(ice) = &planet.ice {
+            out.push_str(&format!("\nIce: {}", ice));
+            include_space = true;
+        }
+
+        if include_space {
+            out.push_str("\n");
+            include_space = false;
+        }
+
+        if let Some(note) = &planet.note {
+            out.push_str(&format!("\nNote: {}", note));
+            // include_space = true;
+        }
+
+        if prettier {
+            out.push_str("\n```");
+        } else {
+            out.push_str("\n#-----------------------------------------#");
+        }
+
+        if include_space {
+            out.push_str("\n");
+        }
+        out
+    }
+}
+
+struct DatabaseStruct {
+    database: Arc<Database>,
+}
+
+impl DatabaseStruct {
+    async fn get_conn() -> anyhow::Result<Connection> {
+        let db = DB
+            .get()
+            .ok_or_else(|| anyhow::anyhow!("DB not initialized"))?;
+        let db_ref = Arc::clone(db);
+
+        let conn = db_ref.as_ref().connect()?;
+        conn.busy_timeout(Duration::from_millis(1500))?; // 1.5 seconds
+        conn.pragma_update("journal_mode", "'mvcc'").await?; // enables concurrency writes which is good!
+
+        Ok(conn)
+    }
+}
+
+static DB: OnceLock<DatabaseStruct> = OnceLock::new();
 static CHECKS: OnceLock<Checks> = OnceLock::new();
 
 #[derive(Deserialize)]
@@ -21,7 +262,7 @@ struct Checks {
     #[serde(rename = "allowed_oceans")]
     oceans: Vec<String>,
     #[serde(rename = "allowed_trees")]
-    trees: Vec<String>,
+    trees: Vec<String>, // won't be used
 }
 
 #[derive(sea_query::Iden)]
@@ -102,8 +343,10 @@ pub struct Planet {
 
 pub async fn establish_database(database_url: &str) -> anyhow::Result<()> {
     let db = Builder::new_local(database_url).build().await?;
-    DB.set(Arc::new(db))
-        .map_err(|_| anyhow::anyhow!("DB is already initialized"))?;
+    DB.set(DatabaseStruct {
+        database: Arc::new(db),
+    })
+    .map_err(|_| anyhow::anyhow!("DB is already initialized"))?;
 
     let check: Checks = {
         let content = std::fs::read("configs.json")?;
@@ -117,12 +360,17 @@ pub async fn establish_database(database_url: &str) -> anyhow::Result<()> {
 }
 
 // i will maybe replace it with search_planets later
-pub async fn get_planet(index: &str, state: AppState) -> anyhow::Result<Planet> {
+pub async fn get_planet(query: &PlanetQuery, state: AppState) -> anyhow::Result<Planet> {
+    let index = query.index.ok_or_else(|| anyhow::anyhow!("No index"))?;
     if check_sql(index, state) {
         anyhow::bail!("Blacklisted sql");
     }
 
-    let conn = establish_connection().await?;
+    let conn = DB
+        .get()
+        .ok_or_else(|| anyhow::anyhow!("DB is not initialized"))?
+        .get_conn()
+        .await?;
 
     let mut planets = conn
         .query("SELECT * FROM planets WHERE id = ?1", [index])
@@ -135,7 +383,8 @@ pub async fn get_planet(index: &str, state: AppState) -> anyhow::Result<Planet> 
     Err(anyhow::anyhow!("Planet wasn't found"))
 }
 
-pub async fn remove_planet(index: &str, state: AppState) -> anyhow::Result<()> {
+pub async fn remove_planet(query: &PlanetQuery, state: AppState) -> anyhow::Result<()> {
+    let index = query.index.ok_or_else(|| anyhow::anyhow!("No index"))?;
     if check_sql(index, state) {
         anyhow::bail!("Blacklisted sql");
     }
@@ -154,19 +403,33 @@ pub async fn remove_planet(index: &str, state: AppState) -> anyhow::Result<()> {
         None => anyhow::bail!("Blacklisted sql"),
     }
 
-    let conn = establish_connection().await?;
+    let conn = DB
+        .get()
+        .ok_or_else(|| anyhow::anyhow!("DB is not initialized"))?
+        .get_conn()
+        .await?;
 
-    conn.execute("DELETE FROM planets WHERE id = ?1", (index,)).await?;
+    conn.execute("DELETE FROM planets WHERE id = ?1", (index,))
+        .await?;
 
     Ok(())
 }
 
-pub async fn search_planets(input: &str, state: AppState) -> anyhow::Result<Attachment> {
+pub async fn search_planets(query: &PlanetQuery, state: AppState) -> anyhow::Result<Attachment> {
+    let input = if let InputStyle::Read = query.input_style {
+        query.input.ok_or_else(anyhow::anyhow!("No index"))?
+    } else {
+        anyhow::bail!("Input style is not Read");
+    };
     if check_sql(input, state) {
         anyhow::bail!("Blacklisted sql");
     }
 
-    let conn = establish_connection().await?;
+    let conn = DB
+        .get()
+        .ok_or_else(|| anyhow::anyhow!("DB is not initialized"))?
+        .get_conn()
+        .await?;
     normalize(input);
 
     let mut planets = conn
@@ -197,8 +460,19 @@ pub async fn search_planets(input: &str, state: AppState) -> anyhow::Result<Atta
     ))
 }
 
-pub async fn edit_planet(index: &str, input: &str, bypass: bool) -> anyhow::Result<()> {
-    let conn = establish_connection().await?;
+// will change
+pub async fn edit_planet(query: &PlanetQuery, bypass: bool) -> anyhow::Result<()> {
+    let index = query.index.ok_or_else(|| anyhow::anyhow!("No index"))?;
+    let input = if let StyleInput::Edit = query.input_style {
+        query.input.ok_or_else(|| anyhow::anyhow!("No input"))?
+    } else {
+        anyhow::bail!("Input style is not Edit");
+    };
+    let conn = DB
+        .get()
+        .ok_or_else(|| anyhow::anyhow!("DB is not initialized"))?
+        .get_conn()
+        .await?;
 
     normalize(input);
 
@@ -267,7 +541,7 @@ pub async fn edit_planet(index: &str, input: &str, bypass: bool) -> anyhow::Resu
         let key = key.trim().to_lowercase();
         value = value.trim();
 
-        validate(&key, value)?;
+        query.validate(&key, value)?;
         match key.as_str() {
             "name" => name = Some(value.to_string()),
             "radius" => radius = Some(value.parse()?),
@@ -474,19 +748,7 @@ pub async fn edit_planet(index: &str, input: &str, bypass: bool) -> anyhow::Resu
     Ok(())
 }
 
-async fn establish_connection() -> anyhow::Result<Connection> {
-    let db = DB
-        .get()
-        .ok_or_else(|| anyhow::anyhow!("DB not initialized"))?;
-    let db_ref = Arc::clone(db);
-
-    let conn = db_ref.as_ref().connect()?;
-    conn.busy_timeout(Duration::from_millis(1500))?; // 1.5 seconds
-    conn.pragma_update("journal_mode", "'mvcc'").await?; // enables concurrency writes which is good!
-
-    Ok(conn)
-}
-
+// will change
 fn construct_planet(row: Row) -> anyhow::Result<Planet> {
     Ok(Planet {
         id: row.get(0)?,
@@ -530,205 +792,6 @@ fn check_sql(input: &str, state: AppState) -> bool {
         .any(|sql| input.contains(sql))
 }
 
-pub fn format_response(planet: &Planet, prettier: bool) -> String {
-    let mut out = String::from("");
-    let mut include_space = false;
-
-    if prettier {
-        out.push_str("```");
-    } else {
-        out.push_str("#-----------------------------------------#\n");
-    }
-
-    out.push_str(&format!(
-        "ID: {}\nStar Id: {}\nName: {}\nRadius: {} studs\nGravity: {:.2}g\nTemperature: {}°C",
-        &planet.id,
-        &planet.star_id,
-        &planet.name,
-        &planet.radius,
-        &planet.gravity,
-        &planet.temperature,
-    ));
-    if let Some(sector) = &planet.sector {
-        out.push_str(&format!("\nSector: {}", sector));
-    }
-    out.push_str(&format!("\nTectonics: {}", &planet.tectonics));
-
-    if let Some(atmosphere) = &planet.atmosphere {
-        out.push_str(&format!("\nAtmosphere: {}", atmosphere))
-    }
-    if let Some(oceans) = &planet.oceans {
-        out.push_str(&format!("\nOceans: {}", oceans))
-    }
-    if let Some(rings) = &planet.rings {
-        out.push_str(&format!("\nRings: {}", rings))
-    }
-    if let Some(trees) = &planet.trees {
-        out.push_str(&format!("\nTrees: {}", trees))
-    }
-    if let Some(sub_trees) = &planet.sub_trees {
-        out.push_str(&format!("\nSub trees: {}", sub_trees))
-    }
-    out.push_str(&format!(
-        "\nLife: {}\nIs Moon: {}",
-        planet.life, planet.is_moon
-    ));
-    if let Some(moons) = &planet.moons {
-        out.push_str(&format!("\nMoons: {}", moons))
-    }
-    out.push_str("\n");
-
-    if let Some(malachite) = &planet.malachite {
-        out.push_str(&format!("\nMalachite: {}", malachite));
-        include_space = true;
-    }
-    if let Some(hematite) = &planet.hematite {
-        out.push_str(&format!("\nHematite: {:.4}", hematite));
-        include_space = true;
-    }
-    if let Some(petroleum) = &planet.petroleum {
-        out.push_str(&format!("\nPetroleum: {}", petroleum));
-        include_space = true;
-    }
-    if let Some(coal) = &planet.coal {
-        out.push_str(&format!("\nCoal: {}", coal));
-        include_space = true;
-    }
-    if let Some(gummite) = &planet.gummite {
-        out.push_str(&format!("\nGummite: {}", gummite));
-        include_space = true;
-    }
-    if let Some(tektite) = &planet.tektite {
-        out.push_str(&format!("\nTektite: {}", tektite));
-        include_space = true;
-    }
-    if let Some(bauxite) = &planet.bauxite {
-        out.push_str(&format!("\nBauxite: {}", bauxite));
-        include_space = true;
-    }
-    if let Some(gold) = &planet.gold {
-        out.push_str(&format!("\nGold: {}", gold));
-        include_space = true;
-    }
-    if let Some(cerussite) = &planet.cerussite {
-        out.push_str(&format!("\nCerussite: {}", cerussite));
-        include_space = true;
-    }
-    if include_space {
-        out.push_str("\n");
-        include_space = false;
-    }
-
-    if let Some(lime) = &planet.lime {
-        out.push_str(&format!("\nLime: {}", lime));
-        include_space = true;
-    }
-    if let Some(saltpeter) = &planet.saltpeter {
-        out.push_str(&format!("\nSaltpeter: {}", saltpeter));
-        include_space = true;
-    }
-    if let Some(quartz) = &planet.quartz {
-        out.push_str(&format!("\nQuartz: {}", quartz));
-        include_space = true;
-    }
-    if let Some(ice) = &planet.ice {
-        out.push_str(&format!("\nIce: {}", ice));
-        include_space = true;
-    }
-
-    if include_space {
-        out.push_str("\n");
-        include_space = false;
-    }
-
-    if let Some(note) = &planet.note {
-        out.push_str(&format!("\nNote: {}", note));
-        // include_space = true;
-    }
-    
-    if prettier {
-        out.push_str("\n```");
-    } else {
-        out.push_str("\n#-----------------------------------------#");
-    }
-
-    if include_space {
-        out.push_str("\n");
-    }
-    out
-}
-
-fn normalize(input: &str) {
-    let _ = input.replace("&&", "and");
-    let _ = input.replace("||", "or");
-}
-
-fn validate(key: &str, value: &str) -> anyhow::Result<()> {
-    match key {
-        "malachite" | "hematite" | "petroleum" | "coal" | "gummite" | "tektite" | "bauxite"
-        | "gold" | "cerussite" => {
-            let concentration = value.parse::<i8>()?;
-            if concentration < 0 || concentration > 3 {
-                anyhow::bail!(format!("Wrong concentration information in {}", key))
-            }
-        }
-        "life" | "lime" | "saltpeter" | "quartz" | "ice" => {
-            if value != "true" && value != "false" {
-                anyhow::bail!("{} is supposed to have true/false value", key);
-            }
-        }
-        "sector" => {
-            if !CHECKS
-                .get()
-                .ok_or(anyhow::anyhow!("CHECKS isn't initialized"))?
-                .sectors
-                .contains(&value.to_string())
-            {
-                anyhow::bail!(format!("Sector type '{}' isn't in the game", value))
-            }
-        }
-        "tectonics" => {
-            if !CHECKS
-                .get()
-                .ok_or(anyhow::anyhow!("CHECKS isn't initialized"))?
-                .tectonics
-                .contains(&value.to_string())
-            {
-                anyhow::bail!(format!("Tectonic type '{}' isn't in the game", value))
-            }
-        }
-        "atmosphere" => {
-            if !CHECKS
-                .get()
-                .ok_or(anyhow::anyhow!("CHECKS isn't initialized"))?
-                .atmospheres
-                .contains(&value.to_string())
-            {
-                anyhow::bail!(format!("Atmospheric type '{}' isn't in the game", value))
-            }
-        }
-        "oceans" => {
-            if !CHECKS
-                .get()
-                .ok_or(anyhow::anyhow!("CHECKS isn't initialized"))?
-                .oceans
-                .contains(&value.to_string())
-            {
-                anyhow::bail!(format!("Oceans type '{}' isn't in the game", value))
-            }
-        }
-        "trees" | "sub trees" => {
-            if !CHECKS
-                .get()
-                .ok_or(anyhow::anyhow!("CHECKS isn't initialized"))?
-                .trees
-                .contains(&value.to_string())
-            {
-                anyhow::bail!(format!("Tree type '{}' isn't in the game", value))
-            }
-        }
-        _ => {}
-    }
-
-    Ok(())
+fn normalize(input: &str) -> &str {
+    input.replace("&&", "and").replace("||", "or")
 }
