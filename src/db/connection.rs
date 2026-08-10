@@ -64,7 +64,7 @@ impl PlanetQuery {
                     anyhow::bail!(format!("Atmospheric type '{}' isn't in the game", value))
                 }
             }
-            "oceans" => {
+            /*"oceans" => {
                 if !CHECKS
                     .get()
                     .ok_or(anyhow::anyhow!("CHECKS isn't initialized"))?
@@ -73,7 +73,7 @@ impl PlanetQuery {
                 {
                     anyhow::bail!(format!("Oceans type '{}' isn't in the game", value))
                 }
-            }
+            }*/
             /*"trees" | "sub trees" => {
                 if !CHECKS
                     .get()
@@ -110,11 +110,12 @@ impl PlanetResult {
         }
 
         out.push_str(&format!(
-            "ID: {}\nStar Id: {}\nName: {}\nRadius: {} studs\nGravity: {:.2}g\nTemperature: {}°C",
+            "ID: {}\nStar Id: {}\nName: {}\nRadius: {} studs\nGravity: {:.2}g\nConditions: {}\nTemperature: {}C",
             &planet.id,
             &planet.star_id,
             &planet.name,
             &planet.radius,
+            &planet.conditions,
             &planet.gravity,
             &planet.temperature,
         ));
@@ -139,9 +140,13 @@ impl PlanetResult {
             out.push_str(&format!("\nSub trees: {}", sub_trees))
         }
         out.push_str(&format!(
-            "\nLife: {}\nIs Moon: {}",
-            planet.life, planet.is_moon
+            "\nLife: {}",
+            planet.life
         ));
+        if let Some(life_type) = &planet.life_type {
+            out.push_str(&format!("\nLife type: {}", life_type));
+        }
+        out.push_str(&format!("\nIs Moon: {}", planet.is_moon));
         if let Some(moons) = &planet.moons {
             out.push_str(&format!("\nMoons: {}", moons))
         }
@@ -256,6 +261,7 @@ struct Checks {
     #[serde(rename = "allowed_atmospheres")]
     atmospheres: Vec<String>,
     #[serde(rename = "allowed_oceans")]
+    #[allow(dead_code)]
     oceans: Vec<String>,
     #[serde(rename = "allowed_trees")]
     #[allow(dead_code)]
@@ -270,6 +276,7 @@ enum Planets {
     Name,
     Radius,
     Gravity,
+    Conditions,
     Temperature,
     Sector,
     Tectonics,
@@ -279,6 +286,7 @@ enum Planets {
     Trees,
     SubTrees,
     Life,
+    LifeType,
     IsMoon,
     Moons,
     Malachite,
@@ -306,6 +314,8 @@ pub struct Planet {
     // default: 0 for radius, gravity and temp
     radius: f64,
     gravity: f64,
+    // default: "Unknown"
+    conditions: String,
     temperature: i64,
     sector: Option<String>,
     // Default: "Unknown" for tectonics
@@ -317,6 +327,7 @@ pub struct Planet {
     sub_trees: Option<String>,
     // default: false (only for life)
     life: bool,
+    life_type: Option<String>,
     is_moon: bool,
     moons: Option<i32>,
 
@@ -357,6 +368,7 @@ pub async fn establish_database(database_url: &str) -> anyhow::Result<()> {
 }
 
 // i will maybe replace it with search_planets later
+// edit: prob not
 pub async fn get_planet(query: &PlanetQuery, state: AppState) -> anyhow::Result<PlanetResult> {
     let index = query.index.as_ref().ok_or_else(|| anyhow::anyhow!("No index"))?;
     if check_sql(&index, state) {
@@ -453,7 +465,6 @@ pub async fn search_planets(query: &PlanetQuery, state: AppState) -> anyhow::Res
     ))
 }
 
-// will change
 pub async fn edit_planet(query: &PlanetQuery, bypass: bool) -> anyhow::Result<()> {
     let index = query.index.as_ref().ok_or_else(|| anyhow::anyhow!("No index"))?;
     let input = if let Some(InputStyle::Edit) = query.input_style {
@@ -494,6 +505,7 @@ pub async fn edit_planet(query: &PlanetQuery, bypass: bool) -> anyhow::Result<()
     let mut name: Option<String> = None;
     let mut radius: Option<f64> = None;
     let mut gravity: Option<f64> = None;
+    let mut conditions: Option<String> = None;
     let mut temperature: Option<i64> = None;
     let mut sector: Option<String> = None;
     let mut tectonics: Option<String> = None;
@@ -503,6 +515,7 @@ pub async fn edit_planet(query: &PlanetQuery, bypass: bool) -> anyhow::Result<()
     let mut trees: Option<String> = None;
     let mut sub_trees: Option<String> = None;
     let mut life: Option<bool> = None;
+    let mut life_type: Option<String> = None;
     let mut moons: Option<i32> = None;
 
     let mut malachite: Option<i32> = None;
@@ -530,7 +543,7 @@ pub async fn edit_planet(query: &PlanetQuery, bypass: bool) -> anyhow::Result<()
 
         let (key, mut value) = expr
             .split_once("=")
-            .ok_or(anyhow::anyhow!("deformed input"))?; // idk i may improve it later
+            .ok_or(anyhow::anyhow!("Invalid input"))?;
         let key = key.trim().to_lowercase();
         value = value.trim();
 
@@ -539,6 +552,7 @@ pub async fn edit_planet(query: &PlanetQuery, bypass: bool) -> anyhow::Result<()
             "name" => name = Some(value.to_string()),
             "radius" => radius = Some(value.parse()?),
             "gravity" => gravity = Some(value.parse()?),
+            "conditions" => conditions = Some(value.to_string()),
             "temperature" => temperature = Some(value.parse()?),
             "sector" => sector = Some(value.to_string()),
             "tectonics" => tectonics = Some(value.to_string()),
@@ -548,6 +562,7 @@ pub async fn edit_planet(query: &PlanetQuery, bypass: bool) -> anyhow::Result<()
             "trees" => trees = Some(value.to_string()),
             "sub trees" => sub_trees = Some(value.to_string()),
             "life" => life = Some(value.parse::<bool>()?),
+            "life type" => life_type =  Some(value.to_string()),
             "moons" => moons = Some(value.parse()?),
             "malachite" => malachite = Some(value.parse()?),
             "hematite" => hematite = Some(value.parse()?),
@@ -588,6 +603,11 @@ pub async fn edit_planet(query: &PlanetQuery, bypass: bool) -> anyhow::Result<()
             columns.push(Planets::Gravity);
             values.push(gravity.into());
             conflict.update_column(Planets::Gravity);
+        }
+        if let Some(conditions) = conditions {
+            columns.push(Planets::Conditions);
+            values.push(conditions.into());
+            conflict.update_column(Planets::Conditions);
         }
         if let Some(temperature) = temperature {
             columns.push(Planets::Temperature);
@@ -633,6 +653,11 @@ pub async fn edit_planet(query: &PlanetQuery, bypass: bool) -> anyhow::Result<()
             columns.push(Planets::Life);
             values.push(life.into());
             conflict.update_column(Planets::Life);
+        }
+        if let Some(life_type) = life_type {
+            columns.push(Planets::LifeType);
+            values.push(life_type.into());
+            conflict.update_column(Planets::LifeType);
         }
         if let Some(moons) = moons {
             columns.push(Planets::Moons);
@@ -741,39 +766,42 @@ pub async fn edit_planet(query: &PlanetQuery, bypass: bool) -> anyhow::Result<()
     Ok(())
 }
 
-// will change
 fn construct_planet(row: &Row) -> anyhow::Result<Planet> {
+    let mut idx = 0;
+
     Ok(Planet {
-        id: row.get(0)?,
-        star_id: row.get(1)?,
-        name: row.get(2)?,
-        radius: row.get(3)?,
-        gravity: row.get(4)?,
-        temperature: row.get(5)?,
-        sector: row.get(6)?,
-        tectonics: row.get(7)?,
-        atmosphere: row.get(8)?,
-        oceans: row.get(9)?,
-        rings: row.get(10)?,
-        trees: row.get(11)?,
-        sub_trees: row.get(12)?,
-        life: row.get::<i64>(13)? != 0,
-        is_moon: row.get::<i64>(14)? != 0,
-        moons: row.get::<Option<i32>>(15)?.map(|v| v),
-        malachite: row.get::<Option<i32>>(16)?.map(|v| v),
-        hematite: row.get(17)?,
-        petroleum: row.get::<Option<i32>>(18)?.map(|v| v),
-        coal: row.get::<Option<i32>>(19)?.map(|v| v),
-        gummite: row.get::<Option<i32>>(20)?.map(|v| v),
-        tektite: row.get::<Option<i32>>(21)?.map(|v| v),
-        bauxite: row.get::<Option<i32>>(22)?.map(|v| v),
-        gold: row.get::<Option<i32>>(23)?.map(|v| v),
-        cerussite: row.get::<Option<i32>>(24)?.map(|v| v),
-        lime: row.get::<Option<i64>>(25)?.map(|v| v != 0),
-        saltpeter: row.get::<Option<i64>>(26)?.map(|v| v != 0),
-        quartz: row.get::<Option<i64>>(27)?.map(|v| v != 0),
-        ice: row.get::<Option<i64>>(28)?.map(|v| v != 0),
-        note: row.get(29)?,
+        id: row.get(idx)?,
+        star_id: row.get({ idx += 1; idx })?,
+        name: row.get({ idx += 1; idx })?,
+        radius: row.get({ idx += 1; idx })?,
+        gravity: row.get({ idx += 1; idx })?,
+        conditions: row.get({ idx += 1; idx })?,
+        temperature: row.get({ idx += 1; idx })?,
+        sector: row.get({ idx += 1; idx })?,
+        tectonics: row.get({ idx += 1; idx })?,
+        atmosphere: row.get({ idx += 1; idx })?,
+        oceans: row.get({ idx += 1; idx })?,
+        rings: row.get({ idx += 1; idx })?,
+        trees: row.get({ idx += 1; idx })?,
+        sub_trees: row.get({ idx += 1; idx })?,
+        life: row.get::<i64>({ idx += 1; idx })? != 0,
+        life_type: row.get({ idx += 1; idx })?,
+        is_moon: row.get::<i64>({ idx += 1; idx })? != 0,
+        moons: row.get::<Option<i32>>({ idx += 1; idx })?.map(|v| v),
+        malachite: row.get::<Option<i32>>({ idx += 1; idx })?.map(|v| v),
+        hematite: row.get({ idx += 1; idx })?,
+        petroleum: row.get::<Option<i32>>({ idx += 1; idx })?.map(|v| v),
+        coal: row.get::<Option<i32>>({ idx += 1; idx })?.map(|v| v),
+        gummite: row.get::<Option<i32>>({ idx += 1; idx })?.map(|v| v),
+        tektite: row.get::<Option<i32>>({ idx += 1; idx })?.map(|v| v),
+        bauxite: row.get::<Option<i32>>({ idx += 1; idx })?.map(|v| v),
+        gold: row.get::<Option<i32>>({ idx += 1; idx })?.map(|v| v),
+        cerussite: row.get::<Option<i32>>({ idx += 1; idx })?.map(|v| v),
+        lime: row.get::<Option<i64>>({ idx += 1; idx })?.map(|v| v != 0),
+        saltpeter: row.get::<Option<i64>>({ idx += 1; idx })?.map(|v| v != 0),
+        quartz: row.get::<Option<i64>>({ idx += 1; idx })?.map(|v| v != 0),
+        ice: row.get::<Option<i64>>({ idx += 1; idx })?.map(|v| v != 0),
+        note: row.get({ idx += 1; idx })?,
     })
 }
 
