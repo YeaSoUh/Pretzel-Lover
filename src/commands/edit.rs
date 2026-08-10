@@ -8,7 +8,7 @@ use twilight_model::{
     id::Id,
 };
 
-use crate::{AppState, commands, db::connection};
+use crate::{AppState, commands, db::connection::{self, InputStyle, PlanetQuery}};
 
 pub async fn run(state: AppState, event: &Box<InteractionCreate>) -> anyhow::Result<()> {
     commands::defer(state.clone(), &event, false).await?;
@@ -66,7 +66,14 @@ pub async fn run(state: AppState, event: &Box<InteractionCreate>) -> anyhow::Res
         anyhow::anyhow!("shouldn't happen in edit.rs no user id who initiated this command")
     })? == &Id::new(1021835061433225296);
 
-    let result = connection::edit_planet(&index, &input, bypass).await;
+    let result = connection::edit_planet(
+        &PlanetQuery {
+            input: Some(input),
+            index: Some(index),
+            input_style: Some(InputStyle::Edit),
+        },
+        bypass,
+    ).await;
 
     if let Err(e) = result {
         state

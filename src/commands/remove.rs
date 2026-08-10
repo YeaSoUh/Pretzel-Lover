@@ -4,7 +4,7 @@ use twilight_model::{
     gateway::payload::incoming::InteractionCreate,
 };
 
-use crate::{AppState, commands, db::connection};
+use crate::{AppState, commands, db::connection::{self, PlanetQuery}};
 
 pub async fn run(state: AppState, event: &Box<InteractionCreate>) -> anyhow::Result<()> {
     commands::defer(state.clone(), &event, false).await?;
@@ -40,7 +40,14 @@ pub async fn run(state: AppState, event: &Box<InteractionCreate>) -> anyhow::Res
 
     let id = index.ok_or_else(|| anyhow::anyhow!("Missing id option"))?;
 
-    let result = connection::remove_planet(&id, state.clone()).await;
+    let result = connection::remove_planet(
+        &PlanetQuery {
+            input: None,
+            index: Some(id),
+            input_style: None,
+        },
+        state.clone(),
+    ).await;
 
     if let Err(e) = result {
         state

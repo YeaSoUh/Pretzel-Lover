@@ -13,21 +13,20 @@ pub enum InputStyle {
     Read,
 }
 
-#[derive(Default)]
 pub struct PlanetQuery {
-    input: Option<&str>,
-    index: Option<&str>,
-    input_style: Option<InputStyle>,
+    pub input: Option<String>,
+    pub index: Option<String>,
+    pub input_style: Option<InputStyle>,
 }
 
 impl PlanetQuery {
-    fn validate(key: &str, value: &str) -> anyhow::Result<()> {
+    fn validate(&self, key: &str, value: &str) -> anyhow::Result<()> {
         match key {
             "malachite" | "hematite" | "petroleum" | "coal" | "gummite" | "tektite" | "bauxite"
             | "gold" | "cerussite" => {
                 let concentration = value.parse::<i8>()?;
                 if concentration < 0 || concentration > 3 {
-                    anyhow::bail!(format!("Wrong concentration information in {}", key))
+                    anyhow::bail!("Wrong concentration information in {}", key)
                 }
             }
             "life" | "lime" | "saltpeter" | "quartz" | "ice" => {
@@ -92,14 +91,14 @@ impl PlanetQuery {
     }
 }
 
-struct PlanetResult {
-    results: Vec<Row>,
-    planet: Planet,
+pub struct PlanetResult {
+    pub planet: Planet,
+    pub result: Row,
 }
 
 impl PlanetResult {
-    fn format(&self, prettier: bool) -> String {
-        let planet = self.planet;
+    pub fn format(&self, prettier: bool) -> String {
+        let planet = &self.planet;
 
         let mut out = String::from("");
         let mut include_space = false;
@@ -234,11 +233,8 @@ struct DatabaseStruct {
 }
 
 impl DatabaseStruct {
-    async fn get_conn() -> anyhow::Result<Connection> {
-        let db = DB
-            .get()
-            .ok_or_else(|| anyhow::anyhow!("DB not initialized"))?;
-        let db_ref = Arc::clone(db);
+    async fn get_conn(&self) -> anyhow::Result<Connection> {
+        let db_ref = Arc::clone(&self.database); // no check cuz why not for rn
 
         let conn = db_ref.as_ref().connect()?;
         conn.busy_timeout(Duration::from_millis(1500))?; // 1.5 seconds
@@ -262,6 +258,7 @@ struct Checks {
     #[serde(rename = "allowed_oceans")]
     oceans: Vec<String>,
     #[serde(rename = "allowed_trees")]
+    #[allow(dead_code)]
     trees: Vec<String>, // won't be used
 }
 
@@ -360,11 +357,12 @@ pub async fn establish_database(database_url: &str) -> anyhow::Result<()> {
 }
 
 // i will maybe replace it with search_planets later
-pub async fn get_planet(query: &PlanetQuery, state: AppState) -> anyhow::Result<Planet> {
-    let index = query.index.ok_or_else(|| anyhow::anyhow!("No index"))?;
-    if check_sql(index, state) {
+pub async fn get_planet(query: &PlanetQuery, state: AppState) -> anyhow::Result<PlanetResult> {
+    let index = query.index.as_ref().ok_or_else(|| anyhow::anyhow!("No index"))?;
+    if check_sql(&index, state) {
         anyhow::bail!("Blacklisted sql");
     }
+    check_index(&index)?;
 
     let conn = DB
         .get()
@@ -373,35 +371,25 @@ pub async fn get_planet(query: &PlanetQuery, state: AppState) -> anyhow::Result<
         .await?;
 
     let mut planets = conn
-        .query("SELECT * FROM planets WHERE id = ?1", [index])
+        .query("SELECT * FROM planets WHERE id = ?1", [index.as_str()])
         .await?;
 
     if let Some(row) = planets.next().await? {
-        return Ok(construct_planet(row)?);
+        return Ok(
+            PlanetResult { planet: construct_planet(&row)?, result: row, }
+        );
     }
 
     Err(anyhow::anyhow!("Planet wasn't found"))
 }
 
 pub async fn remove_planet(query: &PlanetQuery, state: AppState) -> anyhow::Result<()> {
-    let index = query.index.ok_or_else(|| anyhow::anyhow!("No index"))?;
-    if check_sql(index, state) {
+    let index = query.index.as_ref().ok_or_else(|| anyhow::anyhow!("No index"))?;
+    if check_sql(&index, state) {
         anyhow::bail!("Blacklisted sql");
     }
 
-    // 2nd check: parser checker idk as extra check if check_sql fails
-    match index.split_once("-") {
-        Some((num1, num2)) => {
-            num1.parse::<i64>()
-                .map_err(|_| anyhow::anyhow!("Blacklisted sql"))?;
-            if let Err(_) = num2.parse::<i64>() {
-                if num2.split_once("-").is_none() {
-                    anyhow::bail!("Blacklisted sql")
-                }
-            }
-        }
-        None => anyhow::bail!("Blacklisted sql"),
-    }
+    check_index(index)?;
 
     let conn = DB
         .get()
@@ -409,19 +397,19 @@ pub async fn remove_planet(query: &PlanetQuery, state: AppState) -> anyhow::Resu
         .get_conn()
         .await?;
 
-    conn.execute("DELETE FROM planets WHERE id = ?1", (index,))
+    conn.execute("DELETE FROM planets WHERE id = ?1", (index.as_str(),))
         .await?;
 
     Ok(())
 }
 
 pub async fn search_planets(query: &PlanetQuery, state: AppState) -> anyhow::Result<Attachment> {
-    let input = if let InputStyle::Read = query.input_style {
-        query.input.ok_or_else(anyhow::anyhow!("No index"))?
+    let input = if let Some(InputStyle::Read) = query.input_style {
+        query.input.as_ref().ok_or_else(|| anyhow::anyhow!("No index"))?
     } else {
         anyhow::bail!("Input style is not Read");
     };
-    if check_sql(input, state) {
+    if check_sql(&input, state) {
         anyhow::bail!("Blacklisted sql");
     }
 
@@ -430,7 +418,7 @@ pub async fn search_planets(query: &PlanetQuery, state: AppState) -> anyhow::Res
         .ok_or_else(|| anyhow::anyhow!("DB is not initialized"))?
         .get_conn()
         .await?;
-    normalize(input);
+    let input = normalize(&input);
 
     let mut planets = conn
         .query(format!("SELECT * FROM planets WHERE {}", input), ())
@@ -445,9 +433,14 @@ pub async fn search_planets(query: &PlanetQuery, state: AppState) -> anyhow::Res
             break;
         }
 
+        let result = PlanetResult {
+            planet: construct_planet(&row)?,
+            result: row,
+        };
+
         file_content.push_str(&format!(
             "\n{}",
-            format_response(&construct_planet(row)?, false)
+            result.format(false)
         ));
 
         results_showed += 1;
@@ -462,9 +455,9 @@ pub async fn search_planets(query: &PlanetQuery, state: AppState) -> anyhow::Res
 
 // will change
 pub async fn edit_planet(query: &PlanetQuery, bypass: bool) -> anyhow::Result<()> {
-    let index = query.index.ok_or_else(|| anyhow::anyhow!("No index"))?;
-    let input = if let StyleInput::Edit = query.input_style {
-        query.input.ok_or_else(|| anyhow::anyhow!("No input"))?
+    let index = query.index.as_ref().ok_or_else(|| anyhow::anyhow!("No index"))?;
+    let input = if let Some(InputStyle::Edit) = query.input_style {
+        query.input.as_ref().ok_or_else(|| anyhow::anyhow!("No input"))?
     } else {
         anyhow::bail!("Input style is not Edit");
     };
@@ -474,7 +467,7 @@ pub async fn edit_planet(query: &PlanetQuery, bypass: bool) -> anyhow::Result<()
         .get_conn()
         .await?;
 
-    normalize(input);
+    let input = normalize(&input);
 
     let mut split_iter = index.split('-');
     let star_id: i64 = split_iter
@@ -541,7 +534,7 @@ pub async fn edit_planet(query: &PlanetQuery, bypass: bool) -> anyhow::Result<()
         let key = key.trim().to_lowercase();
         value = value.trim();
 
-        query.validate(&key, value)?;
+        query.validate(&key, &value)?;
         match key.as_str() {
             "name" => name = Some(value.to_string()),
             "radius" => radius = Some(value.parse()?),
@@ -749,7 +742,7 @@ pub async fn edit_planet(query: &PlanetQuery, bypass: bool) -> anyhow::Result<()
 }
 
 // will change
-fn construct_planet(row: Row) -> anyhow::Result<Planet> {
+fn construct_planet(row: &Row) -> anyhow::Result<Planet> {
     Ok(Planet {
         id: row.get(0)?,
         star_id: row.get(1)?,
@@ -792,6 +785,22 @@ fn check_sql(input: &str, state: AppState) -> bool {
         .any(|sql| input.contains(sql))
 }
 
-fn normalize(input: &str) -> &str {
+fn check_index(index: &str) -> anyhow::Result<()> {
+    match index.split_once("-") {
+        Some((num1, num2)) => {
+            num1.parse::<i64>()
+                .map_err(|_| anyhow::anyhow!("Blacklisted sql"))?;
+            if let Err(_) = num2.parse::<i64>() {
+                if num2.split_once("-").is_none() {
+                    anyhow::bail!("Blacklisted sql")
+                }
+            }
+            Ok(())
+        }
+        None => anyhow::bail!("Blacklisted sql"),
+    }
+}
+
+fn normalize(input: &str) -> String {
     input.replace("&&", "and").replace("||", "or")
 }
