@@ -8,7 +8,10 @@ use twilight_model::{
     id::Id,
 };
 
-use crate::{AppState, commands, db::connection::{self, InputStyle, PlanetQuery}};
+use crate::{
+    AppState, commands,
+    db::connection::{self, InputStyle, PlanetQuery},
+};
 
 pub async fn run(state: AppState, event: &Box<InteractionCreate>) -> anyhow::Result<()> {
     commands::defer(state.clone(), &event, false).await?;
@@ -73,7 +76,8 @@ pub async fn run(state: AppState, event: &Box<InteractionCreate>) -> anyhow::Res
             input_style: Some(InputStyle::Edit),
         },
         bypass,
-    ).await;
+    )
+    .await;
 
     if let Err(e) = result {
         state

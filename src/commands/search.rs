@@ -4,7 +4,10 @@ use twilight_model::{
     gateway::payload::incoming::InteractionCreate,
 };
 
-use crate::{AppState, commands, db::connection::{self, InputStyle, PlanetQuery}};
+use crate::{
+    AppState, commands,
+    db::connection::{self, InputStyle, PlanetQuery},
+};
 
 pub async fn run(state: AppState, event: &Box<InteractionCreate>) -> anyhow::Result<()> {
     commands::defer(state.clone(), &event, false).await?;
@@ -43,7 +46,7 @@ pub async fn run(state: AppState, event: &Box<InteractionCreate>) -> anyhow::Res
         &PlanetQuery {
             input: Some(input.ok_or_else(|| anyhow::anyhow!("No input"))?),
             index: None,
-            input_style: Some(InputStyle::Read)
+            input_style: Some(InputStyle::Read),
         },
         state.clone(),
     )

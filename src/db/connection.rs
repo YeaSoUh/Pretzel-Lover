@@ -24,14 +24,14 @@ impl PlanetQuery {
         match key {
             "malachite" | "hematite" | "petroleum" | "coal" | "gummite" | "tektite" | "bauxite"
             | "gold" | "cerussite" => {
-                let concentration = value.parse::<i8>()?;
-                if concentration < 0 || concentration > 3 {
+                let concentration = value.parse::<f64>()?;
+                if concentration < 0.0 || concentration > 3.0 {
                     anyhow::bail!("Wrong concentration information in {}", key)
                 }
             }
             "life" | "lime" | "saltpeter" | "quartz" | "ice" => {
                 if value != "true" && value != "false" {
-                    anyhow::bail!("{} is supposed to have true/false value", key);
+                    anyhow::bail!("{} is supposed to have true/false value", key)
                 }
             }
             "sector" => {
@@ -139,10 +139,7 @@ impl PlanetResult {
         if let Some(sub_trees) = &planet.sub_trees {
             out.push_str(&format!("\nSub trees: {}", sub_trees))
         }
-        out.push_str(&format!(
-            "\nLife: {}",
-            planet.life
-        ));
+        out.push_str(&format!("\nLife: {}", planet.life));
         if let Some(life_type) = &planet.life_type {
             out.push_str(&format!("\nLife type: {}", life_type));
         }
@@ -181,7 +178,7 @@ impl PlanetResult {
             include_space = true;
         }
         if let Some(gold) = &planet.gold {
-            out.push_str(&format!("\nGold: {}", gold));
+            out.push_str(&format!("\nGold: {:.4}", gold));
             include_space = true;
         }
         if let Some(cerussite) = &planet.cerussite {
@@ -242,7 +239,7 @@ impl DatabaseStruct {
         let db_ref = Arc::clone(&self.database); // no check cuz why not for rn
 
         let conn = db_ref.as_ref().connect()?;
-        conn.busy_timeout(Duration::from_millis(1500))?; // 1.5 seconds
+        conn.busy_timeout(Duration::from_millis(500))?; // 0.5 seconds
         conn.pragma_update("journal_mode", "'mvcc'").await?; // enables concurrency writes which is good!
 
         Ok(conn)
@@ -338,7 +335,7 @@ pub struct Planet {
     gummite: Option<i32>,
     tektite: Option<i32>,
     bauxite: Option<i32>,
-    gold: Option<i32>,
+    gold: Option<f64>,
     cerussite: Option<i32>,
 
     lime: Option<bool>,
@@ -367,10 +364,11 @@ pub async fn establish_database(database_url: &str) -> anyhow::Result<()> {
     Ok(())
 }
 
-// i will maybe replace it with search_planets later
-// edit: prob not
 pub async fn get_planet(query: &PlanetQuery, state: AppState) -> anyhow::Result<PlanetResult> {
-    let index = query.index.as_ref().ok_or_else(|| anyhow::anyhow!("No index"))?;
+    let index = query
+        .index
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("No index"))?;
     if check_sql(&index, state) {
         anyhow::bail!("Blacklisted sql");
     }
@@ -387,16 +385,20 @@ pub async fn get_planet(query: &PlanetQuery, state: AppState) -> anyhow::Result<
         .await?;
 
     if let Some(row) = planets.next().await? {
-        return Ok(
-            PlanetResult { planet: construct_planet(&row)?, result: row, }
-        );
+        return Ok(PlanetResult {
+            planet: construct_planet(&row)?,
+            result: row,
+        });
     }
 
     Err(anyhow::anyhow!("Planet wasn't found"))
 }
 
 pub async fn remove_planet(query: &PlanetQuery, state: AppState) -> anyhow::Result<()> {
-    let index = query.index.as_ref().ok_or_else(|| anyhow::anyhow!("No index"))?;
+    let index = query
+        .index
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("No index"))?;
     if check_sql(&index, state) {
         anyhow::bail!("Blacklisted sql");
     }
@@ -417,7 +419,10 @@ pub async fn remove_planet(query: &PlanetQuery, state: AppState) -> anyhow::Resu
 
 pub async fn search_planets(query: &PlanetQuery, state: AppState) -> anyhow::Result<Attachment> {
     let input = if let Some(InputStyle::Read) = query.input_style {
-        query.input.as_ref().ok_or_else(|| anyhow::anyhow!("No index"))?
+        query
+            .input
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("No index"))?
     } else {
         anyhow::bail!("Input style is not Read");
     };
@@ -450,10 +455,7 @@ pub async fn search_planets(query: &PlanetQuery, state: AppState) -> anyhow::Res
             result: row,
         };
 
-        file_content.push_str(&format!(
-            "\n{}",
-            result.format(false)
-        ));
+        file_content.push_str(&format!("\n{}", result.format(false)));
 
         results_showed += 1;
     }
@@ -466,9 +468,15 @@ pub async fn search_planets(query: &PlanetQuery, state: AppState) -> anyhow::Res
 }
 
 pub async fn edit_planet(query: &PlanetQuery, bypass: bool) -> anyhow::Result<()> {
-    let index = query.index.as_ref().ok_or_else(|| anyhow::anyhow!("No index"))?;
+    let index = query
+        .index
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("No index"))?;
     let input = if let Some(InputStyle::Edit) = query.input_style {
-        query.input.as_ref().ok_or_else(|| anyhow::anyhow!("No input"))?
+        query
+            .input
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("No input"))?
     } else {
         anyhow::bail!("Input style is not Edit");
     };
@@ -525,7 +533,7 @@ pub async fn edit_planet(query: &PlanetQuery, bypass: bool) -> anyhow::Result<()
     let mut gummite: Option<i32> = None;
     let mut tektite: Option<i32> = None;
     let mut bauxite: Option<i32> = None;
-    let mut gold: Option<i32> = None;
+    let mut gold: Option<f32> = None;
     let mut cerussite: Option<i32> = None;
 
     let mut lime: Option<bool> = None;
@@ -562,7 +570,7 @@ pub async fn edit_planet(query: &PlanetQuery, bypass: bool) -> anyhow::Result<()
             "trees" => trees = Some(value.to_string()),
             "sub trees" => sub_trees = Some(value.to_string()),
             "life" => life = Some(value.parse::<bool>()?),
-            "life type" => life_type =  Some(value.to_string()),
+            "life type" => life_type = Some(value.to_string()),
             "moons" => moons = Some(value.parse()?),
             "malachite" => malachite = Some(value.parse()?),
             "hematite" => hematite = Some(value.parse()?),
@@ -771,46 +779,164 @@ fn construct_planet(row: &Row) -> anyhow::Result<Planet> {
 
     Ok(Planet {
         id: row.get(idx)?,
-        star_id: row.get({ idx += 1; idx })?,
-        name: row.get({ idx += 1; idx })?,
-        radius: row.get({ idx += 1; idx })?,
-        gravity: row.get({ idx += 1; idx })?,
-        conditions: row.get({ idx += 1; idx })?,
-        temperature: row.get({ idx += 1; idx })?,
-        sector: row.get({ idx += 1; idx })?,
-        tectonics: row.get({ idx += 1; idx })?,
-        atmosphere: row.get({ idx += 1; idx })?,
-        oceans: row.get({ idx += 1; idx })?,
-        rings: row.get({ idx += 1; idx })?,
-        trees: row.get({ idx += 1; idx })?,
-        sub_trees: row.get({ idx += 1; idx })?,
-        life: row.get::<i64>({ idx += 1; idx })? != 0,
-        life_type: row.get({ idx += 1; idx })?,
-        is_moon: row.get::<i64>({ idx += 1; idx })? != 0,
-        moons: row.get::<Option<i32>>({ idx += 1; idx })?.map(|v| v),
-        malachite: row.get::<Option<i32>>({ idx += 1; idx })?.map(|v| v),
-        hematite: row.get({ idx += 1; idx })?,
-        petroleum: row.get::<Option<i32>>({ idx += 1; idx })?.map(|v| v),
-        coal: row.get::<Option<i32>>({ idx += 1; idx })?.map(|v| v),
-        gummite: row.get::<Option<i32>>({ idx += 1; idx })?.map(|v| v),
-        tektite: row.get::<Option<i32>>({ idx += 1; idx })?.map(|v| v),
-        bauxite: row.get::<Option<i32>>({ idx += 1; idx })?.map(|v| v),
-        gold: row.get::<Option<i32>>({ idx += 1; idx })?.map(|v| v),
-        cerussite: row.get::<Option<i32>>({ idx += 1; idx })?.map(|v| v),
-        lime: row.get::<Option<i64>>({ idx += 1; idx })?.map(|v| v != 0),
-        saltpeter: row.get::<Option<i64>>({ idx += 1; idx })?.map(|v| v != 0),
-        quartz: row.get::<Option<i64>>({ idx += 1; idx })?.map(|v| v != 0),
-        ice: row.get::<Option<i64>>({ idx += 1; idx })?.map(|v| v != 0),
-        note: row.get({ idx += 1; idx })?,
+        star_id: row.get({
+            idx += 1;
+            idx
+        })?,
+        name: row.get({
+            idx += 1;
+            idx
+        })?,
+        radius: row.get({
+            idx += 1;
+            idx
+        })?,
+        gravity: row.get({
+            idx += 1;
+            idx
+        })?,
+        conditions: row.get({
+            idx += 1;
+            idx
+        })?,
+        temperature: row.get({
+            idx += 1;
+            idx
+        })?,
+        sector: row.get({
+            idx += 1;
+            idx
+        })?,
+        tectonics: row.get({
+            idx += 1;
+            idx
+        })?,
+        atmosphere: row.get({
+            idx += 1;
+            idx
+        })?,
+        oceans: row.get({
+            idx += 1;
+            idx
+        })?,
+        rings: row.get({
+            idx += 1;
+            idx
+        })?,
+        trees: row.get({
+            idx += 1;
+            idx
+        })?,
+        sub_trees: row.get({
+            idx += 1;
+            idx
+        })?,
+        life: row.get::<i64>({
+            idx += 1;
+            idx
+        })? != 0,
+        life_type: row.get({
+            idx += 1;
+            idx
+        })?,
+        is_moon: row.get::<i64>({
+            idx += 1;
+            idx
+        })? != 0,
+        moons: row
+            .get::<Option<i32>>({
+                idx += 1;
+                idx
+            })?
+            .map(|v| v),
+        malachite: row
+            .get::<Option<i32>>({
+                idx += 1;
+                idx
+            })?
+            .map(|v| v),
+        hematite: row.get({
+            idx += 1;
+            idx
+        })?,
+        petroleum: row
+            .get::<Option<i32>>({
+                idx += 1;
+                idx
+            })?
+            .map(|v| v),
+        coal: row
+            .get::<Option<i32>>({
+                idx += 1;
+                idx
+            })?
+            .map(|v| v),
+        gummite: row
+            .get::<Option<i32>>({
+                idx += 1;
+                idx
+            })?
+            .map(|v| v),
+        tektite: row
+            .get::<Option<i32>>({
+                idx += 1;
+                idx
+            })?
+            .map(|v| v),
+        bauxite: row
+            .get::<Option<i32>>({
+                idx += 1;
+                idx
+            })?
+            .map(|v| v),
+        gold: row.get({
+            idx += 1;
+            idx
+        })?,
+        cerussite: row
+            .get::<Option<i32>>({
+                idx += 1;
+                idx
+            })?
+            .map(|v| v),
+        lime: row
+            .get::<Option<i64>>({
+                idx += 1;
+                idx
+            })?
+            .map(|v| v != 0),
+        saltpeter: row
+            .get::<Option<i64>>({
+                idx += 1;
+                idx
+            })?
+            .map(|v| v != 0),
+        quartz: row
+            .get::<Option<i64>>({
+                idx += 1;
+                idx
+            })?
+            .map(|v| v != 0),
+        ice: row
+            .get::<Option<i64>>({
+                idx += 1;
+                idx
+            })?
+            .map(|v| v != 0),
+        note: row.get({
+            idx += 1;
+            idx
+        })?,
     })
 }
 
 fn check_sql(input: &str, state: AppState) -> bool {
+    let upper = input.to_uppercase();
     state
         .configs
         .sql_blacklist
         .iter()
-        .any(|sql| input.contains(sql))
+        .any(|sql| upper.contains(sql))
 }
 
 fn check_index(index: &str) -> anyhow::Result<()> {
