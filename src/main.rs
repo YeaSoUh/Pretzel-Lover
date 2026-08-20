@@ -31,7 +31,7 @@ pub struct Configs {
 #[derive(Clone)]
 pub struct AppState {
     client: Arc<Client>,
-    configs: Arc<Configs>, // already includes db
+    configs: Arc<Configs>,
     application_id: Id<ApplicationMarker>,
 }
 

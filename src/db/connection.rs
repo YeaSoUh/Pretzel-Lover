@@ -1,5 +1,6 @@
 use serde::Deserialize;
 use std::{
+    borrow::Cow,
     sync::{Arc, OnceLock},
     time::Duration,
 };
@@ -955,6 +956,10 @@ fn check_index(index: &str) -> anyhow::Result<()> {
     }
 }
 
-fn normalize(input: &str) -> String {
-    input.replace("&&", "and").replace("||", "or")
+fn normalize(input: &str) -> Cow<'_, str> {
+    if input.contains("&&") || input.contains("||") {
+        Cow::Owned(input.replace("&&", "and").replace("||", "or"))
+    } else {
+        Cow::Borrowed(input)
+    }
 }
