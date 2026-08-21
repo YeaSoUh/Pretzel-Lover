@@ -9,15 +9,14 @@ use twilight_model::http::attachment::Attachment;
 
 use crate::AppState;
 
-pub enum InputStyle {
-    Edit,
-    Read,
+pub enum Input {
+    Edit(String),
+    Read(String),
 }
 
 pub struct PlanetQuery {
-    pub input: Option<String>,
+    pub input: Option<Input>,
     pub index: Option<String>,
-    pub input_style: Option<InputStyle>,
 }
 
 impl PlanetQuery {
@@ -419,15 +418,12 @@ pub async fn remove_planet(query: &PlanetQuery, state: AppState) -> anyhow::Resu
 }
 
 pub async fn search_planets(query: &PlanetQuery, state: AppState) -> anyhow::Result<Attachment> {
-    let input = if let Some(InputStyle::Read) = query.input_style {
-        query
-            .input
-            .as_ref()
-            .ok_or_else(|| anyhow::anyhow!("No index"))?
+    let input = if let Some(Input::Read(input)) = &query.input {
+        input
     } else {
-        anyhow::bail!("Input style is not Read");
+        anyhow::bail!("Input is not Read");
     };
-    if check_sql(&input, state) {
+    if check_sql(input, state) {
         anyhow::bail!("Blacklisted sql");
     }
 
@@ -473,13 +469,10 @@ pub async fn edit_planet(query: &PlanetQuery, bypass: bool) -> anyhow::Result<()
         .index
         .as_ref()
         .ok_or_else(|| anyhow::anyhow!("No index"))?;
-    let input = if let Some(InputStyle::Edit) = query.input_style {
-        query
-            .input
-            .as_ref()
-            .ok_or_else(|| anyhow::anyhow!("No input"))?
+    let input = if let Some(Input::Edit(input)) = &query.input {
+        input
     } else {
-        anyhow::bail!("Input style is not Edit");
+        anyhow::bail!("Input is not Edit");
     };
     let conn = DB
         .get()

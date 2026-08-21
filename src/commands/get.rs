@@ -47,7 +47,6 @@ pub async fn run(state: AppState, event: &Box<InteractionCreate>) -> anyhow::Res
         &PlanetQuery {
             input: None,
             index: Some(id),
-            input_style: None,
         },
         state.clone(),
     )

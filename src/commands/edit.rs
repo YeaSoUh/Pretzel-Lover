@@ -9,8 +9,7 @@ use twilight_model::{
 };
 
 use crate::{
-    AppState, commands,
-    db::connection::{self, InputStyle, PlanetQuery},
+    AppState, commands, db::connection::{self, Input, PlanetQuery},
 };
 
 pub async fn run(state: AppState, event: &Box<InteractionCreate>) -> anyhow::Result<()> {
@@ -71,9 +70,8 @@ pub async fn run(state: AppState, event: &Box<InteractionCreate>) -> anyhow::Res
 
     let result = connection::edit_planet(
         &PlanetQuery {
-            input: Some(input),
+            input: Some(Input::Edit(input)),
             index: Some(index),
-            input_style: Some(InputStyle::Edit),
         },
         bypass,
     )
