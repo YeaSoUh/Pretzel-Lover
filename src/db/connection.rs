@@ -9,18 +9,13 @@ use twilight_model::http::attachment::Attachment;
 
 use crate::AppState;
 
-pub enum Input {
-    Edit(String),
-    Read(String),
+pub struct EditRequest {
+    pub input: String,
+    pub index: String,
 }
 
-pub struct PlanetQuery {
-    pub input: Option<Input>,
-    pub index: Option<String>,
-}
-
-impl PlanetQuery {
-    fn validate(&self, key: &str, value: &str) -> anyhow::Result<()> {
+impl EditRequest {
+    fn validate(key: &str, value: &str) -> anyhow::Result<()> {
         match key {
             "malachite" | "hematite" | "petroleum" | "coal" | "gummite" | "tektite" | "bauxite"
             | "gold" | "cerussite" => {
@@ -34,6 +29,7 @@ impl PlanetQuery {
                     anyhow::bail!("{} is supposed to have true/false value", key)
                 }
             }
+            // will be improved later
             "sector" => {
                 if !CHECKS
                     .get()
@@ -115,8 +111,8 @@ impl PlanetResult {
             &planet.star_id,
             &planet.name,
             &planet.radius,
-            &planet.conditions,
             &planet.gravity,
+            &planet.conditions,
             &planet.temperature,
         ));
         if let Some(sector) = &planet.sector {
@@ -236,7 +232,7 @@ struct DatabaseStruct {
 
 impl DatabaseStruct {
     async fn get_conn(&self) -> anyhow::Result<Connection> {
-        let db_ref = Arc::clone(&self.database); // no check cuz why not for rn
+        let db_ref = Arc::clone(&self.database);
 
         let conn = db_ref.as_ref().connect()?;
         conn.busy_timeout(Duration::from_millis(500))?; // 0.5 seconds
@@ -364,15 +360,11 @@ pub async fn establish_database(database_url: &str) -> anyhow::Result<()> {
     Ok(())
 }
 
-pub async fn get_planet(query: &PlanetQuery, state: AppState) -> anyhow::Result<PlanetResult> {
-    let index = query
-        .index
-        .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("No index"))?;
-    if check_sql(&index, state) {
+pub async fn get_planet(index: &str, state: AppState) -> anyhow::Result<PlanetResult> {
+    if check_sql(index, state) {
         anyhow::bail!("Blacklisted sql");
     }
-    check_index(&index)?;
+    check_index(index)?;
 
     let conn = DB
         .get()
@@ -381,7 +373,7 @@ pub async fn get_planet(query: &PlanetQuery, state: AppState) -> anyhow::Result<
         .await?;
 
     let mut planets = conn
-        .query("SELECT * FROM planets WHERE id = ?1", [index.as_str()])
+        .query("SELECT * FROM planets WHERE id = ?1", [index.to_string()])
         .await?;
 
     if let Some(row) = planets.next().await? {
@@ -394,12 +386,8 @@ pub async fn get_planet(query: &PlanetQuery, state: AppState) -> anyhow::Result<
     Err(anyhow::anyhow!("Planet wasn't found"))
 }
 
-pub async fn remove_planet(query: &PlanetQuery, state: AppState) -> anyhow::Result<()> {
-    let index = query
-        .index
-        .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("No index"))?;
-    if check_sql(&index, state) {
+pub async fn remove_planet(index: &str, state: AppState) -> anyhow::Result<()> {
+    if check_sql(index, state) {
         anyhow::bail!("Blacklisted sql");
     }
 
@@ -411,18 +399,13 @@ pub async fn remove_planet(query: &PlanetQuery, state: AppState) -> anyhow::Resu
         .get_conn()
         .await?;
 
-    conn.execute("DELETE FROM planets WHERE id = ?1", (index.as_str(),))
+    conn.execute("DELETE FROM planets WHERE id = ?1", (index.to_string(),))
         .await?;
 
     Ok(())
 }
 
-pub async fn search_planets(query: &PlanetQuery, state: AppState) -> anyhow::Result<Attachment> {
-    let input = if let Some(Input::Read(input)) = &query.input {
-        input
-    } else {
-        anyhow::bail!("Input is not Read");
-    };
+pub async fn search_planets(input: &str, state: AppState) -> anyhow::Result<Attachment> {
     if check_sql(input, state) {
         anyhow::bail!("Blacklisted sql");
     }
@@ -464,16 +447,9 @@ pub async fn search_planets(query: &PlanetQuery, state: AppState) -> anyhow::Res
     ))
 }
 
-pub async fn edit_planet(query: &PlanetQuery, bypass: bool) -> anyhow::Result<()> {
-    let index = query
-        .index
-        .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("No index"))?;
-    let input = if let Some(Input::Edit(input)) = &query.input {
-        input
-    } else {
-        anyhow::bail!("Input is not Edit");
-    };
+pub async fn edit_planet(query: &EditRequest, bypass: bool) -> anyhow::Result<()> {
+    let index = &query.index;
+    let input = &query.input;
     let conn = DB
         .get()
         .ok_or_else(|| anyhow::anyhow!("DB is not initialized"))?
@@ -549,7 +525,7 @@ pub async fn edit_planet(query: &PlanetQuery, bypass: bool) -> anyhow::Result<()
         let key = key.trim().to_lowercase();
         value = value.trim();
 
-        query.validate(&key, &value)?;
+        EditRequest::validate(&key, &value)?;
         match key.as_str() {
             "name" => name = Some(value.to_string()),
             "radius" => radius = Some(value.parse()?),

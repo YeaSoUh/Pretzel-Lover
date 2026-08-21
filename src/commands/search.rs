@@ -4,9 +4,7 @@ use twilight_model::{
     gateway::payload::incoming::InteractionCreate,
 };
 
-use crate::{
-    AppState, commands, db::connection::{self, Input, PlanetQuery},
-};
+use crate::{AppState, commands, db::connection};
 
 pub async fn run(state: AppState, event: &Box<InteractionCreate>) -> anyhow::Result<()> {
     commands::defer(state.clone(), &event, false).await?;
@@ -43,14 +41,7 @@ pub async fn run(state: AppState, event: &Box<InteractionCreate>) -> anyhow::Res
 
     let input = input.ok_or_else(|| anyhow::anyhow!("No input"))?;
 
-    let result = connection::search_planets(
-        &PlanetQuery {
-            input: Some(Input::Read(input)),
-            index: None,
-        },
-        state.clone(),
-    )
-    .await;
+    let result = connection::search_planets(&input, state.clone()).await;
 
     match result {
         Ok(attachment) => {
