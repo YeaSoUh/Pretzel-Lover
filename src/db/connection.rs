@@ -1,6 +1,9 @@
 use serde::Deserialize;
 use std::{
-    borrow::Cow, fmt::Display, sync::{Arc, OnceLock}, time::Duration,
+    borrow::Cow,
+    fmt::Display,
+    sync::{Arc, OnceLock},
+    time::Duration,
 };
 use turso::{Builder, Connection, Database, Row};
 use twilight_model::http::attachment::Attachment;
