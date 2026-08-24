@@ -919,7 +919,7 @@ fn check_index(index: &str) -> anyhow::Result<()> {
             num1.parse::<i64>()
                 .map_err(|_| anyhow::anyhow!("Blacklisted sql"))?;
             if let Err(_) = num2.parse::<i64>() {
-                if num2.split_once("-").is_none() {
+                if num2.split_once("-").is_some() {
                     anyhow::bail!("Blacklisted sql")
                 }
             }
