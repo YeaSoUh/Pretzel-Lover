@@ -1,8 +1,6 @@
 use serde::Deserialize;
 use std::{
-    borrow::Cow,
-    sync::{Arc, OnceLock},
-    time::Duration,
+    borrow::Cow, fmt::Display, sync::{Arc, OnceLock}, time::Duration,
 };
 use turso::{Builder, Connection, Database, Row};
 use twilight_model::http::attachment::Attachment;
@@ -90,22 +88,23 @@ impl EditRequest {
 pub struct PlanetResult {
     pub planet: Planet,
     pub result: Row,
+    prettier: bool,
 }
 
-impl PlanetResult {
-    pub fn format(&self, prettier: bool) -> String {
+impl Display for PlanetResult {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let planet = &self.planet;
 
-        let mut out = String::from("");
         let mut include_space = false;
 
-        if prettier {
-            out.push_str("```");
+        if self.prettier {
+            write!(f, "```")?;
         } else {
-            out.push_str("#-----------------------------------------#\n");
+            write!(f, "#-----------------------------------------#\n")?;
         }
 
-        out.push_str(&format!(
+        write!(
+            f,
             "ID: {}\nStar Id: {}\nName: {}\nRadius: {} studs\nGravity: {:.2}g\nConditions: {}\nTemperature: {}C",
             &planet.id,
             &planet.star_id,
@@ -114,118 +113,116 @@ impl PlanetResult {
             &planet.gravity,
             &planet.conditions,
             &planet.temperature,
-        ));
+        )?;
         if let Some(sector) = &planet.sector {
-            out.push_str(&format!("\nSector: {}", sector));
+            write!(f, "\nSector: {}", sector)?;
         }
-        out.push_str(&format!("\nTectonics: {}", &planet.tectonics));
+        write!(f, "\nTectonics: {}", &planet.tectonics)?;
 
         if let Some(atmosphere) = &planet.atmosphere {
-            out.push_str(&format!("\nAtmosphere: {}", atmosphere))
+            write!(f, "\nAtmosphere: {}", atmosphere)?;
         }
         if let Some(oceans) = &planet.oceans {
-            out.push_str(&format!("\nOceans: {}", oceans))
+            write!(f, "\nOceans: {}", oceans)?;
         }
         if let Some(rings) = &planet.rings {
-            out.push_str(&format!("\nRings: {}", rings))
+            write!(f, "\nRings: {}", rings)?;
         }
         if let Some(trees) = &planet.trees {
-            out.push_str(&format!("\nTrees: {}", trees))
+            write!(f, "\nTrees: {}", trees)?;
         }
         if let Some(sub_trees) = &planet.sub_trees {
-            out.push_str(&format!("\nSub trees: {}", sub_trees))
+            write!(f, "\nSub trees: {}", sub_trees)?;
         }
-        out.push_str(&format!("\nLife: {}", planet.life));
+        write!(f, "\nLife: {}", planet.life)?;
         if let Some(life_type) = &planet.life_type {
-            out.push_str(&format!("\nLife type: {}", life_type));
+            write!(f, "\nLife type: {}", life_type)?;
         }
-        out.push_str(&format!("\nIs Moon: {}", planet.is_moon));
+        write!(f, "\nIs Moon: {}", planet.is_moon)?;
         if let Some(moons) = &planet.moons {
-            out.push_str(&format!("\nMoons: {}", moons))
+            write!(f, "\nMoons: {}", moons)?;
         }
-        out.push_str("\n");
+        writeln!(f)?;
 
         if let Some(malachite) = &planet.malachite {
-            out.push_str(&format!("\nMalachite: {}", malachite));
+            write!(f, "\nMalachite: {}", malachite)?;
             include_space = true;
         }
         if let Some(hematite) = &planet.hematite {
-            out.push_str(&format!("\nHematite: {:.4}", hematite));
+            write!(f, "\nHematite: {:.4}", hematite)?;
             include_space = true;
         }
         if let Some(petroleum) = &planet.petroleum {
-            out.push_str(&format!("\nPetroleum: {}", petroleum));
+            write!(f, "\nPetroleum: {}", petroleum)?;
             include_space = true;
         }
         if let Some(coal) = &planet.coal {
-            out.push_str(&format!("\nCoal: {}", coal));
+            write!(f, "\nCoal: {}", coal)?;
             include_space = true;
         }
         if let Some(gummite) = &planet.gummite {
-            out.push_str(&format!("\nGummite: {}", gummite));
+            write!(f, "\nGummite: {}", gummite)?;
             include_space = true;
         }
         if let Some(tektite) = &planet.tektite {
-            out.push_str(&format!("\nTektite: {}", tektite));
+            write!(f, "\nTektite: {}", tektite)?;
             include_space = true;
         }
         if let Some(bauxite) = &planet.bauxite {
-            out.push_str(&format!("\nBauxite: {}", bauxite));
+            write!(f, "\nBauxite: {}", bauxite)?;
             include_space = true;
         }
         if let Some(gold) = &planet.gold {
-            out.push_str(&format!("\nGold: {:.4}", gold));
+            write!(f, "\nGold: {:.4}", gold)?;
             include_space = true;
         }
         if let Some(cerussite) = &planet.cerussite {
-            out.push_str(&format!("\nCerussite: {}", cerussite));
+            write!(f, "\nCerussite: {}", cerussite)?;
             include_space = true;
         }
         if include_space {
-            out.push_str("\n");
+            writeln!(f)?;
             include_space = false;
         }
 
         if let Some(lime) = &planet.lime {
-            out.push_str(&format!("\nLime: {}", lime));
+            write!(f, "\nLime: {}", lime)?;
             include_space = true;
         }
         if let Some(saltpeter) = &planet.saltpeter {
-            out.push_str(&format!("\nSaltpeter: {}", saltpeter));
+            write!(f, "\nSaltpeter: {}", saltpeter)?;
             include_space = true;
         }
         if let Some(quartz) = &planet.quartz {
-            out.push_str(&format!("\nQuartz: {}", quartz));
+            write!(f, "\nQuartz: {}", quartz)?;
             include_space = true;
         }
         if let Some(ice) = &planet.ice {
-            out.push_str(&format!("\nIce: {}", ice));
+            write!(f, "\nIce: {}", ice)?;
             include_space = true;
         }
 
         if include_space {
-            out.push_str("\n");
+            writeln!(f)?;
             include_space = false;
         }
 
         if let Some(note) = &planet.note {
-            out.push_str(&format!("\nNote: {}", note));
-            // include_space = true;
+            write!(f, "\nNote: {}", note)?;
         }
 
-        if prettier {
-            out.push_str("\n```");
+        if self.prettier {
+            write!(f, "\n```")?;
         } else {
-            out.push_str("\n#-----------------------------------------#");
+            write!(f, "\n#-----------------------------------------#")?;
         }
 
         if include_space {
-            out.push_str("\n");
+            writeln!(f)?;
         }
-        out
+        Ok(())
     }
 }
-
 struct DatabaseStruct {
     database: Arc<Database>,
 }
@@ -253,9 +250,11 @@ struct Checks {
     tectonics: Vec<String>,
     #[serde(rename = "allowed_atmospheres")]
     atmospheres: Vec<String>,
+    #[serde(skip)]
     #[serde(rename = "allowed_oceans")]
     #[allow(dead_code)]
     oceans: Vec<String>,
+    #[serde(skip)]
     #[serde(rename = "allowed_trees")]
     #[allow(dead_code)]
     trees: Vec<String>, // won't be used
@@ -380,6 +379,7 @@ pub async fn get_planet(index: &str, state: AppState) -> anyhow::Result<PlanetRe
         return Ok(PlanetResult {
             planet: construct_planet(&row)?,
             result: row,
+            prettier: true,
         });
     }
 
@@ -433,9 +433,10 @@ pub async fn search_planets(input: &str, state: AppState) -> anyhow::Result<Atta
         let result = PlanetResult {
             planet: construct_planet(&row)?,
             result: row,
+            prettier: false,
         };
 
-        file_content.push_str(&format!("\n{}", result.format(false)));
+        file_content.push_str(&format!("\n{}", result.to_string()));
 
         results_showed += 1;
     }
