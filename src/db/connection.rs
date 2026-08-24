@@ -917,9 +917,13 @@ fn check_index(index: &str) -> anyhow::Result<()> {
     match index.split_once("-") {
         Some((num1, num2)) => {
             num1.parse::<i64>()
-                .map_err(|_| anyhow::anyhow!("Blacklisted sql"))?;
+                .map_err(|_| anyhow::anyhow!("No star id"))?;
             if let Err(_) = num2.parse::<i64>() {
-                if num2.split_once("-").is_some() {
+                let mut split = num2.split("-");
+                split.by_ref().next().ok_or_else(|| anyhow::anyhow!("No planet id"))?.parse::<i64>().map_err(|_| anyhow::anyhow!("Blacklisted sql"))?;
+                split.by_ref().next().ok_or_else(|| anyhow::anyhow!("No moon id"))?.parse::<i64>().map_err(|_| anyhow::anyhow!("Blacklisted sql"))?;
+
+                if split.next().is_some() {
                     anyhow::bail!("Blacklisted sql")
                 }
             }
