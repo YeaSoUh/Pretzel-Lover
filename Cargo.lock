@@ -7,7 +7,6 @@ name = "AU-Finder"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "mimalloc",
  "rustls",
  "sea-query",
  "serde",

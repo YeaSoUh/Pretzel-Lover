@@ -19,11 +19,6 @@ use twilight_model::{
 
 use crate::{commands::get_commands, db::connection::establish_database};
 
-use mimalloc::MiMalloc;
-
-#[global_allocator]
-static GLOBAL: MiMalloc = MiMalloc;
-
 #[derive(Deserialize, Clone)]
 pub struct Configs {
     token: String,
