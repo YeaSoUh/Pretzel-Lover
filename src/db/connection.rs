@@ -15,79 +15,6 @@ pub struct EditRequest {
     pub index: String,
 }
 
-impl EditRequest {
-    fn validate(key: &str, value: &str) -> anyhow::Result<()> {
-        match key {
-            "malachite" | "hematite" | "petroleum" | "coal" | "gummite" | "tektite" | "bauxite"
-            | "gold" | "cerussite" => {
-                let concentration = value.parse::<f64>()?;
-                if concentration < 0.0 || concentration > 3.0 {
-                    anyhow::bail!("Wrong concentration information in {}", key)
-                }
-            }
-            "life" | "lime" | "saltpeter" | "quartz" | "ice" => {
-                if value != "true" && value != "false" {
-                    anyhow::bail!("{} is supposed to have true/false value", key)
-                }
-            }
-            // will be improved later
-            "sector" => {
-                if !CHECKS
-                    .get()
-                    .ok_or(anyhow::anyhow!("CHECKS isn't initialized"))?
-                    .sectors
-                    .contains(&value.to_string())
-                {
-                    anyhow::bail!(format!("Sector type '{}' isn't in the game", value))
-                }
-            }
-            "tectonics" => {
-                if !CHECKS
-                    .get()
-                    .ok_or(anyhow::anyhow!("CHECKS isn't initialized"))?
-                    .tectonics
-                    .contains(&value.to_string())
-                {
-                    anyhow::bail!(format!("Tectonic type '{}' isn't in the game", value))
-                }
-            }
-            "atmosphere" => {
-                if !CHECKS
-                    .get()
-                    .ok_or(anyhow::anyhow!("CHECKS isn't initialized"))?
-                    .atmospheres
-                    .contains(&value.to_string())
-                {
-                    anyhow::bail!(format!("Atmospheric type '{}' isn't in the game", value))
-                }
-            }
-            /*"oceans" => {
-                if !CHECKS
-                    .get()
-                    .ok_or(anyhow::anyhow!("CHECKS isn't initialized"))?
-                    .oceans
-                    .contains(&value.to_string())
-                {
-                    anyhow::bail!(format!("Oceans type '{}' isn't in the game", value))
-                }
-            }*/
-            /*"trees" | "sub trees" => {
-                if !CHECKS
-                    .get()
-                    .ok_or(anyhow::anyhow!("CHECKS isn't initialized"))?
-                    .trees
-                    .contains(&value.to_string())
-                {
-                    anyhow::bail!(format!("Tree type '{}' isn't in the game", value))
-                }
-            }*/
-            _ => {}
-        }
-
-        Ok(())
-    }
-}
-
 pub struct PlanetResult {
     pub planet: Planet,
     pub result: Row,
@@ -301,6 +228,7 @@ enum Planets {
 }
 
 #[allow(dead_code)] // yes
+#[derive(Deserialize)]
 pub struct Planet {
     id: String,
     star_id: i64,
@@ -408,6 +336,7 @@ pub async fn remove_planet(index: &str, state: AppState) -> anyhow::Result<()> {
     Ok(())
 }
 
+// gon be reworked
 pub async fn search_planets(input: &str, state: AppState) -> anyhow::Result<Attachment> {
     if check_sql(input, state) {
         anyhow::bail!("Blacklisted sql");
@@ -507,7 +436,7 @@ pub async fn edit_planet(query: &EditRequest, bypass: bool) -> anyhow::Result<()
     let mut gummite: Option<i32> = None;
     let mut tektite: Option<i32> = None;
     let mut bauxite: Option<i32> = None;
-    let mut gold: Option<f32> = None;
+    let mut gold: Option<f64> = None;
     let mut cerussite: Option<i32> = None;
 
     let mut lime: Option<bool> = None;
@@ -529,7 +458,7 @@ pub async fn edit_planet(query: &EditRequest, bypass: bool) -> anyhow::Result<()
         let key = key.trim().to_lowercase();
         value = value.trim();
 
-        EditRequest::validate(&key, &value)?;
+        validate(&key, &value)?;
         match key.as_str() {
             "name" => name = Some(value.to_string()),
             "radius" => radius = Some(value.parse()?),
@@ -547,13 +476,13 @@ pub async fn edit_planet(query: &EditRequest, bypass: bool) -> anyhow::Result<()
             "life type" => life_type = Some(value.to_string()),
             "moons" => moons = Some(value.parse()?),
             "malachite" => malachite = Some(value.parse()?),
-            "hematite" => hematite = Some(value.parse()?),
+            "hematite" => hematite = Some((value.parse::<f64>()? * 1000.0).round() / 1000.0),
             "petroleum" => petroleum = Some(value.parse()?),
             "coal" => coal = Some(value.parse()?),
             "gummite" => gummite = Some(value.parse()?),
             "tektite" => tektite = Some(value.parse()?),
             "bauxite" => bauxite = Some(value.parse()?),
-            "gold" => gold = Some(value.parse()?),
+            "gold" => gold = Some((value.parse::<f64>()? * 1000.0).round() / 1000.0),
             "cerussite" => cerussite = Some(value.parse()?),
             "lime" => lime = Some(value.parse()?),
             "saltpeter" => saltpeter = Some(value.parse()?),
@@ -920,8 +849,18 @@ fn check_index(index: &str) -> anyhow::Result<()> {
                 .map_err(|_| anyhow::anyhow!("No star id"))?;
             if let Err(_) = num2.parse::<i64>() {
                 let mut split = num2.split("-");
-                split.by_ref().next().ok_or_else(|| anyhow::anyhow!("No planet id"))?.parse::<i64>().map_err(|_| anyhow::anyhow!("Blacklisted sql"))?;
-                split.by_ref().next().ok_or_else(|| anyhow::anyhow!("No moon id"))?.parse::<i64>().map_err(|_| anyhow::anyhow!("Blacklisted sql"))?;
+                split
+                    .by_ref()
+                    .next()
+                    .ok_or_else(|| anyhow::anyhow!("No planet id"))?
+                    .parse::<i64>()
+                    .map_err(|_| anyhow::anyhow!("Blacklisted sql"))?;
+                split
+                    .by_ref()
+                    .next()
+                    .ok_or_else(|| anyhow::anyhow!("No moon id"))?
+                    .parse::<i64>()
+                    .map_err(|_| anyhow::anyhow!("Blacklisted sql"))?;
 
                 if split.next().is_some() {
                     anyhow::bail!("Blacklisted sql")
@@ -931,6 +870,77 @@ fn check_index(index: &str) -> anyhow::Result<()> {
         }
         None => anyhow::bail!("Blacklisted sql"),
     }
+}
+
+fn validate(key: &str, value: &str) -> anyhow::Result<()> {
+    match key {
+        "malachite" | "hematite" | "petroleum" | "coal" | "gummite" | "tektite" | "bauxite"
+        | "gold" | "cerussite" => {
+            let concentration = value.parse::<f64>()?;
+            if concentration < 0.0 || concentration > 3.0 {
+                anyhow::bail!("Wrong concentration information in {}", key)
+            }
+        }
+        "life" | "lime" | "saltpeter" | "quartz" | "ice" => {
+            if value != "true" && value != "false" {
+                anyhow::bail!("{} is supposed to have true/false value", key)
+            }
+        }
+        // will be improved later
+        "sector" => {
+            if !CHECKS
+                .get()
+                .ok_or(anyhow::anyhow!("CHECKS isn't initialized"))?
+                .sectors
+                .contains(&value.to_string())
+            {
+                anyhow::bail!(format!("Sector type '{}' isn't in the game", value))
+            }
+        }
+        "tectonics" => {
+            if !CHECKS
+                .get()
+                .ok_or(anyhow::anyhow!("CHECKS isn't initialized"))?
+                .tectonics
+                .contains(&value.to_string())
+            {
+                anyhow::bail!(format!("Tectonic type '{}' isn't in the game", value))
+            }
+        }
+        "atmosphere" => {
+            if !CHECKS
+                .get()
+                .ok_or(anyhow::anyhow!("CHECKS isn't initialized"))?
+                .atmospheres
+                .contains(&value.to_string())
+            {
+                anyhow::bail!(format!("Atmospheric type '{}' isn't in the game", value))
+            }
+        }
+        /*"oceans" => {
+            if !CHECKS
+                .get()
+                .ok_or(anyhow::anyhow!("CHECKS isn't initialized"))?
+                .oceans
+                .contains(&value.to_string())
+            {
+                anyhow::bail!(format!("Oceans type '{}' isn't in the game", value))
+            }
+        }*/
+        /*"trees" | "sub trees" => {
+            if !CHECKS
+                .get()
+                .ok_or(anyhow::anyhow!("CHECKS isn't initialized"))?
+                .trees
+                .contains(&value.to_string())
+            {
+                anyhow::bail!(format!("Tree type '{}' isn't in the game", value))
+            }
+        }*/
+        _ => {}
+    }
+
+    Ok(())
 }
 
 fn normalize(input: &str) -> Cow<'_, str> {
