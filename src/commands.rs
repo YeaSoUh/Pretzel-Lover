@@ -17,6 +17,7 @@ pub mod edit;
 pub mod get;
 pub mod remove;
 pub mod search;
+pub mod morgoft;
 
 pub async fn defer(
     state: AppState,
@@ -125,6 +126,11 @@ pub fn get_commands(configs: &Configs) -> anyhow::Result<Vec<Command>> {
         .contexts(vec![InteractionContextType::Guild])
         .validate()?
         .build(),
+
+        CommandBuilder::new("Sentence to Morgoft", "idk", CommandType::User)
+        .contexts(vec![InteractionContextType::Guild])
+        .validate()?
+        .build(),
     ])
 }
 
@@ -140,9 +146,11 @@ pub async fn cmd_handler(
         "search_db" => commands::search::run(state, &event).await,
         "say" => Err(anyhow::anyhow!("TODO command")),
         "edit" => Err(anyhow::anyhow!("TODO command")),
-        "channel_manager" => todo!(),
-        "kitty" => todo!(),
-        "doge" => todo!(),
+        "Sentence to Morgoft" => commands::morgoft::run(state, &event).await,
+        // they are discontinued due to low usage but they can come back
+        // "channel_manager" => todo!(),
+        // "kitty" => todo!(),
+        // "doge" => todo!(),
         _ => unreachable!("Non existent command"),
     };
 
