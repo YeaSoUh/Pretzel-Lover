@@ -26,6 +26,7 @@ pub struct Configs {
     sql_blacklist: Vec<String>,
     allowed_channels: Vec<Id<ChannelMarker>>,
     database_url: String,
+    stickers: Vec<(String, String)>
 }
 
 #[derive(Clone)]
@@ -56,7 +57,7 @@ async fn main() -> anyhow::Result<()> {
     };
     client
         .interaction(application_id)
-        .set_global_commands(&get_commands()?)
+        .set_global_commands(&get_commands(&configs)?)
         .await?;
 
     establish_database(&configs.database_url).await?;
@@ -100,7 +101,7 @@ async fn dispatcher(state: AppState, mut shard: Shard, mut shutdown: watch::Rece
                             },
                             Some(InteractionData::ModalSubmit(_)) => { todo!() },
                             Some(InteractionData::MessageComponent(_)) => { todo!() },
-                            Some(_) => { unreachable!("Every type is already covered; Discord API fault") },
+                            Some(_) => { continue }, // do not fail incase discord api changes
                             None => { unreachable!() }
                         }
                     }
