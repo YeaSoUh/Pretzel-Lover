@@ -1,6 +1,5 @@
 use serde::Deserialize;
 use std::{
-    borrow::Cow,
     fmt::Display,
     sync::{Arc, OnceLock},
     time::Duration,
@@ -8,7 +7,7 @@ use std::{
 use turso::{Builder, Connection, Database, Row};
 use twilight_model::http::attachment::Attachment;
 
-use crate::AppState;
+use crate::{AppState, db::helpers::{check_index, check_sql, insert_with_retry, normalize, validate}};
 
 pub struct EditRequest {
     pub input: String,
@@ -173,21 +172,21 @@ static DB: OnceLock<DatabaseStruct> = OnceLock::new();
 static CHECKS: OnceLock<Checks> = OnceLock::new();
 
 #[derive(Deserialize)]
-struct Checks {
+pub(super) struct Checks {
     #[serde(rename = "allowed_sectors")]
-    sectors: Vec<String>,
+    pub(crate) sectors: Vec<String>,
     #[serde(rename = "allowed_tectonics")]
-    tectonics: Vec<String>,
+    pub(crate) tectonics: Vec<String>,
     #[serde(rename = "allowed_atmospheres")]
-    atmospheres: Vec<String>,
+    pub(crate) atmospheres: Vec<String>,
     #[serde(skip)]
     #[serde(rename = "allowed_oceans")]
     #[allow(dead_code)]
-    oceans: Vec<String>,
+    pub(crate) oceans: Vec<String>,
     #[serde(skip)]
     #[serde(rename = "allowed_trees")]
     #[allow(dead_code)]
-    trees: Vec<String>, // won't be used
+    pub(crate) trees: Vec<String>, // won't be used
 }
 
 #[derive(sea_query::Iden)]
@@ -458,7 +457,7 @@ pub async fn edit_planet(query: &EditRequest, bypass: bool) -> anyhow::Result<()
         let key = key.trim().to_lowercase();
         value = value.trim();
 
-        validate(&key, &value)?;
+        validate(&key, &value, &CHECKS)?;
         match key.as_str() {
             "name" => name = Some(value.to_string()),
             "radius" => radius = Some(value.parse()?),
@@ -672,7 +671,7 @@ pub async fn edit_planet(query: &EditRequest, bypass: bool) -> anyhow::Result<()
         })
         .collect();
 
-    conn.execute(&sql, turso_params).await?;
+    insert_with_retry(&conn, &sql, turso_params).await?;
 
     Ok(())
 }
@@ -831,122 +830,4 @@ fn construct_planet(row: &Row) -> anyhow::Result<Planet> {
             idx
         })?,
     })
-}
-
-fn check_sql(input: &str, state: AppState) -> bool {
-    let upper = input.to_uppercase();
-    state
-        .configs
-        .sql_blacklist
-        .iter()
-        .any(|sql| upper.contains(sql))
-}
-
-fn check_index(index: &str) -> anyhow::Result<()> {
-    match index.split_once("-") {
-        Some((num1, num2)) => {
-            num1.parse::<i64>()
-                .map_err(|_| anyhow::anyhow!("No star id"))?;
-            if let Err(_) = num2.parse::<i64>() {
-                let mut split = num2.split("-");
-                split
-                    .by_ref()
-                    .next()
-                    .ok_or_else(|| anyhow::anyhow!("No planet id"))?
-                    .parse::<i64>()
-                    .map_err(|_| anyhow::anyhow!("Blacklisted sql"))?;
-                split
-                    .by_ref()
-                    .next()
-                    .ok_or_else(|| anyhow::anyhow!("No moon id"))?
-                    .parse::<i64>()
-                    .map_err(|_| anyhow::anyhow!("Blacklisted sql"))?;
-
-                if split.next().is_some() {
-                    anyhow::bail!("Blacklisted sql")
-                }
-            }
-            Ok(())
-        }
-        None => anyhow::bail!("Blacklisted sql"),
-    }
-}
-
-fn validate(key: &str, value: &str) -> anyhow::Result<()> {
-    match key {
-        "malachite" | "hematite" | "petroleum" | "coal" | "gummite" | "tektite" | "bauxite"
-        | "gold" | "cerussite" => {
-            let concentration = value.parse::<f64>()?;
-            if concentration < 0.0 || concentration > 3.0 {
-                anyhow::bail!("Wrong concentration information in {}", key)
-            }
-        }
-        "life" | "lime" | "saltpeter" | "quartz" | "ice" => {
-            if value != "true" && value != "false" {
-                anyhow::bail!("{} is supposed to have true/false value", key)
-            }
-        }
-        // will be improved later
-        "sector" => {
-            if !CHECKS
-                .get()
-                .ok_or(anyhow::anyhow!("CHECKS isn't initialized"))?
-                .sectors
-                .contains(&value.to_string())
-            {
-                anyhow::bail!(format!("Sector type '{}' isn't in the game", value))
-            }
-        }
-        "tectonics" => {
-            if !CHECKS
-                .get()
-                .ok_or(anyhow::anyhow!("CHECKS isn't initialized"))?
-                .tectonics
-                .contains(&value.to_string())
-            {
-                anyhow::bail!(format!("Tectonic type '{}' isn't in the game", value))
-            }
-        }
-        "atmosphere" => {
-            if !CHECKS
-                .get()
-                .ok_or(anyhow::anyhow!("CHECKS isn't initialized"))?
-                .atmospheres
-                .contains(&value.to_string())
-            {
-                anyhow::bail!(format!("Atmospheric type '{}' isn't in the game", value))
-            }
-        }
-        /*"oceans" => {
-            if !CHECKS
-                .get()
-                .ok_or(anyhow::anyhow!("CHECKS isn't initialized"))?
-                .oceans
-                .contains(&value.to_string())
-            {
-                anyhow::bail!(format!("Oceans type '{}' isn't in the game", value))
-            }
-        }*/
-        /*"trees" | "sub trees" => {
-            if !CHECKS
-                .get()
-                .ok_or(anyhow::anyhow!("CHECKS isn't initialized"))?
-                .trees
-                .contains(&value.to_string())
-            {
-                anyhow::bail!(format!("Tree type '{}' isn't in the game", value))
-            }
-        }*/
-        _ => {}
-    }
-
-    Ok(())
-}
-
-fn normalize(input: &str) -> Cow<'_, str> {
-    if input.contains("&&") || input.contains("||") {
-        Cow::Owned(input.replace("&&", "and").replace("||", "or"))
-    } else {
-        Cow::Borrowed(input)
-    }
 }
