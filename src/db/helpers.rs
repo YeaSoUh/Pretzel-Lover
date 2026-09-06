@@ -3,7 +3,11 @@ use turso::{Connection, Error, IntoParams, Rows};
 
 use crate::{AppState, db::connection::Checks};
 
-pub async fn execute(conn: &Connection, sql: &str, params: impl IntoParams + Clone) -> anyhow::Result<()> {
+pub async fn execute(
+    conn: &Connection,
+    sql: &str,
+    params: impl IntoParams + Clone,
+) -> anyhow::Result<()> {
     let max_attempts = 10;
     let mut attempts = 1;
 
@@ -173,7 +177,6 @@ pub fn check_index(index: &str) -> anyhow::Result<()> {
         None => anyhow::bail!("Blacklisted sql"),
     }
 }
-
 
 pub fn normalize(input: &str) -> Cow<'_, str> {
     if input.contains("&&") || input.contains("||") {

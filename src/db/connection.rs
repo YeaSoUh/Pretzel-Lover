@@ -7,7 +7,10 @@ use std::{
 use turso::{Builder, Connection, Database, Row};
 use twilight_model::http::attachment::Attachment;
 
-use crate::{AppState, db::helpers::{check_index, check_sql, execute, normalize, query, validate}};
+use crate::{
+    AppState,
+    db::helpers::{check_index, check_sql, execute, normalize, query, validate},
+};
 
 pub struct EditRequest {
     pub input: String,
@@ -329,7 +332,12 @@ pub async fn remove_planet(index: &str, state: AppState) -> anyhow::Result<()> {
         .get_conn()
         .await?;
 
-    query(&conn, "DELETE FROM planets WHERE id = ?1", [index.to_string()]).await?;
+    query(
+        &conn,
+        "DELETE FROM planets WHERE id = ?1",
+        [index.to_string()],
+    )
+    .await?;
 
     Ok(())
 }

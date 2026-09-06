@@ -8,16 +8,17 @@ use twilight_model::{
     gateway::payload::incoming::InteractionCreate,
 };
 use twilight_util::builder::{
-    InteractionResponseDataBuilder, command::{BooleanBuilder, ChannelBuilder, CommandBuilder, StringBuilder},
+    InteractionResponseDataBuilder,
+    command::{BooleanBuilder, ChannelBuilder, CommandBuilder, StringBuilder},
 };
 
 use crate::{AppState, Configs, commands};
 
 pub mod edit;
 pub mod get;
+pub mod morgoft;
 pub mod remove;
 pub mod search;
-pub mod morgoft;
 
 pub async fn defer(
     state: AppState,
@@ -53,84 +54,75 @@ pub async fn defer(
 pub fn get_commands(configs: &Configs) -> anyhow::Result<Vec<Command>> {
     Ok(vec![
         CommandBuilder::new("edit_db", "Edit a planet/moon", CommandType::ChatInput)
-        .option(
-            StringBuilder::new("index", "What planet/moon to edit")
-            .required(true)
-        )
-        .option(
-            StringBuilder::new("input", "Self explanatory")
-            .required(true)
-        )
-        .contexts(vec![InteractionContextType::Guild])
-        .validate()?
-        .build(),
-
+            .option(StringBuilder::new("index", "What planet/moon to edit").required(true))
+            .option(StringBuilder::new("input", "Self explanatory").required(true))
+            .contexts(vec![InteractionContextType::Guild])
+            .validate()?
+            .build(),
         CommandBuilder::new("get_db", "Get a planet/moon", CommandType::ChatInput)
-        .option(
-            StringBuilder::new("index", "What planet/moon to get")
-            .required(true)
+            .option(StringBuilder::new("index", "What planet/moon to get").required(true))
+            .contexts(vec![InteractionContextType::Guild])
+            .validate()?
+            .build(),
+        CommandBuilder::new(
+            "search_db",
+            "Search for planets/moons",
+            CommandType::ChatInput,
         )
+        .option(StringBuilder::new("input", "Self explanatory").required(true))
         .contexts(vec![InteractionContextType::Guild])
         .validate()?
         .build(),
-
-        CommandBuilder::new("search_db", "Search for planets/moons", CommandType::ChatInput)
-        .option(
-            StringBuilder::new("input", "Self explanatory")
-            .required(true)
-        )
-        .contexts(vec![InteractionContextType::Guild])
-        .validate()?
-        .build(),
-
         CommandBuilder::new("remove_db", "Remove a planet/moon", CommandType::ChatInput)
-        .option(
-            StringBuilder::new("index", "An index of a planet/moon to remove").required(true),
-        )
-        .contexts(vec![InteractionContextType::Guild])
-        .validate()?
-        .build(),
-
+            .option(
+                StringBuilder::new("index", "An index of a planet/moon to remove").required(true),
+            )
+            .contexts(vec![InteractionContextType::Guild])
+            .validate()?
+            .build(),
         CommandBuilder::new("say", "Say as a bot", CommandType::ChatInput)
-        .option(
-            ChannelBuilder::new("channel", "Pick a channel to send")
-        )
-        .option(
-            StringBuilder::new("Sticker", "Type a sticker's id to send a message with sticker")
-            .choices(configs.stickers.clone())
-        )
-        .option(
-            StringBuilder::new("reply", "Type a message's url to reply (will overwrite channel parameter)")
-        )
-        .option(
-            StringBuilder::new("forward", "Paste a message's url to forward it")
-        )
-        .option(
-            BooleanBuilder::new("mention_author", "Mention author while replying?")
-        )
-        .option(
-            BooleanBuilder::new("silent", "Should the message be silent?")
-        )
-        .option(
-            BooleanBuilder::new("tts", "Should Discord say the message's content?")
-        )
-        .contexts(vec![InteractionContextType::Guild])
-        .validate()?
-        .build(),
-
+            .option(ChannelBuilder::new("channel", "Pick a channel to send"))
+            .option(
+                StringBuilder::new(
+                    "Sticker",
+                    "Type a sticker's id to send a message with sticker",
+                )
+                .choices(configs.stickers.clone()),
+            )
+            .option(StringBuilder::new(
+                "reply",
+                "Type a message's url to reply (will overwrite channel parameter)",
+            ))
+            .option(StringBuilder::new(
+                "forward",
+                "Paste a message's url to forward it",
+            ))
+            .option(BooleanBuilder::new(
+                "mention_author",
+                "Mention author while replying?",
+            ))
+            .option(BooleanBuilder::new(
+                "silent",
+                "Should the message be silent?",
+            ))
+            .option(BooleanBuilder::new(
+                "tts",
+                "Should Discord say the message's content?",
+            ))
+            .contexts(vec![InteractionContextType::Guild])
+            .validate()?
+            .build(),
         CommandBuilder::new("edit", "Edits a message by a bot", CommandType::ChatInput)
-        .option(
-            StringBuilder::new("message_url", "Insert a message link to edit")
-            .required(true)
-        )
-        .contexts(vec![InteractionContextType::Guild])
-        .validate()?
-        .build(),
-
+            .option(
+                StringBuilder::new("message_url", "Insert a message link to edit").required(true),
+            )
+            .contexts(vec![InteractionContextType::Guild])
+            .validate()?
+            .build(),
         CommandBuilder::new("Sentence to Morgoft", "idk", CommandType::User)
-        .contexts(vec![InteractionContextType::Guild])
-        .validate()?
-        .build(),
+            .contexts(vec![InteractionContextType::Guild])
+            .validate()?
+            .build(),
     ])
 }
 

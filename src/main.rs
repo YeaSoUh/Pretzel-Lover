@@ -26,7 +26,7 @@ pub struct Configs {
     sql_blacklist: Vec<String>,
     allowed_channels: Vec<Id<ChannelMarker>>,
     database_url: String,
-    stickers: Vec<(String, String)>
+    stickers: Vec<(String, String)>,
 }
 
 #[derive(Clone)]
