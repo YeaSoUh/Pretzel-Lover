@@ -1,11 +1,12 @@
 use std::{borrow::Cow, sync::OnceLock, time::Duration};
-use turso::{Error, Connection};
+use turso::{Connection, Error, IntoParams, Rows};
 
 use crate::{AppState, db::connection::Checks};
 
-pub async fn insert_with_retry(conn: &Connection, sql: &str, params: Vec<turso::Value>) -> anyhow::Result<()> {
+pub async fn execute(conn: &Connection, sql: &str, params: impl IntoParams + Clone) -> anyhow::Result<()> {
     let max_attempts = 10;
     let mut attempts = 1;
+
     loop {
         if attempts > max_attempts {
             return Err(anyhow::anyhow!("Reached max attempts"));
@@ -15,6 +16,38 @@ pub async fn insert_with_retry(conn: &Connection, sql: &str, params: Vec<turso::
             Ok(_) => {
                 conn.execute("COMMIT", ()).await?;
                 return Ok(());
+            }
+            Err(e) if is_retryable(&e) => {
+                let _ = conn.execute("ROLLBACK", ()).await;
+                attempts += 1;
+                tokio::time::sleep(Duration::from_millis(15)).await;
+                continue;
+            }
+            Err(e) => {
+                let _ = conn.execute("ROLLBACK", ()).await;
+                return Err(e.into());
+            }
+        }
+    }
+}
+
+pub async fn query(
+    conn: &Connection,
+    sql: &str,
+    params: impl IntoParams + Clone,
+) -> anyhow::Result<Rows> {
+    let max_attempts = 10;
+    let mut attempts = 1;
+
+    loop {
+        if attempts > max_attempts {
+            return Err(anyhow::anyhow!("Reached max attempts"));
+        }
+        conn.execute("BEGIN CONCURRENT", ()).await?;
+        match conn.query(sql, params.clone()).await {
+            Ok(r) => {
+                conn.execute("COMMIT", ()).await?;
+                return Ok(r);
             }
             Err(e) if is_retryable(&e) => {
                 let _ = conn.execute("ROLLBACK", ()).await;

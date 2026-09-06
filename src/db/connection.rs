@@ -7,7 +7,7 @@ use std::{
 use turso::{Builder, Connection, Database, Row};
 use twilight_model::http::attachment::Attachment;
 
-use crate::{AppState, db::helpers::{check_index, check_sql, insert_with_retry, normalize, validate}};
+use crate::{AppState, db::helpers::{check_index, check_sql, execute, normalize, query, validate}};
 
 pub struct EditRequest {
     pub input: String,
@@ -329,8 +329,7 @@ pub async fn remove_planet(index: &str, state: AppState) -> anyhow::Result<()> {
         .get_conn()
         .await?;
 
-    conn.execute("DELETE FROM planets WHERE id = ?1", (index.to_string(),))
-        .await?;
+    query(&conn, "DELETE FROM planets WHERE id = ?1", [index.to_string()]).await?;
 
     Ok(())
 }
@@ -348,9 +347,7 @@ pub async fn search_planets(input: &str, state: AppState) -> anyhow::Result<Atta
         .await?;
     let input = normalize(&input);
 
-    let mut planets = conn
-        .query(format!("SELECT * FROM planets WHERE {}", input), ())
-        .await?;
+    let mut planets = query(&conn, &format!("SELECT * FROM planets WHERE {}", input), ()).await?;
 
     let results_limit = 100;
     let mut results_showed = 0;
@@ -671,7 +668,7 @@ pub async fn edit_planet(query: &EditRequest, bypass: bool) -> anyhow::Result<()
         })
         .collect();
 
-    insert_with_retry(&conn, &sql, turso_params).await?;
+    execute(&conn, &sql, turso_params).await?;
 
     Ok(())
 }
