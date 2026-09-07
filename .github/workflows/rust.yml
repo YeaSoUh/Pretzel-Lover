@@ -47,7 +47,7 @@ jobs:
       
     - name: Compile code
       shell: bash
-      run: RUSTFLAGS="-C target-cpu=znver4" cargo build --release
+      run: RUSTFLAGS="-C target-cpu=znver4" cargo build --release --target x86_64-pc-windows-msvc
       
     - name: Rename Windows binary for clarity
       shell: bash
