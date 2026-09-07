@@ -52,7 +52,7 @@ jobs:
     - name: Rename Windows binary for clarity
       shell: bash
       run: |
-        mv target/release/Pretzel-Lover.exe ./pretzel-lover-windows-amd64.exe || mv target/release/pretzel-lover.exe ./pretzel-lover-windows-amd64.exe
+        mv target/x86_64-pc-windows-msvc/release/Pretzel-Lover.exe ./pretzel-lover-windows-amd64.exe || mv target/x86_64-pc-windows-msvc/release/pretzel-lover.exe ./pretzel-lover-windows-amd64.exe
     
     - name: Temporary save Windows binary
       uses: actions/upload-artifact@v4
