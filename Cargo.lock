@@ -3,7 +3,7 @@
 version = 4
 
 [[package]]
-name = "AU-Finder"
+name = "Pretzel-Lover"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -12,6 +12,8 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio",
+ "tracing",
+ "tracing-subscriber",
  "turso",
  "twilight-gateway",
  "twilight-http",

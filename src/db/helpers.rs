@@ -1,4 +1,5 @@
 use std::{borrow::Cow, sync::OnceLock, time::Duration};
+use tracing::instrument;
 use turso::{Connection, Error, IntoParams, Rows};
 
 use crate::{AppState, db::connection::Checks};
@@ -23,6 +24,7 @@ pub async fn execute(
             }
             Err(e) if is_retryable(&e) => {
                 let _ = conn.execute("ROLLBACK", ()).await;
+                tracing::warn!(?e, "Retrying request");
                 attempts += 1;
                 tokio::time::sleep(Duration::from_millis(15)).await;
                 continue;
@@ -35,6 +37,7 @@ pub async fn execute(
     }
 }
 
+#[instrument(skip_all, err)]
 pub async fn query(
     conn: &Connection,
     sql: &str,
@@ -55,6 +58,7 @@ pub async fn query(
             }
             Err(e) if is_retryable(&e) => {
                 let _ = conn.execute("ROLLBACK", ()).await;
+                tracing::warn!(?e, "Retrying request");
                 attempts += 1;
                 tokio::time::sleep(Duration::from_millis(15)).await;
                 continue;

@@ -1,8 +1,6 @@
-// if event.channel.as_ref().is_none_or(|chn| !state.configs._allowed_channels.contains(&chn.id)) { return }
-
-use anyhow::Ok;
+use tracing::instrument;
 use twilight_model::{
-    application::interaction::{InteractionData, application_command::CommandOptionValue},
+    application::interaction::application_command::{CommandData, CommandOptionValue},
     channel::message::MessageFlags,
     gateway::payload::incoming::InteractionCreate,
     id::Id,
@@ -13,7 +11,12 @@ use crate::{
     db::connection::{self, EditRequest},
 };
 
-pub async fn run(state: AppState, event: &Box<InteractionCreate>) -> anyhow::Result<()> {
+#[instrument(skip_all, err)]
+pub async fn run(
+    state: AppState,
+    event: &Box<InteractionCreate>,
+    data: &Box<CommandData>,
+) -> anyhow::Result<()> {
     commands::defer(state.clone(), &event, false).await?;
     if event
         .channel
@@ -45,22 +48,20 @@ pub async fn run(state: AppState, event: &Box<InteractionCreate>) -> anyhow::Res
     let mut index: Option<String> = None;
     let mut input: Option<String> = None;
 
-    if let Some(InteractionData::ApplicationCommand(cmd_box)) = &event.data {
-        let cmd = cmd_box.as_ref();
+    let cmd = data.as_ref();
+    if cmd.options.is_empty() {
+        anyhow::bail!("No options")
+    }
 
-        for option in &cmd.options {
-            match (&*option.name, &option.value) {
-                ("index", CommandOptionValue::String(index2)) => {
-                    index = Some(index2.clone());
-                }
-                ("input", CommandOptionValue::String(input2)) => {
-                    input = Some(input2.clone());
-                }
-                _ => {}
+    for option in &cmd.options {
+        match (&*option.name, &option.value) {
+            ("index", CommandOptionValue::String(index2)) => index = Some(index2.clone()),
+
+            ("input", CommandOptionValue::String(input2)) => {
+                input = Some(input2.clone());
             }
+            _ => {}
         }
-    } else {
-        anyhow::bail!("No options");
     }
 
     let index = index.ok_or_else(|| anyhow::anyhow!("Missing index option"))?;

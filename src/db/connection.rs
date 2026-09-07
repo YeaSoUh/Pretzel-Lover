@@ -4,6 +4,7 @@ use std::{
     sync::{Arc, OnceLock},
     time::Duration,
 };
+use tracing::instrument;
 use turso::{Builder, Connection, Database, Row};
 use twilight_model::http::attachment::Attachment;
 
@@ -12,11 +13,13 @@ use crate::{
     db::helpers::{check_index, check_sql, execute, normalize, query, validate},
 };
 
+#[derive(Debug)]
 pub struct EditRequest {
     pub input: String,
     pub index: String,
 }
 
+#[derive(Debug)]
 pub struct PlanetResult {
     pub planet: Planet,
     pub result: Row,
@@ -230,7 +233,7 @@ enum Planets {
 }
 
 #[allow(dead_code)] // yes
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct Planet {
     id: String,
     star_id: i64,
@@ -292,6 +295,7 @@ pub async fn establish_database(database_url: &str) -> anyhow::Result<()> {
     Ok(())
 }
 
+#[instrument(skip(state), err)]
 pub async fn get_planet(index: &str, state: AppState) -> anyhow::Result<PlanetResult> {
     if check_sql(index, state) {
         anyhow::bail!("Blacklisted sql");
@@ -304,9 +308,12 @@ pub async fn get_planet(index: &str, state: AppState) -> anyhow::Result<PlanetRe
         .get_conn()
         .await?;
 
-    let mut planets = conn
-        .query("SELECT * FROM planets WHERE id = ?1", [index.to_string()])
-        .await?;
+    let mut planets = query(
+        &conn,
+        "SELECT * FROM planets WHERE id = ?1",
+        [index.to_string()],
+    )
+    .await?;
 
     if let Some(row) = planets.next().await? {
         return Ok(PlanetResult {
@@ -319,6 +326,7 @@ pub async fn get_planet(index: &str, state: AppState) -> anyhow::Result<PlanetRe
     Err(anyhow::anyhow!("Planet wasn't found"))
 }
 
+#[instrument(skip(state), err)]
 pub async fn remove_planet(index: &str, state: AppState) -> anyhow::Result<()> {
     if check_sql(index, state) {
         anyhow::bail!("Blacklisted sql");
@@ -343,6 +351,7 @@ pub async fn remove_planet(index: &str, state: AppState) -> anyhow::Result<()> {
 }
 
 // gon be reworked
+#[instrument(skip(state), err)]
 pub async fn search_planets(input: &str, state: AppState) -> anyhow::Result<Attachment> {
     if check_sql(input, state) {
         anyhow::bail!("Blacklisted sql");
@@ -384,6 +393,7 @@ pub async fn search_planets(input: &str, state: AppState) -> anyhow::Result<Atta
     ))
 }
 
+#[instrument(skip(bypass), err)]
 pub async fn edit_planet(query: &EditRequest, bypass: bool) -> anyhow::Result<()> {
     let index = &query.index;
     let input = &query.input;

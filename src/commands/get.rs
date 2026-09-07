@@ -1,12 +1,18 @@
+use tracing::instrument;
 use twilight_model::{
-    application::interaction::{InteractionData, application_command::CommandOptionValue},
+    application::interaction::application_command::{CommandData, CommandOptionValue},
     channel::message::MessageFlags,
     gateway::payload::incoming::InteractionCreate,
 };
 
 use crate::{AppState, commands, db::connection};
 
-pub async fn run(state: AppState, event: &Box<InteractionCreate>) -> anyhow::Result<()> {
+#[instrument(skip_all, err)]
+pub async fn run(
+    state: AppState,
+    event: &Box<InteractionCreate>,
+    data: &Box<CommandData>,
+) -> anyhow::Result<()> {
     commands::defer(state.clone(), &event, false).await?;
     if event
         .channel
@@ -23,21 +29,19 @@ pub async fn run(state: AppState, event: &Box<InteractionCreate>) -> anyhow::Res
     }
     let mut index: Option<String> = None;
 
-    if let Some(InteractionData::ApplicationCommand(cmd_box)) = &event.data {
-        let cmd = cmd_box.as_ref();
-
-        for option in &cmd.options {
-            match (&*option.name, &option.value) {
-                ("index", CommandOptionValue::String(index2)) => {
-                    index = Some(index2.clone());
-                }
-                _ => {}
-            }
-        }
-    } else {
-        anyhow::bail!("No options");
+    let cmd = data.as_ref();
+    if cmd.options.is_empty() {
+        anyhow::bail!("No options")
     }
 
+    for option in &cmd.options {
+        match (&*option.name, &option.value) {
+            ("index", CommandOptionValue::String(index2)) => {
+                index = Some(index2.clone());
+            }
+            _ => {}
+        }
+    }
     let id = index.ok_or_else(|| anyhow::anyhow!("Missing id option"))?;
 
     let planet = match connection::get_planet(&id, state.clone()).await {
@@ -53,6 +57,7 @@ pub async fn run(state: AppState, event: &Box<InteractionCreate>) -> anyhow::Res
             return Ok(());
         }
     };
+    tracing::debug!(?planet, "Get command debug");
 
     state
         .client

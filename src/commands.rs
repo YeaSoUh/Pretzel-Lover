@@ -126,20 +126,22 @@ pub fn get_commands(configs: &Configs) -> anyhow::Result<Vec<Command>> {
     ])
 }
 
+#[tracing::instrument(fields(user = ?event.author_id()), skip_all, err)]
 pub async fn cmd_handler(
     state: AppState,
     event: Box<InteractionCreate>,
     data: Box<CommandData>,
 ) -> anyhow::Result<()> {
-    let result = match data.name.as_str() {
-        "edit_db" => commands::edit::run(state, &event).await,
-        "get_db" => commands::get::run(state, &event).await,
-        "remove_db" => commands::remove::run(state, &event).await,
-        "search_db" => commands::search::run(state, &event).await,
-        "say" => Err(anyhow::anyhow!("TODO command")),
-        "edit" => Err(anyhow::anyhow!("TODO command")),
-        "Sentence to Morgoft" => commands::morgoft::run(state, &event).await,
+    let result = match &data.name.as_str() {
         // they are discontinued due to low usage but they can come back
+        //&"edit_db" => commands::edit::run(state, &event, &data).await,
+        //&"get_db" => commands::get::run(state, &event, &data).await,
+        //&"remove_db" => commands::remove::run(state, &event, &data).await,
+        //&"search_db" => commands::search::run(state, &event, &data).await,
+        &"say" => Err(anyhow::anyhow!("TODO command")),
+        &"edit" => Err(anyhow::anyhow!("TODO command")),
+        &"Sentence to Morgoft" => commands::morgoft::run(state, &event, &data).await,
+        // discontinued too
         // "channel_manager" => todo!(),
         // "kitty" => todo!(),
         // "doge" => todo!(),
@@ -147,7 +149,7 @@ pub async fn cmd_handler(
     };
 
     if let Err(e) = &result {
-        println!("AN ERROR!!!!!!!!!!! HERE:\n{e}")
+        tracing::error!(?e, "AN ERROR!!!!!!!!!!!")
     }
     result
 }

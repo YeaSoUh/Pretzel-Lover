@@ -5,6 +5,8 @@ use std::sync::Arc;
 
 use serde::Deserialize;
 use tokio::{signal, sync::watch};
+use tracing::instrument;
+use tracing_subscriber::EnvFilter;
 use twilight_gateway::{
     CloseFrame, Event, EventTypeFlags, Intents, Shard, ShardId, StreamExt as _,
 };
@@ -38,6 +40,13 @@ pub struct AppState {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| EnvFilter::new("Pretzel_Lover=debug,info")),
+        )
+        .init();
+
     rustls::crypto::ring::default_provider()
         .install_default()
         .unwrap();
@@ -79,6 +88,7 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[instrument(fields(shard = %shard.id()), skip_all)]
 async fn dispatcher(state: AppState, mut shard: Shard, mut shutdown: watch::Receiver<bool>) {
     loop {
         tokio::select! {
@@ -87,7 +97,7 @@ async fn dispatcher(state: AppState, mut shard: Shard, mut shutdown: watch::Rece
                 let event = match item {
                     Ok(event) => event,
                     Err(source) => {
-                        eprintln!("error receiving event {source:?}");
+                        tracing::warn!(?source, "error receiving an event");
                         continue;
                     }
                 };
@@ -101,7 +111,10 @@ async fn dispatcher(state: AppState, mut shard: Shard, mut shutdown: watch::Rece
                             },
                             Some(InteractionData::ModalSubmit(_)) => { todo!() },
                             Some(InteractionData::MessageComponent(_)) => { todo!() },
-                            Some(_) => { continue }, // do not fail incase discord api changes
+                            Some(invalid) => {
+                                tracing::warn!(?invalid, "Unrecognized API");
+                                continue;
+                            },
                             None => { unreachable!() }
                         }
                     }
