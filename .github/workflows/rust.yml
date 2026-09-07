@@ -47,7 +47,7 @@ jobs:
       
     - name: Compile code
       shell: bash
-      run: CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_DEBUG=true RUSTFLAGS="-C target-cpu=znver4" cargo build --release
+      run: RUSTFLAGS="-C target-cpu=znver4" cargo build --release
       
     - name: Rename Windows binary for clarity
       shell: bash
