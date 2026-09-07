@@ -19,7 +19,7 @@ use twilight_model::{
     },
 };
 
-use crate::{commands::get_commands, db::connection::establish_database};
+use crate::commands::get_commands;
 
 #[derive(Deserialize, Clone)]
 pub struct Configs {
@@ -27,6 +27,7 @@ pub struct Configs {
     users_blacklist: Vec<Id<UserMarker>>,
     sql_blacklist: Vec<String>,
     allowed_channels: Vec<Id<ChannelMarker>>,
+    #[allow(dead_code)]
     database_url: String,
     stickers: Vec<(String, String)>,
 }
@@ -69,7 +70,7 @@ async fn main() -> anyhow::Result<()> {
         .set_global_commands(&get_commands(&configs)?)
         .await?;
 
-    establish_database(&configs.database_url).await?;
+    //establish_database(&configs.database_url).await?;
 
     let task = tokio::spawn(dispatcher(
         AppState {
