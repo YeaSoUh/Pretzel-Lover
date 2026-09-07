@@ -53,6 +53,7 @@ pub async fn defer(
 
 pub fn get_commands(configs: &Configs) -> anyhow::Result<Vec<Command>> {
     Ok(vec![
+        /*
         CommandBuilder::new("edit_db", "Edit a planet/moon", CommandType::ChatInput)
             .option(StringBuilder::new("index", "What planet/moon to edit").required(true))
             .option(StringBuilder::new("input", "Self explanatory").required(true))
@@ -80,6 +81,7 @@ pub fn get_commands(configs: &Configs) -> anyhow::Result<Vec<Command>> {
             .contexts(vec![InteractionContextType::Guild])
             .validate()?
             .build(),
+        */
         CommandBuilder::new("say", "Say as a bot", CommandType::ChatInput)
             .option(ChannelBuilder::new("channel", "Pick a channel to send"))
             .option(
