@@ -14,6 +14,8 @@ use twilight_util::builder::{
 
 use crate::{AppState, Configs, commands};
 
+pub mod say;
+pub mod edit_say;
 pub mod edit;
 pub mod get;
 pub mod morgoft;
@@ -134,15 +136,15 @@ pub async fn cmd_handler(
     event: Box<InteractionCreate>,
     data: Box<CommandData>,
 ) -> anyhow::Result<()> {
-    let result = match &data.name.as_str() {
+    let result = match data.as_ref().name.as_str() {
         // they are discontinued due to low usage but they can come back
-        //&"edit_db" => commands::edit::run(state, &event, &data).await,
-        //&"get_db" => commands::get::run(state, &event, &data).await,
-        //&"remove_db" => commands::remove::run(state, &event, &data).await,
-        //&"search_db" => commands::search::run(state, &event, &data).await,
-        &"say" => Err(anyhow::anyhow!("TODO command")),
-        &"edit" => Err(anyhow::anyhow!("TODO command")),
-        &"Sentence to Morgoft" => commands::morgoft::run(state, &event, &data).await,
+        //"edit_db" => commands::edit::run(state, &event, &data).await,
+        //"get_db" => commands::get::run(state, &event, &data).await,
+        //"remove_db" => commands::remove::run(state, &event, &data).await,
+        //"search_db" => commands::search::run(state, &event, &data).await,
+        "say" => commands::say::run(state, &event, &data).await,
+        "edit" => commands::edit_say::run(state, &event, &data).await,
+        "Sentence to Morgoft" => commands::morgoft::run(state, &event, &data).await,
         // discontinued too
         // "channel_manager" => todo!(),
         // "kitty" => todo!(),
