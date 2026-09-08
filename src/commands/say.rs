@@ -15,6 +15,7 @@ use twilight_util::builder::{
     InteractionResponseDataBuilder,
     message::{FileUploadBuilder, LabelBuilder},
 };
+use uuid::Uuid;
 
 use crate::AppState;
 
@@ -118,6 +119,8 @@ pub async fn run(
     };
 
     let components = InteractionResponseDataBuilder::new()
+        .custom_id(format!("say_modal:{}", Uuid::new_v4()))
+        .title("Say")
         .components([
             Component::Label(
                 LabelBuilder::new(
