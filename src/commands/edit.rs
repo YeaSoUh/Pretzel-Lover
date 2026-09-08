@@ -18,6 +18,7 @@ pub async fn run(
     data: &Box<CommandData>,
 ) -> anyhow::Result<()> {
     commands::defer(state.clone(), &event, false).await?;
+
     if event
         .channel
         .as_ref()

@@ -10,7 +10,7 @@ use crate::{AppState, commands};
 pub async fn run(
     state: AppState,
     event: &Box<InteractionCreate>,
-    data: &Box<CommandData>,
+    _data: &Box<CommandData>, // underscored for now
 ) -> anyhow::Result<()> {
     commands::defer(state.clone(), &event, false).await?;
 
@@ -21,7 +21,8 @@ pub async fn run(
     let user_roles = &user.roles;
 
     if !user_roles.contains(&Id::new(1410929363863732234)) // co-owner
-        || !user_roles.contains(&Id::new(1410929110502608896)) // owner
+        || !user_roles.contains(&Id::new(1410929110502608896))
+    // owner
     {
         state
             .client

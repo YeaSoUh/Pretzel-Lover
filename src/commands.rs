@@ -14,12 +14,12 @@ use twilight_util::builder::{
 
 use crate::{AppState, Configs, commands};
 
-pub mod say;
-pub mod edit_say;
 pub mod edit;
+pub mod edit_say;
 pub mod get;
 pub mod morgoft;
 pub mod remove;
+pub mod say;
 pub mod search;
 
 pub async fn defer(
@@ -96,10 +96,6 @@ pub fn get_commands(configs: &Configs) -> anyhow::Result<Vec<Command>> {
             .option(StringBuilder::new(
                 "reply",
                 "Type a message's url to reply (will overwrite channel parameter)",
-            ))
-            .option(StringBuilder::new(
-                "forward",
-                "Paste a message's url to forward it",
             ))
             .option(BooleanBuilder::new(
                 "mention_author",

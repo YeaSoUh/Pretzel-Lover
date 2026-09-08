@@ -18,6 +18,7 @@ twilight-gateway = { version = "0.17", features = ["simd-json"] }
 twilight-util = { version = "0.17", features = ["builder"] }
 turso = "0.7"
 sea-query = { version = "1.0", features = ["derive", "backend-sqlite"] }
+uuid = { version = "1.26", features = ["v4"] }
 
 [profile.release]
 opt-level = 3
