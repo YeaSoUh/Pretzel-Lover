@@ -1,14 +1,12 @@
-use std::{collections::HashMap, sync::{LazyLock, Mutex}};
+use std::{sync::{Arc, LazyLock}, time::{Duration, SystemTime, UNIX_EPOCH}};
+use dashmap::DashMap;
 
 use tracing::instrument;
 use twilight_model::{
-    application::interaction::application_command::{CommandData, CommandOptionValue},
-    channel::message::{
+    application::interaction::{application_command::{CommandData, CommandOptionValue}, modal::ModalInteractionData}, channel::message::{
         Component, MessageFlags,
         component::{TextInput, TextInputStyle},
-    },
-    gateway::payload::incoming::InteractionCreate,
-    id::{
+    }, gateway::payload::incoming::InteractionCreate, id::{
         Id,
         marker::{ChannelMarker, MessageMarker, StickerMarker},
     },
@@ -30,10 +28,11 @@ struct ModalInfo {
     tts: bool,
     mention: bool,
     silent: bool,
+    timestamp: u64,
 }
 
-static MODAL_INFO_MAP: LazyLock<Mutex<HashMap<String, ModalInfo>>> =
-    LazyLock::new(|| Mutex::new(HashMap::new()));
+static MODAL_INFO_MAP: LazyLock<Arc<DashMap<String, ModalInfo>>> =
+    LazyLock::new(|| Arc::new(DashMap::new()));
 
 #[instrument(skip_all, err)]
 pub async fn run(
@@ -278,8 +277,6 @@ pub async fn run(
         .await?;
 
     MODAL_INFO_MAP
-        .lock()
-        .expect("modal info map mutex poisoned")
         .insert(
             modal_id,
             ModalInfo {
@@ -297,8 +294,19 @@ pub async fn run(
                 tts,
                 mention: mention_author,
                 silent,
+                timestamp: SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs() + Duration::from_hours(1).as_secs(),
             },
         );
 
+    Ok(())
+}
+
+#[instrument(skip_all, err)]
+pub async fn modal(
+    state: AppState,
+    event: &Box<InteractionCreate>,
+    data: &Box<ModalInteractionData>,
+) -> anyhow::Result<()> {
+    
     Ok(())
 }

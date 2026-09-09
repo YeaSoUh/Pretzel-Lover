@@ -1,11 +1,8 @@
 use twilight_http::{Response, response::marker::EmptyBody};
 use twilight_model::{
     application::{
-        command::{Command, CommandType},
-        interaction::{InteractionContextType, application_command::CommandData},
-    },
-    channel::message::MessageFlags,
-    gateway::payload::incoming::InteractionCreate,
+        command::{Command, CommandType}, interaction::{InteractionContextType, application_command::CommandData, modal::ModalInteractionData},
+    }, channel::message::MessageFlags, gateway::payload::incoming::InteractionCreate,
 };
 use twilight_util::builder::{
     InteractionResponseDataBuilder,
@@ -149,6 +146,23 @@ pub async fn cmd_handler(
         // "channel_manager" => todo!(),
         // "kitty" => todo!(),
         // "doge" => todo!(),
+        _ => unreachable!("Non existent command"),
+    };
+
+    if let Err(e) = &result {
+        tracing::error!(?e, "AN ERROR!!!!!!!!!!!")
+    }
+    result
+}
+
+#[tracing::instrument(fields(user = ?event.author_id()), skip_all, err)]
+pub async fn modal_handler(
+    state: AppState,
+    event: Box<InteractionCreate>,
+    data: Box<ModalInteractionData>,
+) -> anyhow::Result<()> {
+    let result = match data.as_ref().custom_id.as_str() {
+        id if id.starts_with("say_modal") => commands::say::modal(state, &event, &data).await,
         _ => unreachable!("Non existent command"),
     };
 

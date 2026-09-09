@@ -110,7 +110,9 @@ async fn dispatcher(state: AppState, mut shard: Shard, mut shutdown: watch::Rece
                             Some(InteractionData::ApplicationCommand(data)) => {
                                 tokio::spawn(commands::cmd_handler(state.clone(), e.clone(), data.clone()));
                             },
-                            Some(InteractionData::ModalSubmit(_)) => { todo!() },
+                            Some(InteractionData::ModalSubmit(data)) => {
+                                tokio::spawn(commands::modal_handler(state.clone(), e.clone(), data.clone()));
+                            },
                             Some(InteractionData::MessageComponent(_)) => { todo!() },
                             Some(invalid) => {
                                 tracing::warn!(?invalid, "Unrecognized API");
