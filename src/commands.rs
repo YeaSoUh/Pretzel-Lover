@@ -97,6 +97,10 @@ pub fn get_commands(configs: &Configs) -> anyhow::Result<Vec<Command>> {
                 "reply",
                 "Type a message's url to reply (will overwrite channel parameter)",
             ))
+            .option(StringBuilder::new(
+                "forward",
+                "Paste a message's url to forward it",
+            ))
             .option(BooleanBuilder::new(
                 "mention_author",
                 "Mention author while replying?",
