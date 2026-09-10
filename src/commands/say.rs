@@ -319,7 +319,7 @@ pub async fn modal(
     let mut files: Vec<Attachment> = Vec::new();
     let mentions = Some(&AllowedMentions {
         parse: vec![MentionType::Everyone, MentionType::Users, MentionType::Roles],
-        replied_user: true,
+        replied_user: extra_params.mention,
         ..Default::default()
     });
     let sticker_ids = extra_params
