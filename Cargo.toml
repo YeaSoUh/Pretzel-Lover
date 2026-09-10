@@ -20,6 +20,7 @@ turso = "0.7"
 sea-query = { version = "1.0", features = ["derive", "backend-sqlite"] }
 uuid = { version = "1.26", features = ["v4"] }
 dashmap = "6.2"
+reqwest = { version = "0.13", default-features = false, features = ["rustls-no-provider", "http2", "system-proxy"] }
 
 [profile.release]
 opt-level = 3

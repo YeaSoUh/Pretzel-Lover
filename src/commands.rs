@@ -1,8 +1,13 @@
 use twilight_http::{Response, response::marker::EmptyBody};
 use twilight_model::{
     application::{
-        command::{Command, CommandType}, interaction::{InteractionContextType, application_command::CommandData, modal::ModalInteractionData},
-    }, channel::message::MessageFlags, gateway::payload::incoming::InteractionCreate,
+        command::{Command, CommandType},
+        interaction::{
+            InteractionContextType, application_command::CommandData, modal::ModalInteractionData,
+        },
+    },
+    channel::message::MessageFlags,
+    gateway::payload::incoming::InteractionCreate,
 };
 use twilight_util::builder::{
     InteractionResponseDataBuilder,

@@ -1,12 +1,23 @@
-use std::{sync::{Arc, LazyLock}, time::{Duration, SystemTime, UNIX_EPOCH}};
 use dashmap::DashMap;
+use std::{
+    sync::{Arc, LazyLock},
+    time::{Duration, SystemTime, UNIX_EPOCH},
+};
 
 use tracing::instrument;
 use twilight_model::{
-    application::interaction::{application_command::{CommandData, CommandOptionValue}, modal::ModalInteractionData}, channel::message::{
-        Component, MessageFlags,
-        component::{TextInput, TextInputStyle},
-    }, gateway::payload::incoming::InteractionCreate, id::{
+    application::interaction::{
+        application_command::{CommandData, CommandOptionValue},
+        modal::{ModalInteractionComponent, ModalInteractionData},
+    },
+    channel::
+        message::{
+            Component, MessageFlags,
+            component::{TextInput, TextInputStyle},
+        },
+    http::attachment::Attachment
+    gateway::payload::incoming::InteractionCreate,
+    id::{
         Id,
         marker::{ChannelMarker, MessageMarker, StickerMarker},
     },
@@ -31,7 +42,7 @@ struct ModalInfo {
     timestamp: u64,
 }
 
-static MODAL_INFO_MAP: LazyLock<Arc<DashMap<String, ModalInfo>>> =
+static MODAL_INFO_MAP: LazyLock<Arc<DashMap<String, Arc<ModalInfo>>>> =
     LazyLock::new(|| Arc::new(DashMap::new()));
 
 #[instrument(skip_all, err)]
@@ -276,27 +287,27 @@ pub async fn run(
         )
         .await?;
 
-    MODAL_INFO_MAP
-        .insert(
-            modal_id,
-            ModalInfo {
-                channel,
-                sticker: {
-                    if sticker.get() == 1 {
-                        None
-                    } else {
-                        Some(sticker)
-                    }
-                },
-                reply_message_id: reply_id,
-                forward_message_id: forward_message,
-                forward_channel_id: forward_channel,
-                tts,
-                mention: mention_author,
-                silent,
-                timestamp: SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs() + Duration::from_hours(1).as_secs(),
+    MODAL_INFO_MAP.insert(
+        modal_id,
+        Arc::new(ModalInfo {
+            channel,
+            sticker: {
+                if sticker.get() == 1 {
+                    None
+                } else {
+                    Some(sticker)
+                }
             },
-        );
+            reply_message_id: reply_id,
+            forward_message_id: forward_message,
+            forward_channel_id: forward_channel,
+            tts,
+            mention: mention_author,
+            silent,
+            timestamp: SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs()
+                + Duration::from_hours(1).as_secs(),
+        }),
+    );
 
     Ok(())
 }
@@ -307,6 +318,53 @@ pub async fn modal(
     event: &Box<InteractionCreate>,
     data: &Box<ModalInteractionData>,
 ) -> anyhow::Result<()> {
-    
+    let extra_params = {
+        MODAL_INFO_MAP
+            .get(&data.custom_id)
+            .ok_or(anyhow::anyhow!("Didn't find extra parameters"))?
+            .value().clone()
+    };
+    let mut text: &str = "";
+    let mut files: Vec<Attachment> = Vec::new();
+
+    MODAL_INFO_MAP.remove(&data.custom_id);
+
+    for component in &data.components {
+        if let ModalInteractionComponent::TextInput(i) = component {
+            text = &i.value;
+        } else if let ModalInteractionComponent::FileUpload(i) = component {
+            for file_id in &i.values {
+                let file = data.resolved
+                        .as_ref()
+                        .ok_or_else(|| anyhow::anyhow!("No attachments"))?
+                        .attachments
+                        .get(file_id)
+                        .ok_or_else(|| anyhow::anyhow!("Didn't find any attachments"))?;
+                files.push(
+                    Attachment::from_bytes(file.filename.to_string(), reqwest::get(&file.proxy_url).await?.bytes().await?.to_vec(), file_id.get())
+                );
+            }
+        };
+    }
+
+    let mut create_message = state
+        .client
+        .create_message(extra_params.channel)
+        .content(text)
+        .attachments(files.as_slice())
+        .flags(
+            if extra_params.silent {
+                MessageFlags::SUPPRESS_NOTIFICATIONS
+            } else { MessageFlags::empty() }
+        )
+        .tts(extra_params.tts);
+    if let Some(reply_message_id) = extra_params.reply_message_id {
+        create_message = create_message.reply(reply_message_id);
+    };
+    if let Some(forward_channel_id) = extra_params.forward_channel_id {
+        create_message = create_message.forward(forward_channel_id, extra_params.forward_message_id.unwrap());
+    }
+
+
     Ok(())
 }
