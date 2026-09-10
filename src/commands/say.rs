@@ -9,15 +9,10 @@ use twilight_model::{
     application::interaction::{
         application_command::{CommandData, CommandOptionValue},
         modal::{ModalInteractionComponent, ModalInteractionData},
-    },
-    channel::
+    }, channel::
         message::{
-            Component, MessageFlags,
-            component::{TextInput, TextInputStyle},
-        },
-    http::attachment::Attachment
-    gateway::payload::incoming::InteractionCreate,
-    id::{
+            AllowedMentions, Component, MentionType, MessageFlags, component::{TextInput, TextInputStyle},
+        }, gateway::payload::incoming::InteractionCreate, http::attachment::Attachment, id::{
         Id,
         marker::{ChannelMarker, MessageMarker, StickerMarker},
     },
@@ -318,16 +313,19 @@ pub async fn modal(
     event: &Box<InteractionCreate>,
     data: &Box<ModalInteractionData>,
 ) -> anyhow::Result<()> {
-    let extra_params = {
-        MODAL_INFO_MAP
-            .get(&data.custom_id)
-            .ok_or(anyhow::anyhow!("Didn't find extra parameters"))?
-            .value().clone()
-    };
+    let extra_params = MODAL_INFO_MAP.remove(&data.custom_id).ok_or(anyhow::anyhow!("Didn't find extra params"))?.1;
+
     let mut text: &str = "";
     let mut files: Vec<Attachment> = Vec::new();
-
-    MODAL_INFO_MAP.remove(&data.custom_id);
+    let mentions = Some(&AllowedMentions {
+        parse: vec![MentionType::Everyone, MentionType::Users, MentionType::Roles],
+        replied_user: true,
+        ..Default::default()
+    });
+    let sticker_ids = extra_params
+        .sticker
+        .as_ref()
+        .map(|sticker_id| vec![sticker_id.clone()]);
 
     for component in &data.components {
         if let ModalInteractionComponent::TextInput(i) = component {
@@ -341,7 +339,7 @@ pub async fn modal(
                         .get(file_id)
                         .ok_or_else(|| anyhow::anyhow!("Didn't find any attachments"))?;
                 files.push(
-                    Attachment::from_bytes(file.filename.to_string(), reqwest::get(&file.proxy_url).await?.bytes().await?.to_vec(), file_id.get())
+                    Attachment::from_bytes(file.filename.clone(), reqwest::get(&file.proxy_url).await?.bytes().await?.to_vec(), file_id.get())
                 );
             }
         };
@@ -352,6 +350,7 @@ pub async fn modal(
         .create_message(extra_params.channel)
         .content(text)
         .attachments(files.as_slice())
+        .allowed_mentions(mentions)
         .flags(
             if extra_params.silent {
                 MessageFlags::SUPPRESS_NOTIFICATIONS
@@ -362,7 +361,25 @@ pub async fn modal(
         create_message = create_message.reply(reply_message_id);
     };
     if let Some(forward_channel_id) = extra_params.forward_channel_id {
-        create_message = create_message.forward(forward_channel_id, extra_params.forward_message_id.unwrap());
+        create_message = create_message.forward(forward_channel_id, extra_params.forward_message_id.ok_or(anyhow::anyhow!("Didn't find forward message id"))?);
+    }
+    if let Some(sticker_ids) = sticker_ids.as_ref() {
+        create_message = create_message.sticker_ids(sticker_ids.as_slice());
+    }
+
+    let result = create_message.await;
+    if let Err(e) = result {
+        state
+            .client
+            .interaction(state.application_id)
+            .create_followup(&event.token)
+            .content(&format!(
+                "There was an error while sending a message:\n{}",
+                e.to_string()
+            ))
+            .flags(MessageFlags::EPHEMERAL)
+            .await?;
+        return Err(e.into());
     }
 
 
