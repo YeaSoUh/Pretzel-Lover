@@ -3,12 +3,13 @@ use twilight_model::{gateway::payload::incoming::MessageCreate, id::Id};
 use crate::AppState;
 
 #[tracing::instrument(fields(user = ?event.author.id), skip_all, err)]
-pub async fn msg_handler(
-    state: AppState,
-    event: Box<MessageCreate>,
-) -> anyhow::Result<()> {
+pub async fn msg_handler(state: AppState, event: Box<MessageCreate>) -> anyhow::Result<()> {
+    if event.author.bot || event.content.is_empty() {
+        return Ok(());
+    }
 
     if event.channel_id == Id::new(1440695808721686703) {
+        // news channel id
         state
             .client
             .crosspost_message(Id::new(1440695808721686703), event.id)

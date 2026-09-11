@@ -1,19 +1,23 @@
 use dashmap::DashMap;
-use tokio::time::Instant;
 use std::{
     sync::{Arc, LazyLock},
     time::Duration,
 };
+use tokio::time::Instant;
 
 use tracing::instrument;
 use twilight_model::{
     application::interaction::{
         application_command::{CommandData, CommandOptionValue},
         modal::{ModalInteractionComponent, ModalInteractionData},
-    }, channel::
-        message::{
-            AllowedMentions, Component, MentionType, MessageFlags, component::{TextInput, TextInputStyle},
-        }, gateway::payload::incoming::InteractionCreate, http::attachment::Attachment, id::{
+    },
+    channel::message::{
+        AllowedMentions, Component, MentionType, MessageFlags,
+        component::{TextInput, TextInputStyle},
+    },
+    gateway::payload::incoming::InteractionCreate,
+    http::attachment::Attachment,
+    id::{
         Id,
         marker::{ChannelMarker, MessageMarker},
     },
@@ -24,7 +28,13 @@ use twilight_util::builder::{
 };
 use uuid::Uuid;
 
-use crate::{AppState, commands::pretzel::helpers::purge::{Expiring, purge}};
+use crate::{
+    AppState,
+    commands::{
+        pretzel::helpers::purge::{Expiring, purge},
+        response,
+    },
+};
 
 struct ModalInfo {
     message_id: Id<MessageMarker>,
@@ -64,9 +74,16 @@ pub async fn run(
         state
             .client
             .interaction(state.application_id)
-            .create_followup(&event.token)
-            .content("Not allowed to run command")
-            .flags(MessageFlags::EPHEMERAL)
+            .create_response(
+                event.id,
+                &event.token,
+                &response(
+                    InteractionResponseDataBuilder::new()
+                        .content("Not allowed to run command")
+                        .flags(MessageFlags::EPHEMERAL)
+                        .build(),
+                ),
+            )
             .await?;
         return Ok(()); // just to suppress error
     }
@@ -90,9 +107,16 @@ pub async fn run(
                     state
                         .client
                         .interaction(state.application_id)
-                        .create_followup(&event.token)
-                        .content("No channel id in message url")
-                        .flags(MessageFlags::EPHEMERAL)
+                        .create_response(
+                            event.id,
+                            &event.token,
+                            &response(
+                                InteractionResponseDataBuilder::new()
+                                    .content("No channel id in message url")
+                                    .flags(MessageFlags::EPHEMERAL)
+                                    .build(),
+                            ),
+                        )
                         .await?;
                     anyhow::bail!("No channel id in message url");
                 }
@@ -103,9 +127,16 @@ pub async fn run(
                     state
                         .client
                         .interaction(state.application_id)
-                        .create_followup(&event.token)
-                        .content("No message id in message url")
-                        .flags(MessageFlags::EPHEMERAL)
+                        .create_response(
+                            event.id,
+                            &event.token,
+                            &response(
+                                InteractionResponseDataBuilder::new()
+                                    .content("No message id in message url")
+                                    .flags(MessageFlags::EPHEMERAL)
+                                    .build(),
+                            ),
+                        )
                         .await?;
                     anyhow::bail!("No message id in message url");
                 }
@@ -189,50 +220,65 @@ pub async fn modal(
     event: &Box<InteractionCreate>,
     data: &Box<ModalInteractionData>,
 ) -> anyhow::Result<()> {
-    let extra_params = MODAL_INFO_MAP.remove(&data.custom_id).ok_or(anyhow::anyhow!("Didn't find extra params"))?.1;
+    let extra_params = MODAL_INFO_MAP
+        .remove(&data.custom_id)
+        .ok_or(anyhow::anyhow!("Didn't find extra params"))?
+        .1;
 
     let mut text: Option<&str> = None;
     let mut files: Vec<Attachment> = Vec::new();
     let mentions = Some(&AllowedMentions {
-        parse: vec![MentionType::Everyone, MentionType::Users, MentionType::Roles],
+        parse: vec![
+            MentionType::Everyone,
+            MentionType::Users,
+            MentionType::Roles,
+        ],
         replied_user: true,
         ..Default::default()
     });
 
     for component in &data.components {
         match component {
-            ModalInteractionComponent::Label(sub_comp) => {
-                match &*sub_comp.component {
-                    ModalInteractionComponent::TextInput(val) => {
-                        text = Some(&val.value);
-                    }
-                    ModalInteractionComponent::FileUpload(val) => {
-                        for file_id in &val.values {
-                            let file = data.resolved
-                                    .as_ref()
-                                    .ok_or_else(|| anyhow::anyhow!("No attachments"))?
-                                    .attachments
-                                    .get(file_id)
-                                    .ok_or_else(|| anyhow::anyhow!("Didn't find any attachments"))?;
-                            files.push(
-                                Attachment::from_bytes(file.filename.clone(), reqwest::get(&file.proxy_url).await?.bytes().await?.to_vec(), file_id.get())
-                            );
-                        }
-                    }
-                    _ => continue
+            ModalInteractionComponent::Label(sub_comp) => match &*sub_comp.component {
+                ModalInteractionComponent::TextInput(val) => {
+                    text = Some(&val.value);
                 }
-            }
-            _ => continue
+                ModalInteractionComponent::FileUpload(val) => {
+                    for file_id in &val.values {
+                        let file = data
+                            .resolved
+                            .as_ref()
+                            .ok_or_else(|| anyhow::anyhow!("No attachments"))?
+                            .attachments
+                            .get(file_id)
+                            .ok_or_else(|| anyhow::anyhow!("Didn't find any attachments"))?;
+                        files.push(Attachment::from_bytes(
+                            file.filename.clone(),
+                            reqwest::get(&file.proxy_url).await?.bytes().await?.to_vec(),
+                            file_id.get(),
+                        ));
+                    }
+                }
+                _ => continue,
+            },
+            _ => continue,
         }
-    };
+    }
 
     if text.is_none_or(|val| val.is_empty()) && files.is_empty() {
         state
             .client
             .interaction(state.application_id)
-            .create_followup(&event.token)
-            .content("No message content provided to send")
-            .flags(MessageFlags::EPHEMERAL)
+            .create_response(
+                event.id,
+                &event.token,
+                &response(
+                    InteractionResponseDataBuilder::new()
+                        .content("No message content provided to send")
+                        .flags(MessageFlags::EPHEMERAL)
+                        .build(),
+                ),
+            )
             .await?;
         anyhow::bail!("No message content provided to send");
     }
@@ -249,12 +295,19 @@ pub async fn modal(
         state
             .client
             .interaction(state.application_id)
-            .create_followup(&event.token)
-            .content(&format!(
-                "There was an error while editing a message:\n{}",
-                e.to_string()
-            ))
-            .flags(MessageFlags::EPHEMERAL)
+            .create_response(
+                event.id,
+                &event.token,
+                &response(
+                    InteractionResponseDataBuilder::new()
+                        .content(&format!(
+                            "There was an error while editing a message:\n{}",
+                            e.to_string()
+                        ))
+                        .flags(MessageFlags::EPHEMERAL)
+                        .build(),
+                ),
+            )
             .await?;
         return Err(e.into());
     }

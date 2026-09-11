@@ -1,19 +1,23 @@
 use dashmap::DashMap;
-use tokio::time::Instant;
 use std::{
     sync::{Arc, LazyLock},
     time::Duration,
 };
+use tokio::time::Instant;
 
 use tracing::instrument;
 use twilight_model::{
     application::interaction::{
         application_command::{CommandData, CommandOptionValue},
         modal::{ModalInteractionComponent, ModalInteractionData},
-    }, channel::
-        message::{
-            AllowedMentions, Component, MentionType, MessageFlags, component::{TextInput, TextInputStyle},
-        }, gateway::payload::incoming::InteractionCreate, http::attachment::Attachment, id::{
+    },
+    channel::message::{
+        AllowedMentions, Component, MentionType, MessageFlags,
+        component::{TextInput, TextInputStyle},
+    },
+    gateway::payload::incoming::InteractionCreate,
+    http::attachment::Attachment,
+    id::{
         Id,
         marker::{ChannelMarker, MessageMarker, StickerMarker},
     },
@@ -24,7 +28,13 @@ use twilight_util::builder::{
 };
 use uuid::Uuid;
 
-use crate::{AppState, commands::pretzel::helpers::purge::{Expiring, purge}};
+use crate::{
+    AppState,
+    commands::{
+        pretzel::helpers::purge::{Expiring, purge},
+        response,
+    },
+};
 
 struct ModalInfo {
     channel: Id<ChannelMarker>,
@@ -70,9 +80,16 @@ pub async fn run(
         state
             .client
             .interaction(state.application_id)
-            .create_followup(&event.token)
-            .content("Not allowed to run command")
-            .flags(MessageFlags::EPHEMERAL)
+            .create_response(
+                event.id,
+                &event.token,
+                &response(
+                    InteractionResponseDataBuilder::new()
+                        .content("Not allowed to run command")
+                        .flags(MessageFlags::EPHEMERAL)
+                        .build(),
+                ),
+            )
             .await?;
         return Ok(()); // just to suppress error
     }
@@ -123,9 +140,16 @@ pub async fn run(
         state
             .client
             .interaction(state.application_id)
-            .create_followup(&event.token)
-            .content("No message id in reply")
-            .flags(MessageFlags::EPHEMERAL)
+            .create_response(
+                event.id,
+                &event.token,
+                &response(
+                    InteractionResponseDataBuilder::new()
+                        .content("No message id in reply")
+                        .flags(MessageFlags::EPHEMERAL)
+                        .build(),
+                ),
+            )
             .await?;
         anyhow::bail!("No message id in reply");
     } else if let Some(id_str) = reply_id_str {
@@ -137,9 +161,16 @@ pub async fn run(
             state
                 .client
                 .interaction(state.application_id)
-                .create_followup(&event.token)
-                .content("No channel id in reply")
-                .flags(MessageFlags::EPHEMERAL)
+                .create_response(
+                    event.id,
+                    &event.token,
+                    &response(
+                        InteractionResponseDataBuilder::new()
+                            .content("No channel id in reply")
+                            .flags(MessageFlags::EPHEMERAL)
+                            .build(),
+                    ),
+                )
                 .await?;
             anyhow::bail!("No channel id in reply");
         };
@@ -150,9 +181,16 @@ pub async fn run(
                 state
                     .client
                     .interaction(state.application_id)
-                    .create_followup(&event.token)
-                    .content(&format!("An error happened:\n{e}"))
-                    .flags(MessageFlags::EPHEMERAL)
+                    .create_response(
+                        event.id,
+                        &event.token,
+                        &response(
+                            InteractionResponseDataBuilder::new()
+                                .content(&format!("An error happened:\n{e}"))
+                                .flags(MessageFlags::EPHEMERAL)
+                                .build(),
+                        ),
+                    )
                     .await?;
                 return Err(e.into());
             }
@@ -175,9 +213,16 @@ pub async fn run(
             state
                 .client
                 .interaction(state.application_id)
-                .create_followup(&event.token)
-                .content("No channel id in forward link")
-                .flags(MessageFlags::EPHEMERAL)
+                .create_response(
+                    event.id,
+                    &event.token,
+                    &response(
+                        InteractionResponseDataBuilder::new()
+                            .content("Failed to parse channel id in forward link")
+                            .flags(MessageFlags::EPHEMERAL)
+                            .build(),
+                    ),
+                )
                 .await?;
             anyhow::bail!("No channel id in forward");
         };
@@ -188,9 +233,16 @@ pub async fn run(
                 state
                     .client
                     .interaction(state.application_id)
-                    .create_followup(&event.token)
-                    .content(&format!("Failed to parse channel id in forward link"))
-                    .flags(MessageFlags::EPHEMERAL)
+                    .create_response(
+                        event.id,
+                        &event.token,
+                        &response(
+                            InteractionResponseDataBuilder::new()
+                                .content("Failed to parse channel id in forward link")
+                                .flags(MessageFlags::EPHEMERAL)
+                                .build(),
+                        ),
+                    )
                     .await?;
                 return Err(e.into());
             }
@@ -200,9 +252,16 @@ pub async fn run(
             state
                 .client
                 .interaction(state.application_id)
-                .create_followup(&event.token)
-                .content("No channel id in forward link")
-                .flags(MessageFlags::EPHEMERAL)
+                .create_response(
+                    event.id,
+                    &event.token,
+                    &response(
+                        InteractionResponseDataBuilder::new()
+                            .content("No channel id in forward link")
+                            .flags(MessageFlags::EPHEMERAL)
+                            .build(),
+                    ),
+                )
                 .await?;
             anyhow::bail!("No channel id in forward");
         };
@@ -213,9 +272,16 @@ pub async fn run(
                 state
                     .client
                     .interaction(state.application_id)
-                    .create_followup(&event.token)
-                    .content(&format!("Failed to parse message id in forward link"))
-                    .flags(MessageFlags::EPHEMERAL)
+                    .create_response(
+                        event.id,
+                        &event.token,
+                        &response(
+                            InteractionResponseDataBuilder::new()
+                                .content("Failed to parse message id in forward link")
+                                .flags(MessageFlags::EPHEMERAL)
+                                .build(),
+                        ),
+                    )
                     .await?;
                 return Err(e.into());
             }
@@ -310,8 +376,7 @@ pub async fn run(
             tts,
             mention: mention_author,
             silent,
-            expires_at: Instant::now()
-                + Duration::from_hours(1),
+            expires_at: Instant::now() + Duration::from_hours(1),
         }),
     );
 
@@ -324,12 +389,19 @@ pub async fn modal(
     event: &Box<InteractionCreate>,
     data: &Box<ModalInteractionData>,
 ) -> anyhow::Result<()> {
-    let extra_params = MODAL_INFO_MAP.remove(&data.custom_id).ok_or(anyhow::anyhow!("Didn't find extra params"))?.1;
+    let extra_params = MODAL_INFO_MAP
+        .remove(&data.custom_id)
+        .ok_or(anyhow::anyhow!("Didn't find extra params"))?
+        .1;
 
     let mut text: &str = "";
     let mut files: Vec<Attachment> = Vec::new();
     let mentions = Some(&AllowedMentions {
-        parse: vec![MentionType::Everyone, MentionType::Users, MentionType::Roles],
+        parse: vec![
+            MentionType::Everyone,
+            MentionType::Users,
+            MentionType::Roles,
+        ],
         replied_user: extra_params.mention,
         ..Default::default()
     });
@@ -340,38 +412,46 @@ pub async fn modal(
 
     for component in &data.components {
         match component {
-            ModalInteractionComponent::Label(sub_comp) => {
-                match &*sub_comp.component {
-                    ModalInteractionComponent::TextInput(val) => {
-                        text = &val.value;
-                    }
-                    ModalInteractionComponent::FileUpload(val) => {
-                        for file_id in &val.values {
-                            let file = data.resolved
-                                    .as_ref()
-                                    .ok_or_else(|| anyhow::anyhow!("No attachments"))?
-                                    .attachments
-                                    .get(file_id)
-                                    .ok_or_else(|| anyhow::anyhow!("Didn't find any attachments"))?;
-                            files.push(
-                                Attachment::from_bytes(file.filename.clone(), reqwest::get(&file.proxy_url).await?.bytes().await?.to_vec(), file_id.get())
-                            );
-                        }
-                    }
-                    _ => continue
+            ModalInteractionComponent::Label(sub_comp) => match &*sub_comp.component {
+                ModalInteractionComponent::TextInput(val) => {
+                    text = &val.value;
                 }
-            }
-            _ => continue
+                ModalInteractionComponent::FileUpload(val) => {
+                    for file_id in &val.values {
+                        let file = data
+                            .resolved
+                            .as_ref()
+                            .ok_or_else(|| anyhow::anyhow!("No attachments"))?
+                            .attachments
+                            .get(file_id)
+                            .ok_or_else(|| anyhow::anyhow!("Didn't find any attachments"))?;
+                        files.push(Attachment::from_bytes(
+                            file.filename.clone(),
+                            reqwest::get(&file.proxy_url).await?.bytes().await?.to_vec(),
+                            file_id.get(),
+                        ));
+                    }
+                }
+                _ => continue,
+            },
+            _ => continue,
         }
-    };
+    }
 
     if text.is_empty() && files.is_empty() && extra_params.sticker.is_none() {
         state
             .client
             .interaction(state.application_id)
-            .create_followup(&event.token)
-            .content("No message content provided to send")
-            .flags(MessageFlags::EPHEMERAL)
+            .create_response(
+                event.id,
+                &event.token,
+                &response(
+                    InteractionResponseDataBuilder::new()
+                        .content("No message content provided to send")
+                        .flags(MessageFlags::EPHEMERAL)
+                        .build(),
+                ),
+            )
             .await?;
         anyhow::bail!("No message content provided to send");
     }
@@ -382,17 +462,22 @@ pub async fn modal(
         .content(text)
         .attachments(files.as_slice())
         .allowed_mentions(mentions)
-        .flags(
-            if extra_params.silent {
-                MessageFlags::SUPPRESS_NOTIFICATIONS
-            } else { MessageFlags::empty() }
-        )
+        .flags(if extra_params.silent {
+            MessageFlags::SUPPRESS_NOTIFICATIONS
+        } else {
+            MessageFlags::empty()
+        })
         .tts(extra_params.tts);
     if let Some(reply_message_id) = extra_params.reply_message_id {
         create_message = create_message.reply(reply_message_id);
     };
     if let Some(forward_channel_id) = extra_params.forward_channel_id {
-        create_message = create_message.forward(forward_channel_id, extra_params.forward_message_id.ok_or(anyhow::anyhow!("Didn't find forward message id"))?);
+        create_message = create_message.forward(
+            forward_channel_id,
+            extra_params
+                .forward_message_id
+                .ok_or(anyhow::anyhow!("Didn't find forward message id"))?,
+        );
     }
     if let Some(sticker_ids) = sticker_ids.as_ref() {
         create_message = create_message.sticker_ids(sticker_ids.as_slice());
@@ -403,12 +488,19 @@ pub async fn modal(
         state
             .client
             .interaction(state.application_id)
-            .create_followup(&event.token)
-            .content(&format!(
-                "There was an error while sending a message:\n{}",
-                e.to_string()
-            ))
-            .flags(MessageFlags::EPHEMERAL)
+            .create_response(
+                event.id,
+                &event.token,
+                &response(
+                    InteractionResponseDataBuilder::new()
+                        .content(&format!(
+                            "There was an error while sending a message:\n{}",
+                            e.to_string()
+                        ))
+                        .flags(MessageFlags::EPHEMERAL)
+                        .build(),
+                ),
+            )
             .await?;
         return Err(e.into());
     }

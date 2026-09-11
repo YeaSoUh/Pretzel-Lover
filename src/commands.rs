@@ -8,6 +8,7 @@ use twilight_model::{
     },
     channel::message::MessageFlags,
     gateway::payload::incoming::InteractionCreate,
+    http::interaction::{InteractionResponse, InteractionResponseData, InteractionResponseType},
 };
 use twilight_util::builder::{
     InteractionResponseDataBuilder,
@@ -16,9 +17,9 @@ use twilight_util::builder::{
 
 use crate::{AppState, Configs, commands};
 
-pub mod pretzel;
 pub mod edit;
 pub mod get;
+pub mod pretzel;
 pub mod remove;
 pub mod search;
 
@@ -51,6 +52,13 @@ pub async fn defer(
             },
         )
         .await
+}
+
+pub fn response(data: InteractionResponseData) -> InteractionResponse {
+    InteractionResponse {
+        kind: InteractionResponseType::ChannelMessageWithSource,
+        data: Some(data),
+    }
 }
 
 pub fn get_commands(configs: &Configs) -> anyhow::Result<Vec<Command>> {
@@ -168,8 +176,12 @@ pub async fn modal_handler(
     data: Box<ModalInteractionData>,
 ) -> anyhow::Result<()> {
     let result = match data.as_ref().custom_id.as_str() {
-        id if id.starts_with("say_modal") => commands::pretzel::say::modal(state, &event, &data).await,
-        id if id.starts_with("edit_modal") => commands::pretzel::edit::modal(state, &event, &data).await,
+        id if id.starts_with("say_modal") => {
+            commands::pretzel::say::modal(state, &event, &data).await
+        }
+        id if id.starts_with("edit_modal") => {
+            commands::pretzel::edit::modal(state, &event, &data).await
+        }
         _ => unreachable!("Non existent command"),
     };
 

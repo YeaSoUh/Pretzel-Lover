@@ -15,17 +15,16 @@ pub trait Expiring {
 #[instrument(skip(map), fields(check_interval = ?check_interval))]
 pub async fn purge<T>(map: Arc<DashMap<String, Arc<T>>>, check_interval: Duration)
 where
-    T: Expiring + Send + Sync + 'static
+    T: Expiring + Send + Sync + 'static,
 {
     loop {
         tokio::time::sleep(check_interval).await;
 
         let map_clone = Arc::clone(&map);
         let result = tokio::task::spawn_blocking(move || {
-            map_clone.retain(|_, val| {
-                !val.is_expired()
-            });
-        }).await;
+            map_clone.retain(|_, val| !val.is_expired());
+        })
+        .await;
 
         if let Err(e) = result {
             tracing::error!(error = ?e, "An error happened during background purging of a DashMap");
