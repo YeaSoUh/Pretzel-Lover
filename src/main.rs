@@ -58,8 +58,7 @@ async fn main() -> anyhow::Result<()> {
         let content = std::fs::read("configs.json")?;
         serde_json::from_slice(&content)?
     };
-    let mut intents = Intents::MESSAGE_CONTENT;
-    intents.insert(Intents::GUILD_MESSAGES);
+    let intents = Intents::MESSAGE_CONTENT | Intents::GUILD_MESSAGES;
 
     let (shutdown_tx, shutdown_rx) = watch::channel(false);
     let client = Arc::new(Client::new(configs.token.clone()));
