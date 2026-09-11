@@ -205,8 +205,8 @@ pub async fn run(
     };
 
     let forward_info: Option<(Id<ChannelMarker>, Id<MessageMarker>)> = if !forward.is_empty() {
-        let mut reply_iter = reply.split('/');
-        let Some(c_id_str) = reply_iter.nth(5) else {
+        let mut forward_iter = forward.split('/');
+        let Some(c_id_str) = forward_iter.nth(5) else {
             state
                 .client
                 .interaction(state.application_id)
@@ -245,7 +245,7 @@ pub async fn run(
             }
         };
 
-        let Some(m_id_str) = reply_iter.next() else {
+        let Some(m_id_str) = forward_iter.next() else {
             state
                 .client
                 .interaction(state.application_id)
