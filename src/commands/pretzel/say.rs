@@ -131,7 +131,7 @@ pub async fn run(
         }
     }
 
-    let reply_id_str = reply.split("/").nth(7);
+    let reply_id_str = reply.split("/").nth(6);
     let mut reply_id: Option<Id<MessageMarker>> = None;
     if reply_id_str.is_none() && !reply.is_empty() {
         state
