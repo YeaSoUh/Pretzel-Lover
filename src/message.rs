@@ -7,6 +7,7 @@ pub async fn msg_handler(
     state: AppState,
     event: Box<MessageCreate>,
 ) -> anyhow::Result<()> {
+
     if event.channel_id == Id::new(1440695808721686703) {
         state
             .client
@@ -16,7 +17,7 @@ pub async fn msg_handler(
     }
 
     match &event.content {
-        content if content.contains("Ertone") => {
+        content if content.to_lowercase().contains("ertone") => {
             state
                 .client
                 .create_message(event.channel_id)
@@ -24,7 +25,7 @@ pub async fn msg_handler(
                 .content("https://cdn.discordapp.com/attachments/1459124234021376000/1544909288604962896/makesweet-o93b8o.gif?ex=6aa4c465&is=6aa372e5&hm=0b151af29453ed3749bb7b9dd6ca0ec6cbc552b7f0d672d6dd34a9a87fae43a5&")
                 .await?;
         }
-        content if content.contains("Acharlys") => {
+        content if content.to_lowercase().contains("acharlys") => {
             state
                 .client
                 .create_message(event.channel_id)
