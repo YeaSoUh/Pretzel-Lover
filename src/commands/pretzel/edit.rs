@@ -101,7 +101,7 @@ pub async fn run(
             ("message_url", CommandOptionValue::String(message_url)) => {
                 let mut url_iter = message_url.split("/");
 
-                if let Some(channel_id) = url_iter.nth(6) {
+                if let Some(channel_id) = url_iter.nth(5) {
                     message_channel_id = Id::new(channel_id.parse::<u64>()?);
                 } else {
                     state
