@@ -1,6 +1,8 @@
 pub mod commands;
 pub mod db;
 
+mod message;
+
 use std::sync::Arc;
 
 use serde::Deserialize;
@@ -56,9 +58,12 @@ async fn main() -> anyhow::Result<()> {
         let content = std::fs::read("configs.json")?;
         serde_json::from_slice(&content)?
     };
+    let mut intents = Intents::MESSAGE_CONTENT;
+    intents.insert(Intents::GUILD_MESSAGES);
+
     let (shutdown_tx, shutdown_rx) = watch::channel(false);
     let client = Arc::new(Client::new(configs.token.clone()));
-    let shard = Shard::new(ShardId::ONE, configs.token.clone(), Intents::empty());
+    let shard = Shard::new(ShardId::ONE, configs.token.clone(), intents);
 
     let application_id = {
         let response = client.current_user_application().await?;
@@ -118,8 +123,14 @@ async fn dispatcher(state: AppState, mut shard: Shard, mut shutdown: watch::Rece
                                 tracing::warn!(?invalid, "Unrecognized API");
                                 continue;
                             },
-                            None => { unreachable!() }
+                            None => {
+                                tracing::warn!("Unrecognized None API");
+                                continue;
+                            }
                         }
+                    },
+                    Event::MessageCreate(e) => {
+                        tokio::spawn(message::msg_handler(state.clone(), e.clone()));
                     }
                     _ => {}
                 }

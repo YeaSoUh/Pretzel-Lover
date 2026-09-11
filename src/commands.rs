@@ -16,12 +16,10 @@ use twilight_util::builder::{
 
 use crate::{AppState, Configs, commands};
 
+pub mod pretzel;
 pub mod edit;
-pub mod edit_say;
 pub mod get;
-pub mod morgoft;
 pub mod remove;
-pub mod say;
 pub mod search;
 
 pub async fn defer(
@@ -138,15 +136,18 @@ pub async fn cmd_handler(
     event: Box<InteractionCreate>,
     data: Box<CommandData>,
 ) -> anyhow::Result<()> {
+    commands::pretzel::say::run_once();
+    commands::pretzel::edit::run_once();
+
     let result = match data.as_ref().name.as_str() {
         // they are discontinued due to low usage but they can come back
         //"edit_db" => commands::edit::run(state, &event, &data).await,
         //"get_db" => commands::get::run(state, &event, &data).await,
         //"remove_db" => commands::remove::run(state, &event, &data).await,
         //"search_db" => commands::search::run(state, &event, &data).await,
-        "say" => commands::say::run(state, &event, &data).await,
-        "edit" => commands::edit_say::run(state, &event, &data).await,
-        "Sentence to Morgoft" => commands::morgoft::run(state, &event, &data).await,
+        "say" => commands::pretzel::say::run(state, &event, &data).await,
+        "edit" => commands::pretzel::edit::run(state, &event, &data).await,
+        "Sentence to Morgoft" => commands::pretzel::morgoft::run(state, &event, &data).await,
         // discontinued too
         // "channel_manager" => todo!(),
         // "kitty" => todo!(),
@@ -167,7 +168,8 @@ pub async fn modal_handler(
     data: Box<ModalInteractionData>,
 ) -> anyhow::Result<()> {
     let result = match data.as_ref().custom_id.as_str() {
-        id if id.starts_with("say_modal") => commands::say::modal(state, &event, &data).await,
+        id if id.starts_with("say_modal") => commands::pretzel::say::modal(state, &event, &data).await,
+        id if id.starts_with("edit_modal") => commands::pretzel::edit::modal(state, &event, &data).await,
         _ => unreachable!("Non existent command"),
     };
 

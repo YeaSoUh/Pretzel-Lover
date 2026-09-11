@@ -1,7 +1,8 @@
 use dashmap::DashMap;
+use tokio::time::Instant;
 use std::{
     sync::{Arc, LazyLock},
-    time::{Duration, SystemTime, UNIX_EPOCH},
+    time::Duration,
 };
 
 use tracing::instrument;
@@ -23,7 +24,7 @@ use twilight_util::builder::{
 };
 use uuid::Uuid;
 
-use crate::AppState;
+use crate::{AppState, commands::pretzel::helpers::purge::{Expiring, purge}};
 
 struct ModalInfo {
     channel: Id<ChannelMarker>,
@@ -34,11 +35,21 @@ struct ModalInfo {
     tts: bool,
     mention: bool,
     silent: bool,
-    timestamp: u64,
+    expires_at: Instant,
+}
+
+impl Expiring for ModalInfo {
+    fn expires_at(&self) -> Instant {
+        self.expires_at
+    }
 }
 
 static MODAL_INFO_MAP: LazyLock<Arc<DashMap<String, Arc<ModalInfo>>>> =
     LazyLock::new(|| Arc::new(DashMap::new()));
+
+pub fn run_once() {
+    tokio::spawn(purge(Arc::clone(&MODAL_INFO_MAP), Duration::from_hours(1)));
+}
 
 #[instrument(skip_all, err)]
 pub async fn run(
@@ -299,8 +310,8 @@ pub async fn run(
             tts,
             mention: mention_author,
             silent,
-            timestamp: SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs()
-                + Duration::from_hours(1).as_secs(),
+            expires_at: Instant::now()
+                + Duration::from_hours(1),
         }),
     );
 
@@ -328,21 +339,41 @@ pub async fn modal(
         .map(|sticker_id| vec![sticker_id.clone()]);
 
     for component in &data.components {
-        if let ModalInteractionComponent::TextInput(i) = component {
-            text = &i.value;
-        } else if let ModalInteractionComponent::FileUpload(i) = component {
-            for file_id in &i.values {
-                let file = data.resolved
-                        .as_ref()
-                        .ok_or_else(|| anyhow::anyhow!("No attachments"))?
-                        .attachments
-                        .get(file_id)
-                        .ok_or_else(|| anyhow::anyhow!("Didn't find any attachments"))?;
-                files.push(
-                    Attachment::from_bytes(file.filename.clone(), reqwest::get(&file.proxy_url).await?.bytes().await?.to_vec(), file_id.get())
-                );
+        match component {
+            ModalInteractionComponent::Label(sub_comp) => {
+                match &*sub_comp.component {
+                    ModalInteractionComponent::TextInput(val) => {
+                        text = &val.value;
+                    }
+                    ModalInteractionComponent::FileUpload(val) => {
+                        for file_id in &val.values {
+                            let file = data.resolved
+                                    .as_ref()
+                                    .ok_or_else(|| anyhow::anyhow!("No attachments"))?
+                                    .attachments
+                                    .get(file_id)
+                                    .ok_or_else(|| anyhow::anyhow!("Didn't find any attachments"))?;
+                            files.push(
+                                Attachment::from_bytes(file.filename.clone(), reqwest::get(&file.proxy_url).await?.bytes().await?.to_vec(), file_id.get())
+                            );
+                        }
+                    }
+                    _ => continue
+                }
             }
-        };
+            _ => continue
+        }
+    };
+
+    if text.is_empty() && files.is_empty() && extra_params.sticker.is_none() {
+        state
+            .client
+            .interaction(state.application_id)
+            .create_followup(&event.token)
+            .content("No message content provided to send")
+            .flags(MessageFlags::EPHEMERAL)
+            .await?;
+        anyhow::bail!("No message content provided to send");
     }
 
     let mut create_message = state
@@ -381,7 +412,6 @@ pub async fn modal(
             .await?;
         return Err(e.into());
     }
-
 
     Ok(())
 }
