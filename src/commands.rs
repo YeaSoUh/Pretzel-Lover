@@ -88,7 +88,7 @@ pub fn get_commands(configs: &Configs) -> anyhow::Result<Vec<Command>> {
             .option(ChannelBuilder::new("channel", "Pick a channel to send"))
             .option(
                 StringBuilder::new(
-                    "Sticker",
+                    "sticker",
                     "Type a sticker's id to send a message with sticker",
                 )
                 .choices(configs.stickers.clone()),
