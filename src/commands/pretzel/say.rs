@@ -74,7 +74,7 @@ pub async fn run(
     let user_roles = &user.roles;
 
     if !user_roles.contains(&Id::new(1410929363863732234)) // co-owner
-        || !user_roles.contains(&Id::new(1410929110502608896))
+        && !user_roles.contains(&Id::new(1410929110502608896))
     // owner
     {
         state
