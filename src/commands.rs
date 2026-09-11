@@ -123,7 +123,7 @@ pub fn get_commands(configs: &Configs) -> anyhow::Result<Vec<Command>> {
             .contexts(vec![InteractionContextType::Guild])
             .validate()?
             .build(),
-        CommandBuilder::new("Sentence to Morgoft", "idk", CommandType::User)
+        CommandBuilder::new("Sentence to Morgoft", "", CommandType::User)
             .contexts(vec![InteractionContextType::Guild])
             .validate()?
             .build(),
