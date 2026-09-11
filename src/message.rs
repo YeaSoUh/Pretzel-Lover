@@ -18,7 +18,6 @@ pub async fn msg_handler(state: AppState, event: Box<MessageCreate>) -> anyhow::
     }
 
     let lower = event.content.to_lowercase();
-    tracing::debug!(?lower);
     match () {
         _ if lower.contains("ertone") => {
             state

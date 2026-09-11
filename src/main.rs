@@ -98,7 +98,7 @@ async fn dispatcher(state: AppState, mut shard: Shard, mut shutdown: watch::Rece
     loop {
         tokio::select! {
             _ = shutdown.changed() => shard.close(CloseFrame::NORMAL),
-            Some(item) = shard.next_event(EventTypeFlags::INTERACTION_CREATE) => {
+            Some(item) = shard.next_event(EventTypeFlags::INTERACTION_CREATE | EventTypeFlags::MESSAGE_CREATE) => {
                 let event = match item {
                     Ok(event) => event,
                     Err(source) => {

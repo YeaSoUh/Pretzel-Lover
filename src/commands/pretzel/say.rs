@@ -103,9 +103,6 @@ pub async fn run(
     let mut tts: bool = false;
 
     let cmd = data.as_ref();
-    if cmd.options.is_empty() {
-        anyhow::bail!("No options")
-    }
 
     for option in &cmd.options {
         match (&*option.name, &option.value) {
@@ -136,7 +133,7 @@ pub async fn run(
 
     let reply_id_str = reply.split("/").nth(7);
     let mut reply_id: Option<Id<MessageMarker>> = None;
-    if reply_id_str.is_none() || reply.is_empty() {
+    if reply_id_str.is_none() && !reply.is_empty() {
         state
             .client
             .interaction(state.application_id)
