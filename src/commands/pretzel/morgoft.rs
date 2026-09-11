@@ -15,17 +15,21 @@ pub async fn run(
 ) -> anyhow::Result<()> {
     commands::defer(state.clone(), &event, false).await?;
 
-    let user = event
+    let member = event
         .member
         .as_ref()
         .ok_or(anyhow::anyhow!("Not a member"))?;
-    let user_roles = &user.roles;
+    let member_roles = &member.roles;
 
-    if user_roles.contains(&Id::new(1410929363863732234)) // co-owner
-        || user_roles.contains(&Id::new(1410929110502608896))
+    if member_roles.contains(&Id::new(1410929363863732234)) // co-owner
+        || member_roles.contains(&Id::new(1410929110502608896))
     // owner
     {
         let target_id = data.target_id.ok_or(anyhow::anyhow!("No target id"))?;
+        let user = event
+            .user
+            .as_ref()
+            .ok_or(anyhow::anyhow!("No user (as PartialMember)"))?;
 
         state
             .client
@@ -36,7 +40,10 @@ pub async fn run(
             )
             .reason(&format!(
                 "Morgoft'ed by {}",
-                user.nick.as_ref().ok_or(anyhow::anyhow!("No nickname"))?
+                user.global_name
+                    .as_deref()
+                    .map(String::from)
+                    .unwrap_or_else(|| format!("{}#{}", user.name, user.discriminator))
             ))
             .await?;
         state
