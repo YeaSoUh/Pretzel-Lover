@@ -106,8 +106,8 @@ pub async fn run(
 
     for option in &cmd.options {
         match (&*option.name, &option.value) {
-            ("channel", CommandOptionValue::String(channel2)) => {
-                channel = Id::new(channel2.parse::<u64>()?);
+            ("channel", CommandOptionValue::Channel(channel2)) => {
+                channel = *channel2;
             }
             ("sticker", CommandOptionValue::String(sticker2)) => {
                 sticker = Id::new(sticker2.parse::<u64>()?);
