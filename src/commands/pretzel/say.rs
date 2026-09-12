@@ -468,14 +468,6 @@ pub async fn modal(
     if let Some(reply_message_id) = extra_params.reply_message_id {
         create_message = create_message.reply(reply_message_id);
     };
-    if let Some(forward_channel_id) = extra_params.forward_channel_id {
-        create_message = create_message.forward(
-            forward_channel_id,
-            extra_params
-                .forward_message_id
-                .ok_or(anyhow::anyhow!("Didn't find forward message id"))?,
-        );
-    }
     if let Some(sticker_ids) = sticker_ids.as_ref() {
         create_message = create_message.sticker_ids(sticker_ids.as_slice());
     }
@@ -500,6 +492,37 @@ pub async fn modal(
             )
             .await?;
         return Err(e.into());
+    }
+
+    if let Some(forward_channel_id) = extra_params.forward_channel_id {
+        if let Err(e) = state
+            .client
+            .create_message(extra_params.channel)
+            .forward(
+                forward_channel_id,
+                extra_params
+                    .forward_message_id
+                    .ok_or(anyhow::anyhow!("Didn't find forward message id"))?,
+            ).await {
+                state
+                    .client
+                    .interaction(state.application_id)
+                    .create_response(
+                        event.id,
+                        &event.token,
+                        &response(
+                            InteractionResponseDataBuilder::new()
+                                .content(&format!(
+                                    "There was an error while sending a message:\n{}",
+                                    e.to_string()
+                                ))
+                                .flags(MessageFlags::EPHEMERAL)
+                                .build(),
+                        ),
+                    )
+                    .await?;
+                return Err(e.into());
+            }
     }
 
     Ok(())
