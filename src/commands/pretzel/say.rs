@@ -94,7 +94,11 @@ pub async fn run(
         return Ok(()); // just to suppress error
     }
 
-    let mut channel: Id<ChannelMarker> = event.channel.as_ref().ok_or(anyhow::anyhow!("Not called in a channel"))?.id;
+    let mut channel: Id<ChannelMarker> = event
+        .channel
+        .as_ref()
+        .ok_or(anyhow::anyhow!("Not called in a channel"))?
+        .id;
     let mut sticker: Id<StickerMarker> = Id::new(1);
     let mut reply: &str = "";
     let mut forward: &str = "";
@@ -495,26 +499,28 @@ pub async fn modal(
                 extra_params
                     .forward_message_id
                     .ok_or(anyhow::anyhow!("Didn't find forward message id"))?,
-            ).await {
-                state
-                    .client
-                    .interaction(state.application_id)
-                    .create_response(
-                        event.id,
-                        &event.token,
-                        &response(
-                            InteractionResponseDataBuilder::new()
-                                .content(&format!(
-                                    "There was an error while sending a message:\n{}",
-                                    e.to_string()
-                                ))
-                                .flags(MessageFlags::EPHEMERAL)
-                                .build(),
-                        ),
-                    )
-                    .await?;
-                return Err(e.into());
-            }
+            )
+            .await
+        {
+            state
+                .client
+                .interaction(state.application_id)
+                .create_response(
+                    event.id,
+                    &event.token,
+                    &response(
+                        InteractionResponseDataBuilder::new()
+                            .content(&format!(
+                                "There was an error while sending a message:\n{}",
+                                e.to_string()
+                            ))
+                            .flags(MessageFlags::EPHEMERAL)
+                            .build(),
+                    ),
+                )
+                .await?;
+            return Err(e.into());
+        }
     }
 
     state

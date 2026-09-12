@@ -17,6 +17,24 @@ pub async fn msg_handler(state: AppState, event: Box<MessageCreate>) -> anyhow::
         return Ok(());
     }
 
+    if event.channel_id == Id::new(1410924213430259783) // builds channel
+        && !event.attachments.is_empty() {
+            state
+                .client
+                .create_reaction(event.channel_id, event.id, &twilight_http::request::channel::reaction::RequestReactionType::Custom {
+                    id: Id::new(1445413531649310761),
+                    name: Some("peepohappy"),
+                }).await?;
+            
+            state
+                .client
+                .create_reaction(event.channel_id, event.id, &twilight_http::request::channel::reaction::RequestReactionType::Unicode {
+                    name: "🗑️"
+                }).await?;
+            
+            return Ok(());
+        }
+
     let lower = event.content.to_lowercase();
     match () {
         _ if lower.contains("ertone") => {
