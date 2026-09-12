@@ -517,5 +517,20 @@ pub async fn modal(
             }
     }
 
+    state
+        .client
+        .interaction(state.application_id)
+        .create_response(
+            event.id,
+            &event.token,
+            &response(
+                InteractionResponseDataBuilder::new()
+                    .content("Message has been sent")
+                    .flags(MessageFlags::EPHEMERAL)
+                    .build(),
+            ),
+        )
+        .await?;
+
     Ok(())
 }

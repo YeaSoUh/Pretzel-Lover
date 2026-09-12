@@ -312,5 +312,20 @@ pub async fn modal(
         return Err(e.into());
     }
 
+    state
+        .client
+        .interaction(state.application_id)
+        .create_response(
+            event.id,
+            &event.token,
+            &response(
+                InteractionResponseDataBuilder::new()
+                    .content("Message has been edited")
+                    .flags(MessageFlags::EPHEMERAL)
+                    .build(),
+            ),
+        )
+        .await?;
+
     Ok(())
 }
