@@ -31,6 +31,11 @@ pub async fn msg_handler(state: AppState, event: Box<MessageCreate>) -> anyhow::
                 .create_reaction(event.channel_id, event.id, &twilight_http::request::channel::reaction::RequestReactionType::Unicode {
                     name: "🗑️"
                 }).await?;
+
+            state
+                .client
+                .create_thread_from_message(event.channel_id, event.id, &event.content)
+                .await?;
             
             return Ok(());
         }
