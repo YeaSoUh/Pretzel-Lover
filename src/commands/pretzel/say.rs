@@ -94,7 +94,7 @@ pub async fn run(
         return Ok(()); // just to suppress error
     }
 
-    let mut channel: Id<ChannelMarker> = Id::new(1);
+    let mut channel: Id<ChannelMarker> = event.channel.as_ref().ok_or(anyhow::anyhow!("Not called in a channel"))?.id;
     let mut sticker: Id<StickerMarker> = Id::new(1);
     let mut reply: &str = "";
     let mut forward: &str = "";
@@ -153,7 +153,7 @@ pub async fn run(
         reply_id = Some(Id::new(id_str.parse::<u64>()?));
     }
 
-    let channel = if !reply.is_empty() {
+    if !reply.is_empty() {
         let Some(c_id_str) = reply.split('/').nth(5) else {
             state
                 .client
@@ -193,16 +193,8 @@ pub async fn run(
             }
         };
 
-        Id::new(c_id)
-    } else if channel.get() == 1 {
-        event
-            .channel
-            .as_ref()
-            .ok_or(anyhow::anyhow!("Not called in a channel"))?
-            .id
-    } else {
-        channel
-    };
+        channel = Id::new(c_id);
+    }
 
     let forward_info: Option<(Id<ChannelMarker>, Id<MessageMarker>)> = if !forward.is_empty() {
         let mut forward_iter = forward.split('/');
