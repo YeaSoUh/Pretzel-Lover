@@ -26,7 +26,7 @@ pub async fn run(
     // owner
     {
         let target_id = data.target_id.ok_or(anyhow::anyhow!("No target id"))?;
-        let user = event
+        let user = member
             .user
             .as_ref()
             .ok_or(anyhow::anyhow!("No user (as PartialMember)"))?;
