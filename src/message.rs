@@ -4,7 +4,7 @@ use crate::AppState;
 
 #[tracing::instrument(fields(user = ?event.author.id), skip_all, err)]
 pub async fn msg_handler(state: AppState, event: Box<MessageCreate>) -> anyhow::Result<()> {
-    if event.author.bot || event.content.is_empty() {
+    if event.author.bot || (event.content.is_empty() && event.attachments.is_empty()) {
         return Ok(());
     }
 
@@ -12,7 +12,7 @@ pub async fn msg_handler(state: AppState, event: Box<MessageCreate>) -> anyhow::
         // news channel id
         state
             .client
-            .crosspost_message(Id::new(1440695808721686703), event.id)
+            .crosspost_message(event.channel_id, event.id)
             .await?;
         return Ok(());
     }
