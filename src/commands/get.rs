@@ -1,10 +1,24 @@
-use twilight_model::{application::interaction::{InteractionData, application_command::CommandOptionValue}, gateway::payload::incoming::InteractionCreate};
+use tracing::instrument;
+use twilight_model::{
+    application::interaction::application_command::{CommandData, CommandOptionValue},
+    channel::message::MessageFlags,
+    gateway::payload::incoming::InteractionCreate,
+};
 
-use crate::{AppState, db::connection, commands};
+use crate::{AppState, commands, db::connection};
 
-pub async fn run(state: AppState, event: &Box<InteractionCreate>) -> anyhow::Result<()> {
+#[instrument(skip_all, err)]
+pub async fn run(
+    state: AppState,
+    event: &Box<InteractionCreate>,
+    data: &Box<CommandData>,
+) -> anyhow::Result<()> {
     commands::defer(state.clone(), &event, false).await?;
-    if event.channel.as_ref().is_none_or(|chn| !state.configs.allowed_channels.contains(&chn.id)) {
+    if event
+        .channel
+        .as_ref()
+        .is_none_or(|chn| !state.configs.allowed_channels.contains(&chn.id))
+    {
         state
             .client
             .interaction(state.application_id)
@@ -13,41 +27,43 @@ pub async fn run(state: AppState, event: &Box<InteractionCreate>) -> anyhow::Res
             .await?;
         return Ok(());
     }
-    let mut id: Option<String> = None;
+    let mut index: Option<String> = None;
 
-    if let Some(InteractionData::ApplicationCommand(cmd_box)) = &event.data {
-        let cmd = cmd_box.as_ref();
+    let cmd = data.as_ref();
+    if cmd.options.is_empty() {
+        anyhow::bail!("No options")
+    }
 
-        for option in &cmd.options {
-            match (&*option.name, &option.value) {
-                ("id", CommandOptionValue::String(id2)) => {
-                    id = Some(id2.clone());
-                }
-                _ => {}
+    for option in &cmd.options {
+        match (&*option.name, &option.value) {
+            ("index", CommandOptionValue::String(index2)) => {
+                index = Some(index2.clone());
             }
+            _ => {}
         }
-    } else { return Err(anyhow::anyhow!("No options")); }
+    }
+    let id = index.ok_or_else(|| anyhow::anyhow!("Missing id option"))?;
 
-    let id = id.ok_or_else(|| anyhow::anyhow!("Missing id option"))?;
-
-    let planet = match tokio::task::spawn_blocking(move || connection::get_planet(&id)).await? {
+    let planet = match connection::get_planet(&id, state.clone()).await {
         Ok(planet) => planet,
         Err(_) => {
             state
                 .client
                 .interaction(state.application_id)
                 .create_followup(&event.token)
-                .content("Planet doesn't exist in database")
+                .content("Planet doesn't exist in database or an error happened internally that was reported")
+                .flags(MessageFlags::EPHEMERAL)
                 .await?;
             return Ok(());
         }
     };
+    tracing::debug!(?planet, "Get command debug");
 
     state
         .client
         .interaction(state.application_id)
         .create_followup(&event.token)
-        .content(&connection::format_response(planet))
+        .content(&planet.to_string())
         .await?;
 
     Ok(())

@@ -27,8 +27,7 @@ pub async fn run(
             .await?;
         return Ok(());
     }
-
-    let mut input: Option<String> = None;
+    let mut index: Option<String> = None;
 
     let cmd = data.as_ref();
     if cmd.options.is_empty() {
@@ -37,37 +36,34 @@ pub async fn run(
 
     for option in &cmd.options {
         match (&*option.name, &option.value) {
-            ("input", CommandOptionValue::String(input2)) => {
-                input = Some(input2.clone());
+            ("index", CommandOptionValue::String(index2)) => {
+                index = Some(index2.clone());
             }
             _ => {}
         }
     }
 
-    let input = input.ok_or_else(|| anyhow::anyhow!("No input"))?;
+    let id = index.ok_or_else(|| anyhow::anyhow!("Missing id option"))?;
 
-    let result = connection::search_planets(&input, state.clone()).await;
+    let result = connection::remove_planet(&id, state.clone()).await;
 
-    match result {
-        Ok(attachment) => {
-            state
-                .client
-                .interaction(state.application_id)
-                .create_followup(&event.token)
-                .attachments(&[attachment])
-                .await?;
-        }
-        Err(e) => {
-            state
-                .client
-                .interaction(state.application_id)
-                .create_followup(&event.token)
-                .content(&format!("An error happened:\n{}", e.to_string()))
-                .flags(MessageFlags::EPHEMERAL)
-                .await?;
-            return Err(e);
-        }
+    if let Err(e) = result {
+        state
+            .client
+            .interaction(state.application_id)
+            .create_followup(&event.token)
+            .content(&format!("An error happened:\n{}", e.to_string()))
+            .flags(MessageFlags::EPHEMERAL)
+            .await?;
+        return Err(e);
     }
+
+    state
+        .client
+        .interaction(state.application_id)
+        .create_followup(&event.token)
+        .content("Data was successfully removed!")
+        .await?;
 
     Ok(())
 }

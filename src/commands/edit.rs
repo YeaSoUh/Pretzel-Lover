@@ -1,13 +1,29 @@
-// if event.channel.as_ref().is_none_or(|chn| !state.configs._allowed_channels.contains(&chn.id)) { return }
+use tracing::instrument;
+use twilight_model::{
+    application::interaction::application_command::{CommandData, CommandOptionValue},
+    channel::message::MessageFlags,
+    gateway::payload::incoming::InteractionCreate,
+    id::Id,
+};
 
-use anyhow::Ok;
-use twilight_model::{application::interaction::{InteractionData, application_command::CommandOptionValue}, gateway::payload::incoming::InteractionCreate};
+use crate::{
+    AppState, commands,
+    db::connection::{self, EditRequest},
+};
 
-use crate::{AppState, commands};
-
-pub async fn run(state: AppState, event: &Box<InteractionCreate>) -> anyhow::Result<()> {
+#[instrument(skip_all, err)]
+pub async fn run(
+    state: AppState,
+    event: &Box<InteractionCreate>,
+    data: &Box<CommandData>,
+) -> anyhow::Result<()> {
     commands::defer(state.clone(), &event, false).await?;
-    if event.channel.as_ref().is_none_or(|chn| !state.configs.allowed_channels.contains(&chn.id)) {
+
+    if event
+        .channel
+        .as_ref()
+        .is_none_or(|chn| !state.configs.allowed_channels.contains(&chn.id))
+    {
         state
             .client
             .interaction(state.application_id)
@@ -16,43 +32,73 @@ pub async fn run(state: AppState, event: &Box<InteractionCreate>) -> anyhow::Res
             .await?;
         return Ok(());
     }
-    let mut index: Option<String> = None;
-    let mut input: Option<String> = None;
 
-    if let Some(InteractionData::ApplicationCommand(cmd_box)) = &event.data {
-        let cmd = cmd_box.as_ref();
-
-        for option in &cmd.options {
-            match (&*option.name, &option.value) {
-                ("index", CommandOptionValue::String(index2)) => {
-                    index = Some(index2.clone());
-                }
-                ("input", CommandOptionValue::String(input2)) => {
-                    input = Some(input2.clone());
-                }
-                _ => {}
-            }
-        }
-    } else { return Err(anyhow::anyhow!("No options")); }
-
-    let _index = index.ok_or_else(|| anyhow::anyhow!("Missing index option"))?;
-    let _input = input.ok_or_else(|| anyhow::anyhow!("Missing inpuut option"))?;
-    
-    if event.author_id().is_none_or(|id| state.configs.users_blacklist.contains(&id)) {
+    if event
+        .author_id()
+        .is_none_or(|id| state.configs.users_blacklist.contains(&id))
+    {
         state
             .client
             .interaction(state.application_id)
             .create_followup(&event.token)
             .content("Blacklisted")
             .await?;
-        return Ok(())
+        return Ok(());
+    }
+
+    let mut index: Option<String> = None;
+    let mut input: Option<String> = None;
+
+    let cmd = data.as_ref();
+    if cmd.options.is_empty() {
+        anyhow::bail!("No options")
+    }
+
+    for option in &cmd.options {
+        match (&*option.name, &option.value) {
+            ("index", CommandOptionValue::String(index2)) => index = Some(index2.clone()),
+
+            ("input", CommandOptionValue::String(input2)) => {
+                input = Some(input2.clone());
+            }
+            _ => {}
+        }
+    }
+
+    let index = index.ok_or_else(|| anyhow::anyhow!("Missing index option"))?;
+    let input = input.ok_or_else(|| anyhow::anyhow!("Missing input option"))?;
+    let bypass = &event.author_id().ok_or_else(|| {
+        anyhow::anyhow!("shouldn't happen in edit.rs no user id who initiated this command")
+    })? == &Id::new(1021835061433225296);
+
+    let result = connection::edit_planet(
+        &EditRequest {
+            input: input,
+            index: index,
+        },
+        bypass,
+    )
+    .await;
+
+    if let Err(e) = result {
+        state
+            .client
+            .interaction(state.application_id)
+            .create_followup(&event.token)
+            .content(&format!(
+                "There was an error while editing a planet:\n{}",
+                e.to_string()
+            ))
+            .flags(MessageFlags::EPHEMERAL)
+            .await?;
+        return Err(e);
     }
 
     state
         .client
         .interaction(state.application_id)
         .create_followup(&event.token)
-        .content("TODO command")
+        .content("Data was successfully edited!")
         .await?;
 
     Ok(())
