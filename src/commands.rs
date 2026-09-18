@@ -24,6 +24,7 @@ pub mod get;
 pub mod pretzel;
 pub mod remove;
 pub mod search;
+pub mod update_configs;
 
 pub async fn defer(
     state: Arc<AppState>,
@@ -137,6 +138,13 @@ pub fn get_commands(configs: &Configs) -> anyhow::Result<Vec<Command>> {
             .contexts(vec![InteractionContextType::Guild])
             .validate()?
             .build(),
+        CommandBuilder::new(
+            "update_configs",
+            "Updates configs of a bot (only owner is allowed to run this)",
+            CommandType::ChatInput,
+        )
+        .validate()?
+        .build(),
     ])
 }
 
@@ -158,6 +166,7 @@ pub async fn cmd_handler(
         "say" => commands::pretzel::say::run(state, &event, &data).await,
         "edit" => commands::pretzel::edit::run(state, &event, &data).await,
         "Sentence to Morgoft" => commands::pretzel::morgoft::run(state, &event, &data).await,
+        "update_configs" => commands::update_configs::run(state, &event, &data).await,
         // discontinued too
         // "channel_manager" => todo!(),
         // "kitty" => todo!(),
