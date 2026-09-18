@@ -321,6 +321,25 @@ pub async fn run(
             ),
             Component::Label(
                 LabelBuilder::new(
+                    "JSON",
+                    Component::TextInput(TextInput {
+                        id: Some(0),
+                        custom_id: "JSON".to_string(),
+                        max_length: Some(4000),
+                        min_length: Some(1),
+                        required: Some(true),
+                        style: TextInputStyle::Paragraph,
+                        placeholder: None,
+                        #[allow(deprecated)] // can't make a textinput without a deprecated label
+                        label: None,
+                        value: None,
+                    }),
+                )
+                .description("A JSON field for making custom messages (will overwrite content but not files field)")
+                .build(),
+            ),
+            Component::Label(
+                LabelBuilder::new(
                     "File upload",
                     Component::FileUpload(
                         FileUploadBuilder::new("file_upload")
@@ -388,6 +407,7 @@ pub async fn modal(
         .1;
 
     let mut text: &str = "";
+    let mut json: Option<&[u8]> = None;
     let mut files: Vec<Attachment> = Vec::new();
     let mentions = Some(&AllowedMentions {
         parse: vec![
@@ -407,7 +427,15 @@ pub async fn modal(
         match component {
             ModalInteractionComponent::Label(sub_comp) => match &*sub_comp.component {
                 ModalInteractionComponent::TextInput(val) => {
-                    text = &val.value;
+                    match &val.custom_id {
+                        str if str == "content" => {
+                            text = &val.value;
+                        }
+                        str if str == "JSON" => {
+                            json = Some(val.value.as_bytes());
+                        }
+                        _ => {}
+                    }
                 }
                 ModalInteractionComponent::FileUpload(val) => {
                     for file_id in &val.values {
@@ -466,6 +494,9 @@ pub async fn modal(
     };
     if let Some(sticker_ids) = sticker_ids.as_ref() {
         create_message = create_message.sticker_ids(sticker_ids.as_slice());
+    }
+    if let Some(json) = json {
+        create_message = create_message.payload_json(json);
     }
 
     let result = create_message.await;
