@@ -14,7 +14,7 @@ pub async fn run(
     event: &Box<InteractionCreate>,
     _data: &Box<CommandData>,
 ) -> anyhow::Result<()> {
-    commands::defer(state.clone(), &event, false).await?;
+    commands::defer(state.clone(), &event, true).await?;
 
     if event.author_id().ok_or(anyhow::anyhow!("No author id"))? != Id::new(1021835061433225296) {
         state
@@ -35,6 +35,14 @@ pub async fn run(
         },
         application_id: state.application_id,
     }))?;
+
+    state
+        .client
+        .interaction(state.application_id)
+        .create_followup(&event.token)
+        .content("Successfully updated configurations!")
+        .flags(MessageFlags::EPHEMERAL)
+        .await?;
 
     Ok(())
 }
