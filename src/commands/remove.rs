@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use tracing::instrument;
 use twilight_model::{
     application::interaction::application_command::{CommandData, CommandOptionValue},
@@ -9,7 +11,7 @@ use crate::{AppState, commands, db::connection};
 
 #[instrument(skip_all, err)]
 pub async fn run(
-    state: AppState,
+    state: Arc<AppState>,
     event: &Box<InteractionCreate>,
     data: &Box<CommandData>,
 ) -> anyhow::Result<()> {

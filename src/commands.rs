@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use twilight_http::{Response, response::marker::EmptyBody};
 use twilight_model::{
     application::{
@@ -24,7 +26,7 @@ pub mod remove;
 pub mod search;
 
 pub async fn defer(
-    state: AppState,
+    state: Arc<AppState>,
     event: &InteractionCreate,
     ephemeral: bool,
 ) -> Result<Response<EmptyBody>, twilight_http::Error> {
@@ -140,7 +142,7 @@ pub fn get_commands(configs: &Configs) -> anyhow::Result<Vec<Command>> {
 
 #[tracing::instrument(fields(user = ?event.author_id()), skip_all, err)]
 pub async fn cmd_handler(
-    state: AppState,
+    state: Arc<AppState>,
     event: Box<InteractionCreate>,
     data: Box<CommandData>,
 ) -> anyhow::Result<()> {
@@ -171,7 +173,7 @@ pub async fn cmd_handler(
 
 #[tracing::instrument(fields(user = ?event.author_id()), skip_all, err)]
 pub async fn modal_handler(
-    state: AppState,
+    state: Arc<AppState>,
     event: Box<InteractionCreate>,
     data: Box<ModalInteractionData>,
 ) -> anyhow::Result<()> {

@@ -296,7 +296,7 @@ pub async fn establish_database(database_url: &str) -> anyhow::Result<()> {
 }
 
 #[instrument(skip(state), err)]
-pub async fn get_planet(index: &str, state: AppState) -> anyhow::Result<PlanetResult> {
+pub async fn get_planet(index: &str, state: Arc<AppState>) -> anyhow::Result<PlanetResult> {
     if check_sql(index, state) {
         anyhow::bail!("Blacklisted sql");
     }
@@ -327,7 +327,7 @@ pub async fn get_planet(index: &str, state: AppState) -> anyhow::Result<PlanetRe
 }
 
 #[instrument(skip(state), err)]
-pub async fn remove_planet(index: &str, state: AppState) -> anyhow::Result<()> {
+pub async fn remove_planet(index: &str, state: Arc<AppState>) -> anyhow::Result<()> {
     if check_sql(index, state) {
         anyhow::bail!("Blacklisted sql");
     }
@@ -352,7 +352,7 @@ pub async fn remove_planet(index: &str, state: AppState) -> anyhow::Result<()> {
 
 // gon be reworked
 #[instrument(skip(state), err)]
-pub async fn search_planets(input: &str, state: AppState) -> anyhow::Result<Attachment> {
+pub async fn search_planets(input: &str, state: Arc<AppState>) -> anyhow::Result<Attachment> {
     if check_sql(input, state) {
         anyhow::bail!("Blacklisted sql");
     }

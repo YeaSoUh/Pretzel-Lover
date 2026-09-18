@@ -57,7 +57,7 @@ pub fn run_once() {
 
 #[instrument(skip_all, err)]
 pub async fn run(
-    state: AppState,
+    state: Arc<AppState>,
     event: &Box<InteractionCreate>,
     data: &Box<CommandData>,
 ) -> anyhow::Result<()> {
@@ -216,7 +216,7 @@ pub async fn run(
 
 #[instrument(skip_all, err)]
 pub async fn modal(
-    state: AppState,
+    state: Arc<AppState>,
     event: &Box<InteractionCreate>,
     data: &Box<ModalInteractionData>,
 ) -> anyhow::Result<()> {

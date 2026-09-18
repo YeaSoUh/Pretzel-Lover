@@ -1,9 +1,10 @@
 pub mod commands;
 pub mod db;
+pub mod helpers;
 
 mod message;
 
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use serde::Deserialize;
 use tokio::{signal, sync::watch};
@@ -21,9 +22,12 @@ use twilight_model::{
     },
 };
 
-use crate::commands::get_commands;
+use crate::{
+    commands::get_commands,
+    helpers::sync_configs::{get_receiver, set_watch},
+};
 
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Clone, Default, Debug)]
 pub struct Configs {
     token: String,
     users_blacklist: Vec<Id<UserMarker>>,
@@ -32,9 +36,10 @@ pub struct Configs {
     #[allow(dead_code)]
     database_url: String,
     stickers: Vec<(String, String)>,
+    message_replies: HashMap<String, String>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct AppState {
     client: Arc<Client>,
     configs: Arc<Configs>,
@@ -76,15 +81,15 @@ async fn main() -> anyhow::Result<()> {
 
     //establish_database(&configs.database_url).await?;
 
-    let task = tokio::spawn(dispatcher(
-        AppState {
-            client: Arc::clone(&client),
-            configs: Arc::new(configs),
-            application_id: application_id,
-        },
-        shard,
-        shutdown_rx.clone(),
-    ));
+    set_watch(Arc::new(AppState {
+        client: Arc::clone(&client),
+        configs: Arc::new(configs),
+        application_id: application_id,
+    }))?;
+
+    let state_rx = get_receiver().ok_or(anyhow::anyhow!("State watch wasn't initiated"))?;
+
+    let task = tokio::spawn(dispatcher(shard, shutdown_rx.clone(), state_rx));
 
     signal::ctrl_c().await?;
     _ = shutdown_tx.send(true);
@@ -94,8 +99,14 @@ async fn main() -> anyhow::Result<()> {
 }
 
 #[instrument(fields(shard = %shard.id()), skip_all)]
-async fn dispatcher(state: AppState, mut shard: Shard, mut shutdown: watch::Receiver<bool>) {
+async fn dispatcher(
+    mut shard: Shard,
+    mut shutdown: watch::Receiver<bool>,
+    state_rx: watch::Receiver<Arc<AppState>>,
+) {
     loop {
+        let state = state_rx.borrow().clone();
+
         tokio::select! {
             _ = shutdown.changed() => shard.close(CloseFrame::NORMAL),
             Some(item) = shard.next_event(EventTypeFlags::INTERACTION_CREATE | EventTypeFlags::MESSAGE_CREATE) => {

@@ -1,4 +1,8 @@
-use std::{borrow::Cow, sync::OnceLock, time::Duration};
+use std::{
+    borrow::Cow,
+    sync::{Arc, OnceLock},
+    time::Duration,
+};
 use tracing::instrument;
 use turso::{Connection, Error, IntoParams, Rows};
 
@@ -143,7 +147,7 @@ pub fn validate(key: &str, value: &str, CHECKS: &OnceLock<Checks>) -> anyhow::Re
     Ok(())
 }
 
-pub fn check_sql(input: &str, state: AppState) -> bool {
+pub fn check_sql(input: &str, state: Arc<AppState>) -> bool {
     let upper = input.to_uppercase();
     state
         .configs
