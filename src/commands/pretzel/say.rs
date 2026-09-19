@@ -407,7 +407,7 @@ pub async fn modal(
         .1;
 
     let mut text: &str = "";
-    let mut json: Option<&[u8]> = None;
+    let mut json_bytes: Option<&[u8]> = None;
     let mut files: Vec<Attachment> = Vec::new();
     let mentions = Some(&AllowedMentions {
         parse: vec![
@@ -431,8 +431,8 @@ pub async fn modal(
                         str if str == "content" => {
                             text = &val.value;
                         }
-                        str if str == "JSON" => {
-                            json = Some(val.value.as_bytes());
+                        str if str == "JSON" && !val.value.is_empty() => {
+                            json_bytes = Some(val.value.as_bytes());
                         }
                         _ => {}
                     }
@@ -459,7 +459,7 @@ pub async fn modal(
         }
     }
 
-    if text.is_empty() && files.is_empty() && extra_params.sticker.is_none() && json.is_none() {
+    if text.is_empty() && files.is_empty() && extra_params.sticker.is_none() && json_bytes.is_none() {
         state
             .client
             .interaction(state.application_id)
@@ -495,7 +495,7 @@ pub async fn modal(
     if let Some(sticker_ids) = sticker_ids.as_ref() {
         create_message = create_message.sticker_ids(sticker_ids.as_slice());
     }
-    if let Some(json) = json {
+    if let Some(json) = json_bytes {
         create_message = create_message.payload_json(json);
     }
 

@@ -245,7 +245,7 @@ pub async fn modal(
         .1;
 
     let mut text: Option<&str> = None;
-    let mut json: Option<&[u8]> = None;
+    let mut json_bytes: Option<&[u8]> = None;
     let mut files: Vec<Attachment> = Vec::new();
     let mentions = Some(&AllowedMentions {
         parse: vec![
@@ -265,8 +265,8 @@ pub async fn modal(
                         str if str == "content" => {
                             text = Some(&val.value);
                         }
-                        str if str == "JSON" => {
-                            json = Some(val.value.as_bytes());
+                        str if str == "JSON" && !val.value.is_empty() => {
+                            json_bytes = Some(val.value.as_bytes());
                         }
                         _ => {}
                     }
@@ -293,7 +293,7 @@ pub async fn modal(
         }
     }
 
-    if text.is_none_or(|val| val.is_empty()) && files.is_empty() && json.is_none() {
+    if text.is_none_or(|val| val.is_empty()) && files.is_empty() && json_bytes.is_none() {
         state
             .client
             .interaction(state.application_id)
@@ -317,7 +317,7 @@ pub async fn modal(
         .content(text)
         .attachments(files.as_slice())
         .allowed_mentions(mentions);
-    if let Some(json) = json {
+    if let Some(json) = json_bytes {
         edit_message = edit_message.payload_json(json);
     }
 
