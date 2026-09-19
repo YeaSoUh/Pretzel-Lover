@@ -158,7 +158,7 @@ pub async fn run(
                         custom_id: "content".to_string(),
                         max_length: Some(2000),
                         min_length: Some(1),
-                        required: Some(true),
+                        required: Some(false),
                         style: TextInputStyle::Paragraph,
                         placeholder: None,
                         #[allow(deprecated)] // can't make a textinput without a deprecated label
@@ -177,7 +177,7 @@ pub async fn run(
                         custom_id: "JSON".to_string(),
                         max_length: Some(4000),
                         min_length: Some(1),
-                        required: Some(true),
+                        required: Some(false),
                         style: TextInputStyle::Paragraph,
                         placeholder: None,
                         #[allow(deprecated)] // can't make a textinput without a deprecated label
@@ -293,7 +293,7 @@ pub async fn modal(
         }
     }
 
-    if text.is_none_or(|val| val.is_empty()) && files.is_empty() {
+    if text.is_none_or(|val| val.is_empty()) && files.is_empty() && json.is_none() {
         state
             .client
             .interaction(state.application_id)
