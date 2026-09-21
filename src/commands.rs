@@ -22,6 +22,7 @@ use crate::{AppState, Configs, commands};
 pub mod edit;
 pub mod get;
 pub mod pretzel;
+pub mod add_role_employee;
 pub mod remove;
 pub mod search;
 pub mod update_configs;
@@ -138,6 +139,10 @@ pub fn get_commands(configs: &Configs) -> anyhow::Result<Vec<Command>> {
             .contexts(vec![InteractionContextType::Guild])
             .validate()?
             .build(),
+        CommandBuilder::new("Add AUKEA Employee Role", "", CommandType::User)
+            .contexts(vec![InteractionContextType::Guild])
+            .validate()?
+            .build(),
         CommandBuilder::new(
             "update_configs",
             "Updates configs of a bot (only owner is allowed to run this)",
@@ -166,6 +171,7 @@ pub async fn cmd_handler(
         "say" => commands::pretzel::say::run(state, &event, &data).await,
         "edit" => commands::pretzel::edit::run(state, &event, &data).await,
         "Sentence to Morgoft" => commands::pretzel::morgoft::run(state, &event, &data).await,
+        "Add AUKEA Employee Role" => commands::add_role_employee::run(state, &event, &data).await,
         "update_configs" => commands::update_configs::run(state, &event, &data).await,
         // discontinued too
         // "channel_manager" => todo!(),
