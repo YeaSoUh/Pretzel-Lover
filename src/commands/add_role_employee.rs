@@ -15,7 +15,7 @@ pub async fn run(
     event: &Box<InteractionCreate>,
     data: &Box<CommandData>,
 ) -> anyhow::Result<()> {
-    commands::defer(state.clone(), &event, false).await?;
+    commands::defer(state.clone(), &event, true).await?;
 
     let member = event
         .member
@@ -49,10 +49,7 @@ pub async fn run(
             .client
             .interaction(state.application_id)
             .create_followup(&event.token)
-            .content(&format!(
-                "<@{}> HAS BEEN SENT TO THE WORST PLACE",
-                target_id
-            ))
+            .content("Target has been given an employee role")
             .await?;
     } else {
         state

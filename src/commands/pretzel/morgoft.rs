@@ -15,7 +15,7 @@ pub async fn run(
     event: &Box<InteractionCreate>,
     data: &Box<CommandData>,
 ) -> anyhow::Result<()> {
-    commands::defer(state.clone(), &event, false).await?;
+    commands::defer(state.clone(), &event, true).await?;
 
     let member = event
         .member
@@ -50,8 +50,7 @@ pub async fn run(
             .await?;
         state
             .client
-            .interaction(state.application_id)
-            .create_followup(&event.token)
+            .create_message(event.channel.as_ref().ok_or(anyhow::anyhow!("No channel"))?.id)
             .content(&format!(
                 "<@{}> HAS BEEN SENT TO THE WORST PLACE",
                 target_id
