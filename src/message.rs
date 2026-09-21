@@ -20,7 +20,7 @@ pub async fn msg_handler(state: Arc<AppState>, event: Box<MessageCreate>) -> any
     }
 
     if event.channel_id == Id::new(1410924213430259783) // builds channel
-        && !event.attachment.is_empty()
+        && !event.attachments.is_empty()
     {
 
         let content = if event.content.is_empty() {
