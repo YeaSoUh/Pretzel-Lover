@@ -23,11 +23,11 @@ pub async fn msg_handler(state: Arc<AppState>, event: Box<MessageCreate>) -> any
         && !event.attachments.is_empty()
     {
 
-        let content = if event.content.is_empty() {
-            &event.attachments[0].filename
+        let content: String = if event.content.is_empty() {
+            event.attachments[0].filename.clone()
         } else {
-            &event.content
-        };
+            event.content.clone()
+        }.chars().take(100).collect();
         
         state
             .client
@@ -54,7 +54,7 @@ pub async fn msg_handler(state: Arc<AppState>, event: Box<MessageCreate>) -> any
 
         state
             .client
-            .create_thread_from_message(event.channel_id, event.id, content)
+            .create_thread_from_message(event.channel_id, event.id, &content)
             .await?;
 
         return Ok(());
