@@ -24,7 +24,7 @@ pub async fn msg_handler(state: Arc<AppState>, event: Box<MessageCreate>) -> any
     {
 
         let content = if event.content.is_empty() {
-            &attachment.0.filename
+            &event.attachments.0.filename
         } else {
             &event.content
         };
