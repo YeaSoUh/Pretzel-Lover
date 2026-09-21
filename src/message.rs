@@ -20,8 +20,15 @@ pub async fn msg_handler(state: Arc<AppState>, event: Box<MessageCreate>) -> any
     }
 
     if event.channel_id == Id::new(1410924213430259783) // builds channel
-        && !event.attachments.is_empty()
+        && !event.attachment.is_empty()
     {
+
+        let content = if event.content.is_empty() {
+            &attachment.0.filename
+        } else {
+            &event.content
+        };
+        
         state
             .client
             .create_reaction(
@@ -47,7 +54,7 @@ pub async fn msg_handler(state: Arc<AppState>, event: Box<MessageCreate>) -> any
 
         state
             .client
-            .create_thread_from_message(event.channel_id, event.id, &event.content)
+            .create_thread_from_message(event.channel_id, event.id, content)
             .await?;
 
         return Ok(());
