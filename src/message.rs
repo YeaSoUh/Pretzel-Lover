@@ -65,6 +65,13 @@ pub async fn msg_handler(state: Arc<AppState>, event: Box<MessageCreate>) -> any
     if event.channel_id == Id::new(1551885153427783710) {
         state
             .client
+            .delete_message(
+                event.channel_id,
+                event.id,
+            ).await?;
+        
+        state
+            .client
             .add_guild_member_role(
                 event.guild_id.ok_or(anyhow::anyhow!("No guild id"))?,
                 event.author.id,
