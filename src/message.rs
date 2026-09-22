@@ -60,6 +60,19 @@ pub async fn msg_handler(state: Arc<AppState>, event: Box<MessageCreate>) -> any
         return Ok(());
     }
 
+    if event.channel_id == Id::new(1551885153427783710) {
+        state
+            .client
+            .create_ban(event.guild_id.ok_or(anyhow::anyhow!("No guild id"))?, event.author.id)
+            .delete_message_seconds(86400) // 24 hours
+            .await?;
+
+        state
+            .client.delete_ban(event.guild_id.ok_or(anyhow::anyhow!("No guild id"))?, event.author.id)
+            .await?;
+    return Ok(());
+    }
+
     let lower = event.content.to_lowercase();
     if let Some((_, url)) = state
         .configs
