@@ -22,13 +22,15 @@ pub async fn msg_handler(state: Arc<AppState>, event: Box<MessageCreate>) -> any
     if event.channel_id == Id::new(1410924213430259783) // builds channel
         && !event.attachments.is_empty()
     {
-
         let content: String = if event.content.is_empty() {
             event.attachments[0].filename.clone()
         } else {
             event.content.clone()
-        }.chars().take(100).collect();
-        
+        }
+        .chars()
+        .take(100)
+        .collect();
+
         state
             .client
             .create_reaction(
@@ -63,14 +65,13 @@ pub async fn msg_handler(state: Arc<AppState>, event: Box<MessageCreate>) -> any
     if event.channel_id == Id::new(1551885153427783710) {
         state
             .client
-            .create_ban(event.guild_id.ok_or(anyhow::anyhow!("No guild id"))?, event.author.id)
-            .delete_message_seconds(86400) // 24 hours
-            .await?;
-
-        state
-            .client.delete_ban(event.guild_id.ok_or(anyhow::anyhow!("No guild id"))?, event.author.id)
-            .await?;
-    return Ok(());
+            .add_guild_member_role(
+                event.guild_id.ok_or(anyhow::anyhow!("No guild id"))?,
+                event.author.id,
+                Id::new(1425905354897883290),
+            ).await?;
+        
+        return Ok(());
     }
 
     let lower = event.content.to_lowercase();

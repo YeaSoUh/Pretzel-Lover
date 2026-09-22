@@ -50,7 +50,13 @@ pub async fn run(
             .await?;
         state
             .client
-            .create_message(event.channel.as_ref().ok_or(anyhow::anyhow!("No channel"))?.id)
+            .create_message(
+                event
+                    .channel
+                    .as_ref()
+                    .ok_or(anyhow::anyhow!("No channel"))?
+                    .id,
+            )
             .content(&format!(
                 "<@{}> HAS BEEN SENT TO THE WORST PLACE",
                 target_id

@@ -26,7 +26,8 @@ pub async fn run(
         .as_ref()
         .ok_or(anyhow::anyhow!("No user (as PartialMember)"))?;
 
-    if user.id == Id::new(1317504235495227392) // AUKEA's company owner
+    if user.id == Id::new(1317504235495227392)
+    // AUKEA's company owner
     {
         let target_id = data.target_id.ok_or(anyhow::anyhow!("No target id"))?;
 

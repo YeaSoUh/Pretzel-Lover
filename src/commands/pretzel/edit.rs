@@ -260,17 +260,15 @@ pub async fn modal(
     for component in &data.components {
         match component {
             ModalInteractionComponent::Label(sub_comp) => match &*sub_comp.component {
-                ModalInteractionComponent::TextInput(val) => {
-                    match &val.custom_id {
-                        str if str == "content" => {
-                            text = Some(&val.value);
-                        }
-                        str if str == "JSON" && !val.value.is_empty() => {
-                            json_bytes = Some(val.value.as_bytes());
-                        }
-                        _ => {}
+                ModalInteractionComponent::TextInput(val) => match &val.custom_id {
+                    str if str == "content" => {
+                        text = Some(&val.value);
                     }
-                }
+                    str if str == "JSON" && !val.value.is_empty() => {
+                        json_bytes = Some(val.value.as_bytes());
+                    }
+                    _ => {}
+                },
                 ModalInteractionComponent::FileUpload(val) => {
                     for file_id in &val.values {
                         let file = data

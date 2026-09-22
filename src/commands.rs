@@ -19,10 +19,10 @@ use twilight_util::builder::{
 
 use crate::{AppState, Configs, commands};
 
+pub mod add_role_employee;
 pub mod edit;
 pub mod get;
 pub mod pretzel;
-pub mod add_role_employee;
 pub mod remove;
 pub mod search;
 pub mod update_configs;
