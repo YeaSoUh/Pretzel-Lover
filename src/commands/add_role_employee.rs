@@ -3,8 +3,7 @@ use std::sync::Arc;
 use tracing::instrument;
 use twilight_http::request::AuditLogReason;
 use twilight_model::{
-    application::interaction::application_command::CommandData, channel::message::MessageFlags,
-    gateway::payload::incoming::InteractionCreate, id::Id,
+    application::interaction::application_command::CommandData, channel::message::MessageFlags, gateway::payload::incoming::InteractionCreate, id::{Id, marker::RoleMarker},
 };
 
 use crate::{AppState, commands};
@@ -26,9 +25,15 @@ pub async fn run(
         .as_ref()
         .ok_or(anyhow::anyhow!("No user (as PartialMember)"))?;
 
-    if user.id == Id::new(1317504235495227392)
-    // AUKEA's company owner
-    {
+    let company_role_id: Option<Id<RoleMarker>> = if user.id == Id::new(1317504235495227392) {
+        Some(Id::new(1530896915275841607))
+    } else if user.id == Id::new(1347832381716828213) {
+        Some(Id::new(1532399786949345360))
+    } else {
+        None
+    };
+
+    if let Some(role_id) = company_role_id {
         let target_id = data.target_id.ok_or(anyhow::anyhow!("No target id"))?;
 
         state
@@ -36,10 +41,10 @@ pub async fn run(
             .add_guild_member_role(
                 event.guild_id.ok_or(anyhow::anyhow!("No guild id"))?,
                 target_id.cast(),
-                Id::new(1530896915275841607),
+                role_id,
             )
             .reason(&format!(
-                "Morgoft'ed by {}",
+                "Promoted by {}",
                 user.global_name
                     .as_deref()
                     .map(String::from)
