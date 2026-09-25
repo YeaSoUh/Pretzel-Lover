@@ -6,7 +6,7 @@ use std::{
 use tracing::instrument;
 use turso::{Connection, Error, IntoParams, Rows};
 
-use crate::{AppState, db::connection::Checks};
+use crate::{AppState, db::types::Checks};
 
 pub async fn execute(
     conn: &Connection,

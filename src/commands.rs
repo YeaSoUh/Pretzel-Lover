@@ -7,10 +7,7 @@ use twilight_model::{
         interaction::{
             InteractionContextType, application_command::CommandData, modal::ModalInteractionData,
         },
-    },
-    channel::message::MessageFlags,
-    gateway::payload::incoming::InteractionCreate,
-    http::interaction::{InteractionResponse, InteractionResponseData, InteractionResponseType},
+    }, channel::message::MessageFlags, gateway::payload::incoming::InteractionCreate, http::interaction::{InteractionResponse, InteractionResponseData, InteractionResponseType}, oauth::ApplicationIntegrationType,
 };
 use twilight_util::builder::{
     InteractionResponseDataBuilder,
@@ -137,10 +134,12 @@ pub fn get_commands(configs: &Configs) -> anyhow::Result<Vec<Command>> {
             .build(),
         CommandBuilder::new("Sentence to Morgoft", "", CommandType::User)
             .contexts(vec![InteractionContextType::Guild])
+            .integration_types(vec![ApplicationIntegrationType::GuildInstall])
             .validate()?
             .build(),
         CommandBuilder::new("Add Employee Role", "", CommandType::User)
             .contexts(vec![InteractionContextType::Guild])
+            .integration_types(vec![ApplicationIntegrationType::GuildInstall])
             .validate()?
             .build(),
         CommandBuilder::new(
