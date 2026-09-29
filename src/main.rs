@@ -79,6 +79,9 @@ async fn main() -> anyhow::Result<()> {
         .set_global_commands(&get_commands(&configs)?)
         .await?;
 
+    commands::pretzel::say::run_once();
+    commands::pretzel::edit::run_once();
+
     //establish_database(&configs.database_url).await?;
 
     set_watch(Arc::new(AppState {

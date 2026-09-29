@@ -158,9 +158,6 @@ pub async fn cmd_handler(
     event: Box<InteractionCreate>,
     data: Box<CommandData>,
 ) -> anyhow::Result<()> {
-    commands::pretzel::say::run_once();
-    commands::pretzel::edit::run_once();
-
     let result = match data.as_ref().name.as_str() {
         // they are discontinued due to low usage but they can come back
         //"edit_db" => commands::edit::run(state, &event, &data).await,
