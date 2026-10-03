@@ -36,14 +36,12 @@ pub async fn get_planet(index: &str, state: Arc<AppState>) -> anyhow::Result<Pla
     }
     check_index(index)?;
 
-    let conn = DB
+    let db = DB
         .get()
-        .ok_or_else(|| anyhow::anyhow!("DB is not initialized"))?
-        .get_conn()
-        .await?;
+        .ok_or_else(|| anyhow::anyhow!("DB is not initialized"))?;
 
     let mut planets = query(
-        &conn,
+        &db,
         "SELECT * FROM planets WHERE id = ?1",
         [index.to_string()],
     )
@@ -68,14 +66,12 @@ pub async fn remove_planet(index: &str, state: Arc<AppState>) -> anyhow::Result<
 
     check_index(index)?;
 
-    let conn = DB
+    let db = DB
         .get()
-        .ok_or_else(|| anyhow::anyhow!("DB is not initialized"))?
-        .get_conn()
-        .await?;
+        .ok_or_else(|| anyhow::anyhow!("DB is not initialized"))?;
 
     query(
-        &conn,
+        &db,
         "DELETE FROM planets WHERE id = ?1",
         [index.to_string()],
     )
@@ -91,14 +87,12 @@ pub async fn search_planets(input: &str, state: Arc<AppState>) -> anyhow::Result
         anyhow::bail!("Blacklisted sql");
     }
 
-    let conn = DB
+    let db = DB
         .get()
-        .ok_or_else(|| anyhow::anyhow!("DB is not initialized"))?
-        .get_conn()
-        .await?;
+        .ok_or_else(|| anyhow::anyhow!("DB is not initialized"))?;
     let input = normalize(&input);
 
-    let mut planets = query(&conn, &format!("SELECT * FROM planets WHERE {}", input), ()).await?;
+    let mut planets = query(&db, &format!("SELECT * FROM planets WHERE {}", input), ()).await?;
 
     let results_limit = 100;
     let mut results_showed = 0;
@@ -131,11 +125,9 @@ pub async fn search_planets(input: &str, state: Arc<AppState>) -> anyhow::Result
 pub async fn edit_planet(query: &EditRequest, bypass: bool) -> anyhow::Result<()> {
     let index = &query.index;
     let input = &query.input;
-    let conn = DB
+    let db = DB
         .get()
-        .ok_or_else(|| anyhow::anyhow!("DB is not initialized"))?
-        .get_conn()
-        .await?;
+        .ok_or_else(|| anyhow::anyhow!("DB is not initialized"))?;
 
     let input = normalize(&input);
 
@@ -420,7 +412,7 @@ pub async fn edit_planet(query: &EditRequest, bypass: bool) -> anyhow::Result<()
         })
         .collect();
 
-    execute(&conn, &sql, turso_params).await?;
+    execute(&db, &sql, turso_params).await?;
 
     Ok(())
 }

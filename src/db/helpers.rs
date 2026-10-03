@@ -4,15 +4,17 @@ use std::{
     time::Duration,
 };
 use tracing::instrument;
-use turso::{Connection, Error, IntoParams, Rows};
+use turso::{Error, IntoParams, Rows};
 
-use crate::{AppState, db::types::Checks};
+use crate::{AppState, db::types::{Checks, DatabaseStruct}};
 
 pub async fn execute(
-    conn: &Connection,
+    db: &DatabaseStruct,
     sql: &str,
     params: impl IntoParams + Clone,
 ) -> anyhow::Result<()> {
+    let conn = db.get_conn().await?;
+
     let max_attempts = 10;
     let mut attempts = 1;
 
@@ -43,10 +45,12 @@ pub async fn execute(
 
 #[instrument(skip_all, err)]
 pub async fn query(
-    conn: &Connection,
+    db: &DatabaseStruct,
     sql: &str,
     params: impl IntoParams + Clone,
 ) -> anyhow::Result<Rows> {
+    let conn = db.get_conn().await?;
+
     let max_attempts = 10;
     let mut attempts = 1;
 
