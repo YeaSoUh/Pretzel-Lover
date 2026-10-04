@@ -3,7 +3,10 @@ use std::sync::Arc;
 use tracing::instrument;
 use twilight_http::request::AuditLogReason;
 use twilight_model::{
-    application::interaction::application_command::CommandData, channel::message::MessageFlags, gateway::payload::incoming::InteractionCreate, id::{Id, marker::RoleMarker},
+    application::interaction::application_command::CommandData,
+    channel::message::MessageFlags,
+    gateway::payload::incoming::InteractionCreate,
+    id::{Id, marker::RoleMarker},
 };
 
 use crate::{AppState, commands};

@@ -10,7 +10,7 @@ use twilight_model::{
 
 use crate::{
     AppState, commands,
-    db::{connection::self, types::EditRequest},
+    db::{connection, types::EditRequest},
 };
 
 #[instrument(skip_all, err)]

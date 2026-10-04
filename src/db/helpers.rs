@@ -4,75 +4,43 @@ use std::{
     time::Duration,
 };
 use tracing::instrument;
-use turso::{Error, IntoParams, Rows};
+use turso::{Error, IntoParams};
 
-use crate::{AppState, db::types::{Checks, DatabaseStruct}};
+use crate::{
+    AppState,
+    db::types::{Checks, DatabaseStruct, DbInstruction, DbResult},
+};
 
-pub async fn execute(
-    db: &DatabaseStruct,
-    sql: &str,
-    params: impl IntoParams + Clone,
-) -> anyhow::Result<()> {
-    let conn = db.get_conn().await?;
-
-    let max_attempts = 10;
-    let mut attempts = 1;
-
-    loop {
-        if attempts > max_attempts {
-            return Err(anyhow::anyhow!("Reached max attempts"));
-        }
-        conn.execute("BEGIN CONCURRENT", ()).await?;
-        match conn.execute(sql, params.clone()).await {
-            Ok(_) => {
-                conn.execute("COMMIT", ()).await?;
-                return Ok(());
-            }
-            Err(e) if is_retryable(&e) => {
-                let _ = conn.execute("ROLLBACK", ()).await;
-                tracing::warn!(?e, "Retrying request");
-                attempts += 1;
-                tokio::time::sleep(Duration::from_millis(15)).await;
-                continue;
-            }
-            Err(e) => {
-                let _ = conn.execute("ROLLBACK", ()).await;
-                return Err(e.into());
-            }
-        }
-    }
-}
+const MAX_ATTEMPTS: u64 = 10;
 
 #[instrument(skip_all, err)]
-pub async fn query(
+pub async fn execute<P: IntoParams + Clone>(
     db: &DatabaseStruct,
-    sql: &str,
-    params: impl IntoParams + Clone,
-) -> anyhow::Result<Rows> {
+    instruction: &DbInstruction<P>,
+) -> anyhow::Result<DbResult> {
     let conn = db.get_conn().await?;
 
-    let max_attempts = 10;
     let mut attempts = 1;
 
     loop {
-        if attempts > max_attempts {
+        if attempts > MAX_ATTEMPTS {
             return Err(anyhow::anyhow!("Reached max attempts"));
         }
         conn.execute("BEGIN CONCURRENT", ()).await?;
-        match conn.query(sql, params.clone()).await {
-            Ok(r) => {
+        match instruction.run(&conn).await {
+            Ok(dbres) => {
                 conn.execute("COMMIT", ()).await?;
-                return Ok(r);
+                return Ok(dbres);
             }
             Err(e) if is_retryable(&e) => {
-                let _ = conn.execute("ROLLBACK", ()).await;
+                conn.execute("ROLLBACK", ()).await?;
                 tracing::warn!(?e, "Retrying request");
                 attempts += 1;
                 tokio::time::sleep(Duration::from_millis(15)).await;
                 continue;
             }
             Err(e) => {
-                let _ = conn.execute("ROLLBACK", ()).await;
+                conn.execute("ROLLBACK", ()).await?;
                 return Err(e.into());
             }
         }

@@ -1,11 +1,17 @@
-use std::sync::{OnceLock, Arc};
+use std::sync::{Arc, OnceLock};
 
 use tracing::instrument;
 use turso::Builder;
 use twilight_model::http::attachment::Attachment;
 
 use crate::{
-    AppState, db::{helpers::{check_index, check_sql, execute, normalize, query, validate}, types::{Checks, DatabaseStruct, EditRequest, Planet, PlanetResult, Planets}},
+    AppState,
+    db::{
+        helpers::{check_index, check_sql, execute, normalize, validate},
+        types::{
+            Checks, DatabaseStruct, DbInstruction, EditRequest, Planet, PlanetResult, Planets,
+        },
+    },
 };
 
 static DB: OnceLock<DatabaseStruct> = OnceLock::new();
@@ -40,12 +46,16 @@ pub async fn get_planet(index: &str, state: Arc<AppState>) -> anyhow::Result<Pla
         .get()
         .ok_or_else(|| anyhow::anyhow!("DB is not initialized"))?;
 
-    let mut planets = query(
+    let mut planets = execute(
         &db,
-        "SELECT * FROM planets WHERE id = ?1",
-        [index.to_string()],
+        &DbInstruction::Execute {
+            execute: String::from("SELECT * FROM planets WHERE id = ?1"),
+            params: [index.to_string()],
+        },
     )
-    .await?;
+    .await?
+    .into_rows()
+    .ok_or(anyhow::anyhow!("Row wasn't found"))?;
 
     if let Some(row) = planets.next().await? {
         return Ok(PlanetResult {
@@ -70,10 +80,12 @@ pub async fn remove_planet(index: &str, state: Arc<AppState>) -> anyhow::Result<
         .get()
         .ok_or_else(|| anyhow::anyhow!("DB is not initialized"))?;
 
-    query(
+    execute(
         &db,
-        "DELETE FROM planets WHERE id = ?1",
-        [index.to_string()],
+        &DbInstruction::Execute {
+            execute: String::from("DELETE FROM planets WHERE id = ?1"),
+            params: [index.to_string()],
+        },
     )
     .await?;
 
@@ -92,7 +104,16 @@ pub async fn search_planets(input: &str, state: Arc<AppState>) -> anyhow::Result
         .ok_or_else(|| anyhow::anyhow!("DB is not initialized"))?;
     let input = normalize(&input);
 
-    let mut planets = query(&db, &format!("SELECT * FROM planets WHERE {}", input), ()).await?;
+    let mut planets = execute(
+        &db,
+        &DbInstruction::Query {
+            query: format!("SELECT * FROM planets WHERE {}", input),
+            params: (),
+        },
+    )
+    .await?
+    .into_rows()
+    .ok_or(anyhow::anyhow!("No Rows were found"))?;
 
     let results_limit = 100;
     let mut results_showed = 0;
@@ -412,7 +433,14 @@ pub async fn edit_planet(query: &EditRequest, bypass: bool) -> anyhow::Result<()
         })
         .collect();
 
-    execute(&db, &sql, turso_params).await?;
+    execute(
+        db,
+        &DbInstruction::Execute {
+            execute: sql,
+            params: turso_params,
+        },
+    )
+    .await?;
 
     Ok(())
 }

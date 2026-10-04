@@ -1,7 +1,7 @@
 use std::{fmt::Display, sync::Arc, time::Duration};
 
 use serde::Deserialize;
-use turso::{Connection, Database, Row};
+use turso::{Connection, Database, IntoParams, Row, Rows};
 
 #[derive(Debug)]
 pub struct EditRequest {
@@ -161,6 +161,46 @@ impl DatabaseStruct {
         conn.pragma_update("journal_mode", "'mvcc'").await?; // enables concurrency writes which is good!
 
         Ok(conn)
+    }
+}
+
+pub(in crate::db) enum DbResult {
+    #[allow(dead_code)]
+    Execute(u64),
+    Query(Rows),
+}
+
+impl DbResult {
+    #[allow(dead_code)]
+    pub fn as_u64(&self) -> Option<u64> {
+        match self {
+            DbResult::Execute(num) => Some(*num),
+            _ => None,
+        }
+    }
+    pub fn into_rows(self) -> Option<Rows> {
+        match self {
+            DbResult::Query(rows) => Some(rows),
+            _ => None,
+        }
+    }
+}
+
+pub(in crate::db) enum DbInstruction<P: IntoParams + Clone> {
+    Execute { execute: String, params: P },
+    Query { query: String, params: P },
+}
+
+impl<P: IntoParams + Clone> DbInstruction<P> {
+    pub async fn run(&self, conn: &Connection) -> Result<DbResult, turso::Error> {
+        Ok(match self {
+            DbInstruction::Execute { execute, params } => {
+                DbResult::Execute(conn.execute(execute, params.clone()).await?)
+            }
+            DbInstruction::Query { query, params } => {
+                DbResult::Query(conn.query(query, params.clone()).await?)
+            }
+        })
     }
 }
 

@@ -7,7 +7,11 @@ use twilight_model::{
         interaction::{
             InteractionContextType, application_command::CommandData, modal::ModalInteractionData,
         },
-    }, channel::message::MessageFlags, gateway::payload::incoming::InteractionCreate, http::interaction::{InteractionResponse, InteractionResponseData, InteractionResponseType}, oauth::ApplicationIntegrationType,
+    },
+    channel::message::MessageFlags,
+    gateway::payload::incoming::InteractionCreate,
+    http::interaction::{InteractionResponse, InteractionResponseData, InteractionResponseType},
+    oauth::ApplicationIntegrationType,
 };
 use twilight_util::builder::{
     InteractionResponseDataBuilder,
