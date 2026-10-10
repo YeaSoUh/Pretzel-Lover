@@ -14,9 +14,9 @@ use crate::{
 const MAX_ATTEMPTS: u64 = 10;
 
 #[instrument(skip_all, err)]
-pub async fn execute<P: IntoParams + Clone>(
+pub async fn execute(
     db: &DatabaseStruct,
-    instruction: &DbInstruction<P>,
+    instruction: DbInstruction<impl IntoParams + Clone>,
 ) -> anyhow::Result<DbResult> {
     let conn = db.get_conn().await?;
 
@@ -27,7 +27,7 @@ pub async fn execute<P: IntoParams + Clone>(
             return Err(anyhow::anyhow!("Reached max attempts"));
         }
         conn.execute("BEGIN CONCURRENT", ()).await?;
-        match instruction.run(&conn).await {
+        match instruction.clone().run(&conn).await {
             Ok(dbres) => {
                 conn.execute("COMMIT", ()).await?;
                 return Ok(dbres);

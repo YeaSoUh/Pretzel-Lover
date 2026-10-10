@@ -1,4 +1,4 @@
-use std::sync::{Arc, OnceLock};
+use std::{borrow::Cow, sync::{Arc, OnceLock}};
 
 use tracing::instrument;
 use turso::Builder;
@@ -48,8 +48,8 @@ pub async fn get_planet(index: &str, state: Arc<AppState>) -> anyhow::Result<Pla
 
     let mut planets = execute(
         &db,
-        &DbInstruction::Execute {
-            execute: String::from("SELECT * FROM planets WHERE id = ?1"),
+        DbInstruction::Execute {
+            execute: Cow::Borrowed("SELECT * FROM planets WHERE id = ?1"),
             params: [index.to_string()],
         },
     )
@@ -82,8 +82,8 @@ pub async fn remove_planet(index: &str, state: Arc<AppState>) -> anyhow::Result<
 
     execute(
         &db,
-        &DbInstruction::Execute {
-            execute: String::from("DELETE FROM planets WHERE id = ?1"),
+        DbInstruction::Execute {
+            execute: Cow::Borrowed("DELETE FROM planets WHERE id = ?1"),
             params: [index.to_string()],
         },
     )
@@ -106,8 +106,8 @@ pub async fn search_planets(input: &str, state: Arc<AppState>) -> anyhow::Result
 
     let mut planets = execute(
         &db,
-        &DbInstruction::Query {
-            query: format!("SELECT * FROM planets WHERE {}", input),
+        DbInstruction::Query {
+            query: Cow::Owned(format!("SELECT * FROM planets WHERE {}", input)),
             params: (),
         },
     )
@@ -435,8 +435,8 @@ pub async fn edit_planet(query: &EditRequest, bypass: bool) -> anyhow::Result<()
 
     execute(
         db,
-        &DbInstruction::Execute {
-            execute: sql,
+        DbInstruction::Execute {
+            execute: sql.into(),
             params: turso_params,
         },
     )

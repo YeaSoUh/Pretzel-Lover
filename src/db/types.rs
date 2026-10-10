@@ -1,4 +1,4 @@
-use std::{fmt::Display, sync::Arc, time::Duration};
+use std::{borrow::Cow, fmt::Display, sync::Arc, time::Duration};
 
 use serde::Deserialize;
 use turso::{Connection, Database, IntoParams, Row, Rows};
@@ -186,19 +186,20 @@ impl DbResult {
     }
 }
 
-pub(in crate::db) enum DbInstruction<P: IntoParams + Clone> {
-    Execute { execute: String, params: P },
-    Query { query: String, params: P },
+#[derive(Debug, Clone)]
+pub(in crate::db) enum DbInstruction<P: IntoParams> {
+    Execute { execute: Cow<'static, str>, params: P },
+    Query { query: Cow<'static, str>, params: P },
 }
 
-impl<P: IntoParams + Clone> DbInstruction<P> {
-    pub async fn run(&self, conn: &Connection) -> Result<DbResult, turso::Error> {
+impl<P: IntoParams> DbInstruction<P> {
+    pub async fn run(self, conn: &Connection) -> Result<DbResult, turso::Error> {
         Ok(match self {
             DbInstruction::Execute { execute, params } => {
-                DbResult::Execute(conn.execute(execute, params.clone()).await?)
+                DbResult::Execute(conn.execute(execute, params).await?)
             }
             DbInstruction::Query { query, params } => {
-                DbResult::Query(conn.query(query, params.clone()).await?)
+                DbResult::Query(conn.query(query, params).await?)
             }
         })
     }
