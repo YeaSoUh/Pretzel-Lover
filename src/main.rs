@@ -37,6 +37,7 @@ pub struct Configs {
     database_url: String,
     stickers: Vec<(String, String)>,
     message_replies: HashMap<String, String>,
+    simmer_api_key: String,
 }
 
 #[derive(Clone, Debug)]

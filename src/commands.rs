@@ -27,6 +27,7 @@ pub mod pretzel;
 pub mod remove;
 pub mod search;
 pub mod update_configs;
+pub mod check_user;
 
 pub async fn defer(
     state: Arc<AppState>,
@@ -151,6 +152,20 @@ pub fn get_commands(configs: &Configs) -> anyhow::Result<Vec<Command>> {
             "Updates configs of a bot (only owner is allowed to run this)",
             CommandType::ChatInput,
         )
+        .contexts(vec![InteractionContextType::Guild])
+        .integration_types(vec![ApplicationIntegrationType::GuildInstall])
+        .validate()?
+        .build(),
+        CommandBuilder::new(
+            "check_user",
+            "Checks a roblox user for suspicious activities",
+            CommandType::ChatInput,
+        )
+        .option(
+            StringBuilder::new("user_id", "A user id of a roblox player to check").required(true),
+        )
+        .contexts(vec![InteractionContextType::Guild])
+        .integration_types(vec![ApplicationIntegrationType::GuildInstall])
         .validate()?
         .build(),
     ])
@@ -173,6 +188,7 @@ pub async fn cmd_handler(
         "Sentence to Morgoft" => commands::pretzel::morgoft::run(state, &event, &data).await,
         "Add Employee Role" => commands::add_role_employee::run(state, &event, &data).await,
         "update_configs" => commands::update_configs::run(state, &event, &data).await,
+        "check_user" => commands::check_user::run(state, &event, &data).await,
         // discontinued too
         // "channel_manager" => todo!(),
         // "kitty" => todo!(),
