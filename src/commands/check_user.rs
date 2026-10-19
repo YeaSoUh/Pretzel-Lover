@@ -1,10 +1,18 @@
 use std::sync::Arc;
 
 use tracing::instrument;
-use twilight_model::{application::interaction::application_command::{CommandData, CommandOptionValue}, channel::message::MessageFlags, gateway::payload::incoming::InteractionCreate, id::Id};
+use twilight_model::{
+    application::interaction::application_command::{CommandData, CommandOptionValue},
+    channel::message::MessageFlags,
+    gateway::payload::incoming::InteractionCreate,
+    id::Id,
+};
 use twilight_util::builder::InteractionResponseDataBuilder;
 
-use crate::{AppState, commands::{self, response}};
+use crate::{
+    AppState,
+    commands::{self, response},
+};
 
 #[instrument(skip_all, err)]
 pub async fn run(
@@ -21,7 +29,8 @@ pub async fn run(
     let user_roles = &user.roles;
 
     if !user_roles.contains(&Id::new(1410929363863732234)) // co-owner
-        && !user_roles.contains(&Id::new(1410929110502608896)) // owner
+        && !user_roles.contains(&Id::new(1410929110502608896))
+    // owner
     {
         state
             .client
@@ -61,15 +70,19 @@ pub async fn run(
 
     let request = client
         .get(format!("https://api.simmer.icu/v2/checkuser/{}", user_id))
-        .header("Authorization", format!("Bearer {}", state.configs.simmer_api_key));
+        .header(
+            "Authorization",
+            format!("Bearer {}", state.configs.simmer_api_key),
+        );
 
     state
         .client
         .interaction(state.application_id)
         .create_followup(&event.token)
-        .content(&request.send().await?.text().await?)
+        .content(&serde_json::to_string_pretty(
+            &request.send().await?.text().await?,
+        )?)
         .await?;
-
 
     Ok(())
 }

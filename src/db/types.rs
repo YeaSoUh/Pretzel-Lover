@@ -188,8 +188,14 @@ impl DbResult {
 
 #[derive(Debug, Clone)]
 pub(in crate::db) enum DbInstruction<P: IntoParams> {
-    Execute { execute: Cow<'static, str>, params: P },
-    Query { query: Cow<'static, str>, params: P },
+    Execute {
+        execute: Cow<'static, str>,
+        params: P,
+    },
+    Query {
+        query: Cow<'static, str>,
+        params: P,
+    },
 }
 
 impl<P: IntoParams> DbInstruction<P> {

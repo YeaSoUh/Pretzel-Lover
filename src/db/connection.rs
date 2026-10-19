@@ -1,4 +1,7 @@
-use std::{borrow::Cow, sync::{Arc, OnceLock}};
+use std::{
+    borrow::Cow,
+    sync::{Arc, OnceLock},
+};
 
 use tracing::instrument;
 use turso::Builder;

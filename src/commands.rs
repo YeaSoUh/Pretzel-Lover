@@ -21,13 +21,13 @@ use twilight_util::builder::{
 use crate::{AppState, Configs, commands};
 
 pub mod add_role_employee;
+pub mod check_user;
 pub mod edit;
 pub mod get;
 pub mod pretzel;
 pub mod remove;
 pub mod search;
 pub mod update_configs;
-pub mod check_user;
 
 pub async fn defer(
     state: Arc<AppState>,
