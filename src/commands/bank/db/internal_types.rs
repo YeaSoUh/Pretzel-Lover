@@ -1,5 +1,6 @@
+use std::time::Duration;
+
 use chrono::{DateTime, Utc};
-use serde::Deserialize;
 use turso::Row;
 use twilight_model::id::{Id, marker::UserMarker};
 
@@ -12,7 +13,7 @@ pub(in crate::commands::bank::db) enum BankAccounts {
     Frozen,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Debug)]
 pub struct BankAccount {
     pub id: String,
     pub amount: u64,
@@ -46,25 +47,40 @@ impl TryFrom<Row> for BankAccount {
     }
 }
 
-pub enum SalaryState {
-    Due,
-    Wait(DateTime<Utc>), // ISO 8601 datetime
+#[derive(sea_query::Iden)]
+pub(in crate::commands::bank::db) enum Salaries {
+    Table,
+    Id,
+    From,
+    To,
+    Amount,
+    IntervalHours,
+    RunAt,
 }
 
+pub enum SalaryState {
+    Due,
+    Wait(Duration), // ISO 8601 datetime
+}
+
+#[derive(Debug)]
 pub struct Salary {
     pub id: [u8; 16], // BLOB (raw binary data) of uuid v7
     pub from: Id<UserMarker>,
     pub to: Id<UserMarker>,
-    pub amount: i64,
+    pub amount: u64,
+    pub interval_hours: u64,
     pub run_at: DateTime<Utc>,
 }
 
 impl Salary {
     pub fn state(&self) -> SalaryState {
-        if self.run_at < Utc::now() {
+        let now = Utc::now();
+
+        if self.run_at < now {
             SalaryState::Due
         } else {
-            SalaryState::Wait(self.run_at)
+            SalaryState::Wait((self.run_at - now).to_std().unwrap_or(Duration::ZERO))
         }
     }
 }
@@ -99,6 +115,7 @@ impl TryFrom<&Row> for Salary {
             )
             .ok_or(anyhow::anyhow!("User receving a payment has a zero id"))?,
             amount: row.get(next())?,
+            interval_hours: row.get(next())?,
             run_at: DateTime::parse_from_rfc3339(
                 row.get_value(next())?
                     .as_text()

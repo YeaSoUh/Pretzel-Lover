@@ -1,14 +1,12 @@
 use std::{
-    borrow::Cow,
-    sync::{Arc, OnceLock},
+    borrow::Cow, sync::{Arc, OnceLock},
 };
 
 use tracing::instrument;
 use turso::Builder;
 
 use crate::{
-    commands::bank::db::internal_types::Salary,
-    db::{
+    commands::bank::db::internal_types::{Salaries, Salary}, db::{
         helpers::execute,
         types::{DatabaseStruct, DbInstruction},
     },
@@ -16,6 +14,7 @@ use crate::{
 
 static DB: OnceLock<DatabaseStruct> = OnceLock::new();
 
+#[instrument(err)]
 pub async fn establish_database(database_url: &str) -> anyhow::Result<()> {
     let db = Builder::new_local(database_url).build().await?;
     DB.set(DatabaseStruct {
@@ -27,7 +26,7 @@ pub async fn establish_database(database_url: &str) -> anyhow::Result<()> {
 }
 
 #[instrument(err)]
-pub async fn get_payment(id: uuid::Uuid) -> anyhow::Result<Option<Salary>> {
+pub async fn get_salary(id: uuid::Uuid) -> anyhow::Result<Option<Salary>> {
     if id.get_version_num() != 7 {
         anyhow::bail!("Invalid UUID version")
     }
@@ -39,7 +38,7 @@ pub async fn get_payment(id: uuid::Uuid) -> anyhow::Result<Option<Salary>> {
     let mut payments = execute(
         &db,
         DbInstruction::Execute {
-            execute: Cow::Borrowed("SELECT * FROM planets WHERE id = ?1"),
+            execute: Cow::Borrowed("SELECT * FROM salaries WHERE id = ?1 LIMIT 1"),
             params: [id.as_bytes().as_slice()],
         },
     )
@@ -55,7 +54,35 @@ pub async fn get_payment(id: uuid::Uuid) -> anyhow::Result<Option<Salary>> {
 }
 
 #[instrument(err)]
-pub async fn remove_payment(id: uuid::Uuid) -> anyhow::Result<()> {
+pub async fn get_coming_salary(id: uuid::Uuid) -> anyhow::Result<Option<Salary>> {
+    if id.get_version_num() != 7 {
+        anyhow::bail!("Invalid UUID version")
+    }
+
+    let db = DB
+        .get()
+        .ok_or_else(|| anyhow::anyhow!("DB is not initialized"))?;
+
+    let mut payments = execute(
+        &db,
+        DbInstruction::Execute {
+            execute: Cow::Borrowed("SELECT * FROM salaries ORDER BY run_at ASC LIMIT 1"),
+            params: [id.as_bytes().as_slice()],
+        },
+    )
+    .await?
+    .into_rows()
+    .ok_or(anyhow::anyhow!("Rows weren't found"))?;
+
+    if let Some(row) = payments.next().await? {
+        return Ok(Some(row.try_into()?));
+    }
+
+    Ok(None)
+}
+
+#[instrument(err)]
+pub async fn remove_salary(id: uuid::Uuid) -> anyhow::Result<()> {
     if id.get_version_num() != 7 {
         anyhow::bail!("Invalid UUID version")
     }
@@ -67,7 +94,7 @@ pub async fn remove_payment(id: uuid::Uuid) -> anyhow::Result<()> {
     execute(
         &db,
         DbInstruction::Execute {
-            execute: Cow::Borrowed("DELETE FROM payments WHERE id = ?1"),
+            execute: Cow::Borrowed("DELETE FROM salaries WHERE id = ?1"),
             params: [id.as_bytes().as_slice()],
         },
     )
@@ -76,297 +103,38 @@ pub async fn remove_payment(id: uuid::Uuid) -> anyhow::Result<()> {
     Ok(())
 }
 
-/*
-#[instrument(skip(bypass), err)]
-pub async fn edit_planet(query: &EditRequest, bypass: bool) -> anyhow::Result<()> {
-    let index = &query.index;
-    let input = &query.input;
+#[instrument(err)]
+pub async fn edit_salary(query: Salary) -> anyhow::Result<()> {
     let db = DB
         .get()
         .ok_or_else(|| anyhow::anyhow!("DB is not initialized"))?;
 
-    let input = normalize(&input);
-
-    let mut split_iter = index.split('-');
-    let star_id: i64 = split_iter
-        .next()
-        .ok_or_else(|| anyhow::anyhow!("Invalid star id format"))?
-        .parse()?;
-
-    if split_iter.next().unwrap_or("None").parse::<i64>().is_err() {
-        anyhow::bail!("Invalid planet id format");
-    }
-
-    let mut is_moon = match split_iter.next() {
-        Some(s) => {
-            s.parse::<i64>()?;
-            true
-        }
-        None => false,
-    };
-
-    if split_iter.next().is_some() {
-        anyhow::bail!("Invalid id format");
-    }
-
-    let mut name: Option<String> = None;
-    let mut radius: Option<f64> = None;
-    let mut gravity: Option<f64> = None;
-    let mut conditions: Option<String> = None;
-    let mut temperature: Option<i64> = None;
-    let mut sector: Option<String> = None;
-    let mut tectonics: Option<String> = None;
-    let mut atmosphere: Option<String> = None;
-    let mut oceans: Option<String> = None;
-    let mut rings: Option<String> = None;
-    let mut trees: Option<String> = None;
-    let mut sub_trees: Option<String> = None;
-    let mut life: Option<bool> = None;
-    let mut life_type: Option<String> = None;
-    let mut moons: Option<i32> = None;
-
-    let mut malachite: Option<i32> = None;
-    let mut hematite: Option<f64> = None;
-    let mut petroleum: Option<i32> = None;
-    let mut coal: Option<i32> = None;
-    let mut gummite: Option<i32> = None;
-    let mut tektite: Option<i32> = None;
-    let mut bauxite: Option<i32> = None;
-    let mut gold: Option<f64> = None;
-    let mut cerussite: Option<i32> = None;
-
-    let mut lime: Option<bool> = None;
-    let mut saltpeter: Option<bool> = None;
-    let mut quartz: Option<bool> = None;
-    let mut ice: Option<bool> = None;
-
-    let mut note: Option<String> = None;
-
-    for expr in input.split("|") {
-        let expr = expr.trim();
-        if expr.is_empty() {
-            continue;
-        }
-
-        let (key, mut value) = expr
-            .split_once("=")
-            .ok_or(anyhow::anyhow!("Invalid input"))?;
-        let key = key.trim().to_lowercase();
-        value = value.trim();
-
-        validate(&key, &value, &CHECKS)?;
-        match key.as_str() {
-            "name" => name = Some(value.to_string()),
-            "radius" => radius = Some(value.parse()?),
-            "gravity" => gravity = Some(value.parse()?),
-            "conditions" => conditions = Some(value.to_string()),
-            "temperature" => temperature = Some(value.parse()?),
-            "sector" => sector = Some(value.to_string()),
-            "tectonics" => tectonics = Some(value.to_string()),
-            "atmosphere" => atmosphere = Some(value.to_string()),
-            "oceans" => oceans = Some(value.to_string()),
-            "rings" => rings = Some(value.to_string()),
-            "trees" => trees = Some(value.to_string()),
-            "sub trees" => sub_trees = Some(value.to_string()),
-            "life" => life = Some(value.parse::<bool>()?),
-            "life type" => life_type = Some(value.to_string()),
-            "moons" => moons = Some(value.parse()?),
-            "malachite" => malachite = Some(value.parse()?),
-            "hematite" => hematite = Some((value.parse::<f64>()? * 1000.0).round() / 1000.0),
-            "petroleum" => petroleum = Some(value.parse()?),
-            "coal" => coal = Some(value.parse()?),
-            "gummite" => gummite = Some(value.parse()?),
-            "tektite" => tektite = Some(value.parse()?),
-            "bauxite" => bauxite = Some(value.parse()?),
-            "gold" => gold = Some((value.parse::<f64>()? * 1000.0).round() / 1000.0),
-            "cerussite" => cerussite = Some(value.parse()?),
-            "lime" => lime = Some(value.parse()?),
-            "saltpeter" => saltpeter = Some(value.parse()?),
-            "quartz" => quartz = Some(value.parse()?),
-            "ice" => ice = Some(value.parse()?),
-            "note" => note = Some(value.to_string()),
-            "moon" if bypass => is_moon = value.parse::<bool>()?,
-            _ => continue,
-        }
-    }
-
     let (sql, query_values) = {
-        let mut columns = vec![Planets::Id, Planets::StarId];
-        let mut values: Vec<sea_query::SimpleExpr> = vec![index.into(), star_id.into()];
-
-        let mut conflict = sea_query::OnConflict::new();
-
-        if let Some(name) = name {
-            columns.push(Planets::Name);
-            values.push(name.into());
-            conflict.update_column(Planets::Name);
-        }
-        if let Some(radius) = radius {
-            columns.push(Planets::Radius);
-            values.push(radius.into());
-            conflict.update_column(Planets::Radius);
-        }
-        if let Some(gravity) = gravity {
-            columns.push(Planets::Gravity);
-            values.push(gravity.into());
-            conflict.update_column(Planets::Gravity);
-        }
-        if let Some(conditions) = conditions {
-            columns.push(Planets::Conditions);
-            values.push(conditions.into());
-            conflict.update_column(Planets::Conditions);
-        }
-        if let Some(temperature) = temperature {
-            columns.push(Planets::Temperature);
-            values.push(temperature.into());
-            conflict.update_column(Planets::Temperature);
-        }
-        if let Some(tectonics) = tectonics {
-            columns.push(Planets::Tectonics);
-            values.push(tectonics.into());
-            conflict.update_column(Planets::Tectonics);
-        }
-        if let Some(sector) = sector {
-            columns.push(Planets::Sector);
-            values.push(sector.into());
-            conflict.update_column(Planets::Sector);
-        }
-        if let Some(atmosphere) = atmosphere {
-            columns.push(Planets::Atmosphere);
-            values.push(atmosphere.into());
-            conflict.update_column(Planets::Atmosphere);
-        }
-        if let Some(oceans) = oceans {
-            columns.push(Planets::Oceans);
-            values.push(oceans.into());
-            conflict.update_column(Planets::Oceans);
-        }
-        if let Some(rings) = rings {
-            columns.push(Planets::Rings);
-            values.push(rings.into());
-            conflict.update_column(Planets::Rings);
-        }
-        if let Some(trees) = trees {
-            columns.push(Planets::Trees);
-            values.push(trees.into());
-            conflict.update_column(Planets::Trees);
-        }
-        if let Some(sub_trees) = sub_trees {
-            columns.push(Planets::SubTrees);
-            values.push(sub_trees.into());
-            conflict.update_column(Planets::SubTrees);
-        }
-        if let Some(life) = life {
-            columns.push(Planets::Life);
-            values.push(life.into());
-            conflict.update_column(Planets::Life);
-        }
-        if let Some(life_type) = life_type {
-            columns.push(Planets::LifeType);
-            values.push(life_type.into());
-            conflict.update_column(Planets::LifeType);
-        }
-        if let Some(moons) = moons {
-            columns.push(Planets::Moons);
-            values.push(moons.into());
-            conflict.update_column(Planets::Moons);
-        }
-        if let Some(malachite) = malachite {
-            columns.push(Planets::Malachite);
-            values.push(malachite.into());
-            conflict.update_column(Planets::Malachite);
-        }
-        if let Some(hematite) = hematite {
-            columns.push(Planets::Hematite);
-            values.push(hematite.into());
-            conflict.update_column(Planets::Hematite);
-        }
-        if let Some(petroleum) = petroleum {
-            columns.push(Planets::Petroleum);
-            values.push(petroleum.into());
-            conflict.update_column(Planets::Petroleum);
-        }
-        if let Some(coal) = coal {
-            columns.push(Planets::Coal);
-            values.push(coal.into());
-            conflict.update_column(Planets::Coal);
-        }
-        if let Some(gummite) = gummite {
-            columns.push(Planets::Gummite);
-            values.push(gummite.into());
-            conflict.update_column(Planets::Gummite);
-        }
-        if let Some(tektite) = tektite {
-            columns.push(Planets::Tektite);
-            values.push(tektite.into());
-            conflict.update_column(Planets::Tektite);
-        }
-        if let Some(bauxite) = bauxite {
-            columns.push(Planets::Bauxite);
-            values.push(bauxite.into());
-            conflict.update_column(Planets::Bauxite);
-        }
-        if let Some(gold) = gold {
-            columns.push(Planets::Gold);
-            values.push(gold.into());
-            conflict.update_column(Planets::Gold);
-        }
-        if let Some(cerussite) = cerussite {
-            columns.push(Planets::Cerussite);
-            values.push(cerussite.into());
-            conflict.update_column(Planets::Cerussite);
-        }
-
-        if let Some(lime) = lime {
-            columns.push(Planets::Lime);
-            values.push(lime.into());
-            conflict.update_column(Planets::Lime);
-        }
-        if let Some(saltpeter) = saltpeter {
-            columns.push(Planets::Saltpeter);
-            values.push(saltpeter.into());
-            conflict.update_column(Planets::Saltpeter);
-        }
-        if let Some(quartz) = quartz {
-            columns.push(Planets::Quartz);
-            values.push(quartz.into());
-            conflict.update_column(Planets::Quartz);
-        }
-        if let Some(ice) = ice {
-            columns.push(Planets::Ice);
-            values.push(ice.into());
-            conflict.update_column(Planets::Ice);
-        }
-
-        if let Some(note) = note {
-            columns.push(Planets::Note);
-            values.push(note.into());
-            conflict.update_column(Planets::Note);
-        }
-
-        columns.push(Planets::IsMoon);
-        values.push(is_moon.into());
-        conflict.update_column(Planets::IsMoon);
+        let columns = vec![Salaries::Id, Salaries::From, Salaries::To, Salaries::Amount, Salaries::IntervalHours, Salaries::RunAt];
+        let values: Vec<sea_query::SimpleExpr> = vec![query.id.as_slice().into(), query.from.get().into(), query.to.get().into(), query.amount.into(), query.interval_hours.into(), query.run_at.to_rfc3339_opts(chrono::SecondsFormat::Millis, true).into()];
 
         sea_query::Query::insert()
-            .into_table(Planets::Table)
+            .into_table(Salaries::Table)
             .columns(columns)
             .values(values)?
-            .on_conflict(conflict)
             .build(sea_query::SqliteQueryBuilder)
     };
 
     let turso_params: Vec<turso::Value> = query_values
-        .into_iter()
-        .map(|v| match v {
+    .into_iter()
+    .map(|v| {
+        Ok(match v {
             sea_query::Value::Int(Some(i)) => turso::Value::Integer(i as i64),
             sea_query::Value::BigInt(Some(i)) => turso::Value::Integer(i),
+            sea_query::Value::BigUnsigned(Some(i)) => turso::Value::Integer(i64::try_from(i)?),
             sea_query::Value::Double(Some(f)) => turso::Value::Real(f),
             sea_query::Value::String(Some(s)) => turso::Value::Text(s),
-            sea_query::Value::Bool(Some(b)) => turso::Value::Integer(if b { 1 } else { 0 }),
-            _ => turso::Value::Null,
+            sea_query::Value::Bool(Some(b)) => turso::Value::Integer(b as i64),
+            sea_query::Value::Bytes(Some(b)) => turso::Value::Blob(b),
+            other => anyhow::bail!("unsupported sea query value:\n{other:?}"),
         })
-        .collect();
+    })
+    .collect::<anyhow::Result<_>>()?;
 
     execute(
         db,
@@ -379,4 +147,3 @@ pub async fn edit_planet(query: &EditRequest, bypass: bool) -> anyhow::Result<()
 
     Ok(())
 }
-*/
