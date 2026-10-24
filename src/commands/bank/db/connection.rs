@@ -7,7 +7,7 @@ use tracing::instrument;
 use turso::Builder;
 
 use crate::{
-    commands::bank::db::internal_types::Payment,
+    commands::bank::db::internal_types::Salary,
     db::{
         helpers::execute,
         types::{DatabaseStruct, DbInstruction},
@@ -27,7 +27,7 @@ pub async fn establish_database(database_url: &str) -> anyhow::Result<()> {
 }
 
 #[instrument(err)]
-pub async fn get_payment(id: uuid::Uuid) -> anyhow::Result<Option<Payment>> {
+pub async fn get_payment(id: uuid::Uuid) -> anyhow::Result<Option<Salary>> {
     if id.get_version_num() != 7 {
         anyhow::bail!("Invalid UUID version")
     }

@@ -46,12 +46,12 @@ impl TryFrom<Row> for BankAccount {
     }
 }
 
-pub enum PaymentState {
+pub enum SalaryState {
     Due,
     Wait(DateTime<Utc>), // ISO 8601 datetime
 }
 
-pub struct Payment {
+pub struct Salary {
     pub id: [u8; 16], // BLOB (raw binary data) of uuid v7
     pub from: Id<UserMarker>,
     pub to: Id<UserMarker>,
@@ -59,17 +59,17 @@ pub struct Payment {
     pub run_at: DateTime<Utc>,
 }
 
-impl Payment {
-    pub fn state(&self) -> PaymentState {
+impl Salary {
+    pub fn state(&self) -> SalaryState {
         if self.run_at < Utc::now() {
-            PaymentState::Due
+            SalaryState::Due
         } else {
-            PaymentState::Wait(self.run_at)
+            SalaryState::Wait(self.run_at)
         }
     }
 }
 
-impl TryFrom<&Row> for Payment {
+impl TryFrom<&Row> for Salary {
     type Error = anyhow::Error;
 
     fn try_from(row: &Row) -> Result<Self, Self::Error> {
@@ -80,7 +80,7 @@ impl TryFrom<&Row> for Payment {
             i
         };
 
-        Ok(Payment {
+        Ok(Salary {
             id: row.get(next())?,
             from: Id::new_checked(
                 (*row
@@ -109,10 +109,10 @@ impl TryFrom<&Row> for Payment {
     }
 }
 
-impl TryFrom<Row> for Payment {
+impl TryFrom<Row> for Salary {
     type Error = anyhow::Error;
 
     fn try_from(row: Row) -> Result<Self, Self::Error> {
-        Payment::try_from(&row)
+        Salary::try_from(&row)
     }
 }
