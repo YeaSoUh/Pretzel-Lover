@@ -1,6 +1,4 @@
-use std::{
-    time::Duration,
-};
+use std::time::Duration;
 use tracing::instrument;
 use turso::{Error, IntoParams};
 

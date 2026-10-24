@@ -82,10 +82,29 @@ impl TryFrom<&Row> for Payment {
 
         Ok(Payment {
             id: row.get(next())?,
-            from: Id::new_checked((*row.get_value(next())?.as_integer().ok_or(anyhow::anyhow!("User sending a payment isn't a valid id"))?).try_into()?).ok_or(anyhow::anyhow!("User sending a payment has a zero id"))?,
-            to: Id::new_checked((*row.get_value(next())?.as_integer().ok_or(anyhow::anyhow!("User receiving a payment isn't a valid id"))?).try_into()?).ok_or(anyhow::anyhow!("User receving a payment has a zero id"))?,
+            from: Id::new_checked(
+                (*row
+                    .get_value(next())?
+                    .as_integer()
+                    .ok_or(anyhow::anyhow!("User sending a payment isn't a valid id"))?)
+                .try_into()?,
+            )
+            .ok_or(anyhow::anyhow!("User sending a payment has a zero id"))?,
+            to: Id::new_checked(
+                (*row
+                    .get_value(next())?
+                    .as_integer()
+                    .ok_or(anyhow::anyhow!("User receiving a payment isn't a valid id"))?)
+                .try_into()?,
+            )
+            .ok_or(anyhow::anyhow!("User receving a payment has a zero id"))?,
             amount: row.get(next())?,
-            run_at: DateTime::parse_from_rfc3339(row.get_value(next())?.as_text().ok_or(anyhow::anyhow!("Invalid ISO 8601 datetime format"))?)?.with_timezone(&Utc),
+            run_at: DateTime::parse_from_rfc3339(
+                row.get_value(next())?
+                    .as_text()
+                    .ok_or(anyhow::anyhow!("Invalid ISO 8601 datetime format"))?,
+            )?
+            .with_timezone(&Utc),
         })
     }
 }

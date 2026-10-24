@@ -6,7 +6,13 @@ use std::{
 use tracing::instrument;
 use turso::Builder;
 
-use crate::{commands::bank::db::internal_types::Payment, db::{helpers::execute, types::{DatabaseStruct, DbInstruction}}};
+use crate::{
+    commands::bank::db::internal_types::Payment,
+    db::{
+        helpers::execute,
+        types::{DatabaseStruct, DbInstruction},
+    },
+};
 
 static DB: OnceLock<DatabaseStruct> = OnceLock::new();
 
@@ -25,7 +31,7 @@ pub async fn get_payment(id: uuid::Uuid) -> anyhow::Result<Option<Payment>> {
     if id.get_version_num() != 7 {
         anyhow::bail!("Invalid UUID version")
     }
-    
+
     let db = DB
         .get()
         .ok_or_else(|| anyhow::anyhow!("DB is not initialized"))?;
