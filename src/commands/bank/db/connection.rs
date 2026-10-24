@@ -87,6 +87,7 @@ pub async fn remove_salary(id: uuid::Uuid) -> anyhow::Result<()> {
         anyhow::bail!("Invalid UUID version")
     }
 
+
     let db = DB
         .get()
         .ok_or_else(|| anyhow::anyhow!("DB is not initialized"))?;
