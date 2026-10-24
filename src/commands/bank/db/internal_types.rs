@@ -58,9 +58,10 @@ pub(in crate::commands::bank::db) enum Salaries {
     RunAt,
 }
 
+#[derive(Debug)]
 pub enum SalaryState {
     Due,
-    Wait(Duration), // ISO 8601 datetime
+    Wait(Duration),
 }
 
 #[derive(Debug)]
@@ -75,13 +76,7 @@ pub struct Salary {
 
 impl Salary {
     pub fn state(&self) -> SalaryState {
-        let now = Utc::now();
-
-        if self.run_at < now {
-            SalaryState::Due
-        } else {
-            SalaryState::Wait((self.run_at - now).to_std().unwrap_or(Duration::ZERO))
-        }
+        (self.run_at - Utc::now()).to_std().map_or(SalaryState::Due, SalaryState::Wait)
     }
 }
 
