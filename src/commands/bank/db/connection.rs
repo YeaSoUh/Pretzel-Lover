@@ -5,20 +5,10 @@ use std::{
 
 use tracing::instrument;
 use turso::Builder;
-use twilight_model::http::attachment::Attachment;
 
-use crate::{
-    AppState,
-    db::{
-        helpers::{check_index, check_sql, execute, normalize, validate},
-        types::{
-            Checks, DatabaseStruct, DbInstruction, EditRequest, Planet, PlanetResult, Planets,
-        },
-    },
-};
+use crate::{commands::bank::db::internal_types::Payment, db::{helpers::execute, types::{DatabaseStruct, DbInstruction}}};
 
 static DB: OnceLock<DatabaseStruct> = OnceLock::new();
-static CHECKS: OnceLock<Checks> = OnceLock::new();
 
 pub async fn establish_database(database_url: &str) -> anyhow::Result<()> {
     let db = Builder::new_local(database_url).build().await?;
@@ -27,57 +17,42 @@ pub async fn establish_database(database_url: &str) -> anyhow::Result<()> {
     })
     .map_err(|_| anyhow::anyhow!("DB is already initialized"))?;
 
-    let check: Checks = {
-        let content = std::fs::read("configs.json")?;
-        serde_json::from_slice(&content)?
-    };
-    CHECKS
-        .set(check)
-        .map_err(|_| anyhow::anyhow!("CHECKS is already initialized"))?;
-
     Ok(())
 }
 
-#[instrument(skip(state), err)]
-pub async fn get_planet(index: &str, state: Arc<AppState>) -> anyhow::Result<PlanetResult> {
-    if check_sql(index, state) {
-        anyhow::bail!("Blacklisted sql");
+#[instrument(err)]
+pub async fn get_payment(id: uuid::Uuid) -> anyhow::Result<Option<Payment>> {
+    if id.get_version_num() != 7 {
+        anyhow::bail!("Invalid UUID version")
     }
-    check_index(index)?;
-
+    
     let db = DB
         .get()
         .ok_or_else(|| anyhow::anyhow!("DB is not initialized"))?;
 
-    let mut planets = execute(
+    let mut payments = execute(
         &db,
         DbInstruction::Execute {
             execute: Cow::Borrowed("SELECT * FROM planets WHERE id = ?1"),
-            params: [index.to_string()],
+            params: [id.as_bytes().as_slice()],
         },
     )
     .await?
     .into_rows()
-    .ok_or(anyhow::anyhow!("Row wasn't found"))?;
+    .ok_or(anyhow::anyhow!("Rows weren't found"))?;
 
-    if let Some(row) = planets.next().await? {
-        return Ok(PlanetResult {
-            planet: Planet::try_from(&row)?,
-            result: row,
-            prettier: true,
-        });
+    if let Some(row) = payments.next().await? {
+        return Ok(Some(row.try_into()?));
     }
 
-    Err(anyhow::anyhow!("Planet wasn't found"))
+    Ok(None)
 }
 
-#[instrument(skip(state), err)]
-pub async fn remove_planet(index: &str, state: Arc<AppState>) -> anyhow::Result<()> {
-    if check_sql(index, state) {
-        anyhow::bail!("Blacklisted sql");
+#[instrument(err)]
+pub async fn remove_payment(id: uuid::Uuid) -> anyhow::Result<()> {
+    if id.get_version_num() != 7 {
+        anyhow::bail!("Invalid UUID version")
     }
-
-    check_index(index)?;
 
     let db = DB
         .get()
@@ -86,8 +61,8 @@ pub async fn remove_planet(index: &str, state: Arc<AppState>) -> anyhow::Result<
     execute(
         &db,
         DbInstruction::Execute {
-            execute: Cow::Borrowed("DELETE FROM planets WHERE id = ?1"),
-            params: [index.to_string()],
+            execute: Cow::Borrowed("DELETE FROM payments WHERE id = ?1"),
+            params: [id.as_bytes().as_slice()],
         },
     )
     .await?;
@@ -95,56 +70,7 @@ pub async fn remove_planet(index: &str, state: Arc<AppState>) -> anyhow::Result<
     Ok(())
 }
 
-// gon be reworked
-#[instrument(skip(state), err)]
-pub async fn search_planets(input: &str, state: Arc<AppState>) -> anyhow::Result<Attachment> {
-    if check_sql(input, state) {
-        anyhow::bail!("Blacklisted sql");
-    }
-
-    let db = DB
-        .get()
-        .ok_or_else(|| anyhow::anyhow!("DB is not initialized"))?;
-    let input = normalize(&input);
-
-    let mut planets = execute(
-        &db,
-        DbInstruction::Query {
-            query: Cow::Owned(format!("SELECT * FROM planets WHERE {}", input)),
-            params: (),
-        },
-    )
-    .await?
-    .into_rows()
-    .ok_or(anyhow::anyhow!("No Rows were found"))?;
-
-    let results_limit = 100;
-    let mut results_showed = 0;
-    let mut file_content = format!("Only showing first {results_limit} results\n");
-
-    while let Some(row) = planets.next().await? {
-        if results_showed >= results_limit {
-            break;
-        }
-
-        let result = PlanetResult {
-            planet: Planet::try_from(&row)?,
-            result: row,
-            prettier: false,
-        };
-
-        file_content.push_str(&format!("\n{}", result.to_string()));
-
-        results_showed += 1;
-    }
-
-    Ok(Attachment::from_bytes(
-        "result.txt".to_owned(),
-        file_content.into_bytes(),
-        0,
-    ))
-}
-
+/*
 #[instrument(skip(bypass), err)]
 pub async fn edit_planet(query: &EditRequest, bypass: bool) -> anyhow::Result<()> {
     let index = &query.index;
@@ -447,3 +373,4 @@ pub async fn edit_planet(query: &EditRequest, bypass: bool) -> anyhow::Result<()
 
     Ok(())
 }
+*/

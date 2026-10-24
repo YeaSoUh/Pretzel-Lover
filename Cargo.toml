@@ -17,8 +17,9 @@ twilight-http = { version = "0.17", features = ["simd-json"] }
 twilight-gateway = { version = "0.17", features = ["simd-json"] }
 twilight-util = { version = "0.17", features = ["builder"] }
 turso = "0.8"
+chrono = "0.4"
 sea-query = { version = "1.0", features = ["derive", "backend-sqlite"] }
-uuid = { version = "1.26", features = ["v4"] }
+uuid = { version = "1.26", features = ["v4", "v7"] }
 dashmap = "6.2"
 reqwest = { version = "0.13", default-features = false, features = ["rustls-no-provider", "http2", "system-proxy"] }
 
