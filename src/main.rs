@@ -31,7 +31,6 @@ use crate::{
 pub struct Configs {
     token: String,
     users_blacklist: Vec<Id<UserMarker>>,
-    sql_blacklist: Vec<String>,
     allowed_channels: Vec<Id<ChannelMarker>>,
     #[allow(dead_code)]
     database_url: String,
@@ -90,7 +89,7 @@ async fn main() -> anyhow::Result<()> {
         application_id: application_id,
     }))?;
 
-    let state_rx = get_receiver().ok_or(anyhow::anyhow!("State watch wasn't initiated"))?;
+    let state_rx = get_receiver().ok_or_else(|| anyhow::anyhow!("State watch wasn't initiated"))?;
 
     let task = tokio::spawn(dispatcher(shard, shutdown_rx.clone(), state_rx));
 

@@ -20,23 +20,27 @@ pub async fn run(
     let member = event
         .member
         .as_ref()
-        .ok_or(anyhow::anyhow!("Not a member"))?;
+        .ok_or_else(|| anyhow::anyhow!("Not a member"))?;
     let member_roles = &member.roles;
 
     if member_roles.contains(&Id::new(1410929363863732234)) // co-owner
         || member_roles.contains(&Id::new(1410929110502608896))
     // owner
     {
-        let target_id = data.target_id.ok_or(anyhow::anyhow!("No target id"))?;
+        let target_id = data
+            .target_id
+            .ok_or_else(|| anyhow::anyhow!("No target id"))?;
         let user = member
             .user
             .as_ref()
-            .ok_or(anyhow::anyhow!("No user (as PartialMember)"))?;
+            .ok_or_else(|| anyhow::anyhow!("No user (as PartialMember)"))?;
 
         state
             .client
             .add_guild_member_role(
-                event.guild_id.ok_or(anyhow::anyhow!("No guild id"))?,
+                event
+                    .guild_id
+                    .ok_or_else(|| anyhow::anyhow!("No guild id"))?,
                 target_id.cast(),
                 Id::new(1425905354897883290),
             )
@@ -54,7 +58,7 @@ pub async fn run(
                 event
                     .channel
                     .as_ref()
-                    .ok_or(anyhow::anyhow!("No channel"))?
+                    .ok_or_else(|| anyhow::anyhow!("No channel"))?
                     .id,
             )
             .content(&format!(

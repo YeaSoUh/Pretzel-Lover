@@ -16,7 +16,11 @@ pub async fn run(
 ) -> anyhow::Result<()> {
     commands::defer(state.clone(), &event, true).await?;
 
-    if event.author_id().ok_or(anyhow::anyhow!("No author id"))? != Id::new(1021835061433225296) {
+    if event
+        .author_id()
+        .ok_or_else(|| anyhow::anyhow!("No author id"))?
+        != Id::new(1021835061433225296)
+    {
         state
             .client
             .interaction(state.application_id)

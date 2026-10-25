@@ -64,7 +64,7 @@ pub async fn run(
     let user = event
         .member
         .as_ref()
-        .ok_or(anyhow::anyhow!("Not a member"))?;
+        .ok_or_else(|| anyhow::anyhow!("Not a member"))?;
     let user_roles = &user.roles;
 
     if !user_roles.contains(&Id::new(1410929363863732234)) // co-owner
@@ -241,7 +241,7 @@ pub async fn modal(
 ) -> anyhow::Result<()> {
     let extra_params = MODAL_INFO_MAP
         .remove(&data.custom_id)
-        .ok_or(anyhow::anyhow!("Didn't find extra params"))?
+        .ok_or_else(|| anyhow::anyhow!("Didn't find extra params"))?
         .1;
 
     let mut text: Option<&str> = None;

@@ -22,11 +22,11 @@ pub async fn run(
     let member = event
         .member
         .as_ref()
-        .ok_or(anyhow::anyhow!("Not a member"))?;
+        .ok_or_else(|| anyhow::anyhow!("Not a member"))?;
     let user = member
         .user
         .as_ref()
-        .ok_or(anyhow::anyhow!("No user (as PartialMember)"))?;
+        .ok_or_else(|| anyhow::anyhow!("No user (as PartialMember)"))?;
 
     let company_role_id: Option<Id<RoleMarker>> = if user.id == Id::new(1317504235495227392) {
         Some(Id::new(1530896915275841607))
@@ -37,12 +37,16 @@ pub async fn run(
     };
 
     if let Some(role_id) = company_role_id {
-        let target_id = data.target_id.ok_or(anyhow::anyhow!("No target id"))?;
+        let target_id = data
+            .target_id
+            .ok_or_else(|| anyhow::anyhow!("No target id"))?;
 
         state
             .client
             .add_guild_member_role(
-                event.guild_id.ok_or(anyhow::anyhow!("No guild id"))?,
+                event
+                    .guild_id
+                    .ok_or_else(|| anyhow::anyhow!("No guild id"))?,
                 target_id.cast(),
                 role_id,
             )

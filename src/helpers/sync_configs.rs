@@ -25,7 +25,7 @@ pub fn set_watch(appstate: Arc<AppState>) -> anyhow::Result<()> {
 pub fn update_configs(state_updated: Arc<AppState>) -> anyhow::Result<()> {
     SENDER
         .get()
-        .ok_or(anyhow::anyhow!("Sender wasn't initialized"))?
+        .ok_or_else(|| anyhow::anyhow!("Sender wasn't initialized"))?
         .send(state_updated)?;
 
     Ok(())

@@ -71,7 +71,9 @@ pub async fn msg_handler(state: Arc<AppState>, event: Box<MessageCreate>) -> any
         state
             .client
             .add_guild_member_role(
-                event.guild_id.ok_or(anyhow::anyhow!("No guild id"))?,
+                event
+                    .guild_id
+                    .ok_or_else(|| anyhow::anyhow!("No guild id"))?,
                 event.author.id,
                 Id::new(1425905354897883290),
             )

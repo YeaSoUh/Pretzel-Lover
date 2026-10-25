@@ -70,7 +70,7 @@ pub async fn run(
     let user = event
         .member
         .as_ref()
-        .ok_or(anyhow::anyhow!("Not a member"))?;
+        .ok_or_else(|| anyhow::anyhow!("Not a member"))?;
     let user_roles = &user.roles;
 
     if !user_roles.contains(&Id::new(1410929363863732234)) // co-owner
@@ -97,7 +97,7 @@ pub async fn run(
     let mut channel: Id<ChannelMarker> = event
         .channel
         .as_ref()
-        .ok_or(anyhow::anyhow!("Not called in a channel"))?
+        .ok_or_else(|| anyhow::anyhow!("Not called in a channel"))?
         .id;
     let mut sticker: Id<StickerMarker> = Id::new(1);
     let mut reply: &str = "";
@@ -403,7 +403,7 @@ pub async fn modal(
 ) -> anyhow::Result<()> {
     let extra_params = MODAL_INFO_MAP
         .remove(&data.custom_id)
-        .ok_or(anyhow::anyhow!("Didn't find extra params"))?
+        .ok_or_else(|| anyhow::anyhow!("Didn't find extra params"))?
         .1;
 
     let mut text: &str = "";
@@ -528,7 +528,7 @@ pub async fn modal(
                 forward_channel_id,
                 extra_params
                     .forward_message_id
-                    .ok_or(anyhow::anyhow!("Didn't find forward message id"))?,
+                    .ok_or_else(|| anyhow::anyhow!("Didn't find forward message id"))?,
             )
             .await
         {
