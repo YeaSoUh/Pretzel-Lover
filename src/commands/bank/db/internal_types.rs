@@ -186,6 +186,11 @@ impl Payment {
             ));
         }
 
+        #[allow(unused_comparisons)]
+        if from_account.amount - self.amount < 0 {
+            anyhow::bail!("Insufficient amount");
+        }
+
         let new_from_account = &BankAccount {
             account_id: from_account.account_id,
             amount: from_account.amount - self.amount,
