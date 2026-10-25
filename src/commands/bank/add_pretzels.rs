@@ -1,9 +1,21 @@
 use std::sync::Arc;
 
 use tracing::instrument;
-use twilight_model::{application::interaction::application_command::{CommandData, CommandOptionValue}, gateway::payload::incoming::InteractionCreate};
+use twilight_model::{
+    application::interaction::application_command::{CommandData, CommandOptionValue},
+    gateway::payload::incoming::InteractionCreate,
+};
 
-use crate::{AppState, commands::{bank::db::{connection::{edit_bank_account, get_bank_account}, internal_types::BankAccount}, defer, respond}};
+use crate::{
+    AppState,
+    commands::{
+        bank::db::{
+            connection::{edit_bank_account, get_bank_account},
+            internal_types::BankAccount,
+        },
+        defer, respond,
+    },
+};
 
 #[instrument(skip_all, err)]
 pub async fn run(
@@ -35,7 +47,9 @@ pub async fn run(
     let user_id = user_id.ok_or_else(|| anyhow::anyhow!("Missing user option"))?;
     let amount_to_add = amount_to_add.ok_or_else(|| anyhow::anyhow!("Missing amount option"))?;
 
-    let old_bank_account = get_bank_account(user_id).await?.ok_or_else(|| anyhow::anyhow!("The bank account doesn't exist"))?;
+    let old_bank_account = get_bank_account(user_id)
+        .await?
+        .ok_or_else(|| anyhow::anyhow!("The bank account doesn't exist"))?;
 
     let new_bank_account = BankAccount {
         account_id: user_id,
@@ -44,7 +58,12 @@ pub async fn run(
     };
     edit_bank_account(&new_bank_account).await?;
 
-    respond(state.clone(), &event.token, "Transaction has been completed successfully").await?;
+    respond(
+        state.clone(),
+        &event.token,
+        "Transaction has been completed successfully",
+    )
+    .await?;
 
     Ok(())
 }
