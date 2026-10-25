@@ -3,14 +3,14 @@ use std::time::Duration;
 use chrono::{DateTime, Utc};
 use turso::Row;
 use twilight_model::{
-    channel::message::Embed,
-    id::{Id, marker::UserMarker},
+    channel::message::Component, id::{Id, marker::UserMarker},
 };
+use twilight_util::builder::message::{ContainerBuilder, SeparatorBuilder, TextDisplayBuilder};
 
 use crate::commands::bank::db::connection::{edit_bank_account, get_bank_account};
 
-pub trait EmbedLogger {
-    fn to_embed() -> Embed;
+pub trait ComponentV2Logger {
+    fn to_embed(&self) -> Component;
 }
 
 #[allow(dead_code)] // for now
@@ -25,14 +25,8 @@ pub(in crate::commands::bank::db) enum BankAccounts {
 #[derive(Debug)]
 pub struct BankAccount {
     pub account_id: Id<UserMarker>,
-    pub amount: u64,
+    pub amount: i64,
     pub frozen: bool,
-}
-
-impl EmbedLogger for BankAccount {
-    fn to_embed() -> Embed {
-        todo!()
-    }
 }
 
 impl TryFrom<&Row> for BankAccount {
@@ -91,8 +85,8 @@ pub struct Salary {
     pub id: [u8; 16], // BLOB (raw binary data) of uuid v7
     pub from: Id<UserMarker>,
     pub to: Id<UserMarker>,
-    pub amount: u64,
-    pub interval_hours: u64,
+    pub amount: i64,
+    pub interval_hours: i64,
     pub run_at: DateTime<Utc>,
 }
 
@@ -104,9 +98,25 @@ impl Salary {
     }
 }
 
-impl EmbedLogger for Salary {
-    fn to_embed() -> Embed {
-        todo!()
+impl ComponentV2Logger for Salary {
+    fn to_embed(&self) -> Component {
+        Component::Container(
+            ContainerBuilder::new()
+                .accent_color(Some(0x216FE7)) // 2191335
+                .spoiler(false)
+                .component(TextDisplayBuilder::new("# SALARY PROCESS").build())
+                .component(SeparatorBuilder::new().build())
+                .component(TextDisplayBuilder::new(format!("From: {}", self.from)).build())
+                .component(SeparatorBuilder::new().build())
+                .component(TextDisplayBuilder::new(format!("To: {}", self.to)).build())
+                .component(SeparatorBuilder::new().build())
+                .component(TextDisplayBuilder::new(format!("Amount: {}", self.amount)).build())
+                .component(SeparatorBuilder::new().build())
+                .component(TextDisplayBuilder::new(format!("Every: {} hour(s)", self.interval_hours)).build())
+                .component(SeparatorBuilder::new().build())
+                .component(TextDisplayBuilder::new(format!("Next salary at: {}", "%Y-%m-%d %H:%M:%S")).build())
+                .build()
+        )
     }
 }
 
@@ -162,7 +172,7 @@ impl TryFrom<Row> for Salary {
 pub struct Payment {
     pub from: Id<UserMarker>,
     pub to: Id<UserMarker>,
-    pub amount: u64,
+    pub amount: i64,
 }
 
 impl Payment {
@@ -186,7 +196,6 @@ impl Payment {
             ));
         }
 
-        #[allow(unused_comparisons)]
         if from_account.amount - self.amount < 0 {
             anyhow::bail!("Insufficient amount");
         }
@@ -209,9 +218,21 @@ impl Payment {
     }
 }
 
-impl EmbedLogger for Payment {
-    fn to_embed() -> Embed {
-        todo!()
+impl ComponentV2Logger for Payment {
+    fn to_embed(&self) -> Component {
+        Component::Container(
+            ContainerBuilder::new()
+                .accent_color(Some(0x216FE7)) // 2191335
+                .spoiler(false)
+                .component(TextDisplayBuilder::new("# PAYMENT PROCESS").build())
+                .component(SeparatorBuilder::new().build())
+                .component(TextDisplayBuilder::new(format!("From: {}", self.from)).build())
+                .component(SeparatorBuilder::new().build())
+                .component(TextDisplayBuilder::new(format!("To: {}", self.to)).build())
+                .component(SeparatorBuilder::new().build())
+                .component(TextDisplayBuilder::new(format!("Amount: {}", self.amount)).build())
+                .build()
+        )
     }
 }
 

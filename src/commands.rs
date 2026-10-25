@@ -67,6 +67,17 @@ pub fn response(data: InteractionResponseData) -> InteractionResponse {
     }
 }
 
+pub async fn respond(state: Arc<AppState>, token: &str, content: &str) -> anyhow::Result<()> {
+    state
+        .client
+        .interaction(state.application_id)
+        .create_followup(&token)
+        .content(content)
+        .await?;
+
+    Ok(())
+}
+
 pub fn get_commands(configs: &Configs) -> anyhow::Result<Vec<Command>> {
     Ok(vec![
         /*

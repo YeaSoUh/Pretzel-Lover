@@ -72,10 +72,7 @@ async fn pay_salary(
     from_account: &BankAccount,
     to_account: &BankAccount,
 ) -> anyhow::Result<()> {
-    const MAX_INTERVAL_HOURS: u64 = 24 * 365; // 1 year
-
-    let hours = salary.interval_hours.clamp(1, MAX_INTERVAL_HOURS) as i64;
-    let new_run = salary.run_at + chrono::Duration::hours(hours);
+    let new_run = salary.run_at + chrono::Duration::hours(salary.interval_hours);
 
     let new_salary = Salary {
         id: salary.id,
