@@ -3,9 +3,11 @@ use std::time::Duration;
 use tracing::instrument;
 
 use crate::commands::bank::db::{
-    connection::{edit_salary, get_bank_account, get_coming_salary, remove_salary},
+    connection::{
+        edit_bank_account, edit_salary, get_bank_account, get_coming_salary, remove_salary,
+    },
     internal_types::{
-        Salary,
+        BankAccount, Salary,
         SalaryState::{Due, Wait},
     },
 };
@@ -53,10 +55,10 @@ pub async fn establish_salaries() -> anyhow::Result<()> {
                 }
 
                 match upcoming_salary.state() {
-                    Due => pay_salary(&upcoming_salary).await?,
+                    Due => pay_salary(&upcoming_salary, &from_account, &to_account).await?,
                     Wait(duration) => {
                         tokio::time::sleep(duration).await;
-                        pay_salary(&upcoming_salary).await?;
+                        pay_salary(&upcoming_salary, &from_account, &to_account).await?;
                     }
                 }
             }
@@ -65,7 +67,11 @@ pub async fn establish_salaries() -> anyhow::Result<()> {
     }
 }
 
-async fn pay_salary(salary: &Salary) -> anyhow::Result<()> {
+async fn pay_salary(
+    salary: &Salary,
+    from_account: &BankAccount,
+    to_account: &BankAccount,
+) -> anyhow::Result<()> {
     const MAX_INTERVAL_HOURS: u64 = 24 * 365; // 1 year
 
     let hours = salary.interval_hours.clamp(1, MAX_INTERVAL_HOURS) as i64;
@@ -81,6 +87,20 @@ async fn pay_salary(salary: &Salary) -> anyhow::Result<()> {
     };
 
     edit_salary(&new_salary).await?;
+
+    let new_from_account = &BankAccount {
+        account_id: from_account.account_id,
+        amount: from_account.amount - salary.amount,
+        frozen: from_account.frozen,
+    };
+    let new_to_account = &BankAccount {
+        account_id: to_account.account_id,
+        amount: to_account.amount + salary.amount,
+        frozen: to_account.frozen,
+    };
+
+    edit_bank_account(new_from_account).await?;
+    edit_bank_account(new_to_account).await?;
 
     Ok(())
 }

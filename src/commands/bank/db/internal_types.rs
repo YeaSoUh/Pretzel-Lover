@@ -7,6 +7,8 @@ use twilight_model::{
     id::{Id, marker::UserMarker},
 };
 
+use crate::commands::bank::db::connection::{edit_bank_account, get_bank_account};
+
 pub trait EmbedLogger {
     fn to_embed() -> Embed;
 }
@@ -161,6 +163,45 @@ pub struct Payment {
     pub from: Id<UserMarker>,
     pub to: Id<UserMarker>,
     pub amount: u64,
+}
+
+impl Payment {
+    // aka pay
+    pub async fn process_payment(&self) -> anyhow::Result<()> {
+        let from_account;
+        if let Some(bank_account) = get_bank_account(self.to).await? {
+            from_account = bank_account;
+        } else {
+            return Err(anyhow::anyhow!(
+                "Bank account sending the payment doesn't exist"
+            ));
+        }
+
+        let to_account;
+        if let Some(bank_account) = get_bank_account(self.to).await? {
+            to_account = bank_account;
+        } else {
+            return Err(anyhow::anyhow!(
+                "Bank account receiving the payment doesn't exist"
+            ));
+        }
+
+        let new_from_account = &BankAccount {
+            account_id: from_account.account_id,
+            amount: from_account.amount - self.amount,
+            frozen: from_account.frozen,
+        };
+        let new_to_account = &BankAccount {
+            account_id: to_account.account_id,
+            amount: to_account.amount + self.amount,
+            frozen: to_account.frozen,
+        };
+
+        edit_bank_account(new_from_account).await?;
+        edit_bank_account(new_to_account).await?;
+
+        Ok(())
+    }
 }
 
 impl EmbedLogger for Payment {
