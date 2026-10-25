@@ -166,8 +166,8 @@ pub async fn edit_salary(query: &Salary) -> anyhow::Result<()> {
         ];
         let values: Vec<sea_query::SimpleExpr> = vec![
             query.id.as_slice().into(),
-            query.from.get().into(),
-            query.to.get().into(),
+            query.from_account.get().into(),
+            query.to_account.get().into(),
             query.amount.into(),
             query.interval_hours.into(),
             query
@@ -305,6 +305,15 @@ pub async fn delete_bank_account(bank_account: &BankAccount) -> anyhow::Result<(
         &db,
         DbInstruction::Execute {
             execute: Cow::Borrowed("DELETE FROM bank_accounts WHERE id = ?1"),
+            params: [bank_account.account_id.get()],
+        },
+    )
+    .await?;
+
+    execute(
+        &db,
+        DbInstruction::Execute {
+            execute: Cow::Borrowed(r#"DELETE FROM salaries WHERE "from" = ?1 OR "to" = ?1"#),
             params: [bank_account.account_id.get()],
         },
     )

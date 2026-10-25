@@ -84,8 +84,8 @@ pub enum SalaryState {
 #[derive(Debug)]
 pub struct Salary {
     pub id: [u8; 16], // BLOB (raw binary data) of uuid v7
-    pub from: Id<UserMarker>,
-    pub to: Id<UserMarker>,
+    pub from_account: Id<UserMarker>,
+    pub to_account: Id<UserMarker>,
     pub amount: i64,
     pub interval_hours: i64,
     pub run_at: DateTime<Utc>,
@@ -107,9 +107,9 @@ impl ComponentV2Logger for Salary {
                 .spoiler(false)
                 .component(TextDisplayBuilder::new("# SALARY PROCESS").build())
                 .component(SeparatorBuilder::new().build())
-                .component(TextDisplayBuilder::new(format!("From: {}", self.from)).build())
+                .component(TextDisplayBuilder::new(format!("From: {}", self.from_account)).build())
                 .component(SeparatorBuilder::new().build())
-                .component(TextDisplayBuilder::new(format!("To: {}", self.to)).build())
+                .component(TextDisplayBuilder::new(format!("To: {}", self.to_account)).build())
                 .component(SeparatorBuilder::new().build())
                 .component(TextDisplayBuilder::new(format!("Amount: {}", self.amount)).build())
                 .component(SeparatorBuilder::new().build())
@@ -140,7 +140,7 @@ impl TryFrom<&Row> for Salary {
 
         Ok(Salary {
             id: row.get(next())?,
-            from: Id::new_checked(
+            from_account: Id::new_checked(
                 (*row
                     .get_value(next())?
                     .as_integer()
@@ -148,7 +148,7 @@ impl TryFrom<&Row> for Salary {
                 .try_into()?,
             )
             .ok_or_else(|| anyhow::anyhow!("User sending salary has a zero id"))?,
-            to: Id::new_checked(
+            to_account: Id::new_checked(
                 (*row
                     .get_value(next())?
                     .as_integer()
@@ -177,8 +177,8 @@ impl TryFrom<Row> for Salary {
 }
 
 pub struct Payment {
-    pub from: Id<UserMarker>,
-    pub to: Id<UserMarker>,
+    pub from_account: Id<UserMarker>,
+    pub to_account: Id<UserMarker>,
     pub amount: i64,
 }
 
@@ -186,7 +186,7 @@ impl Payment {
     // aka pay
     pub async fn process_payment(&self) -> anyhow::Result<()> {
         let from_account;
-        if let Some(bank_account) = get_bank_account(self.to).await? {
+        if let Some(bank_account) = get_bank_account(self.to_account).await? {
             from_account = bank_account;
         } else {
             return Err(anyhow::anyhow!(
@@ -195,7 +195,7 @@ impl Payment {
         }
 
         let to_account;
-        if let Some(bank_account) = get_bank_account(self.to).await? {
+        if let Some(bank_account) = get_bank_account(self.to_account).await? {
             to_account = bank_account;
         } else {
             return Err(anyhow::anyhow!(
@@ -233,9 +233,9 @@ impl ComponentV2Logger for Payment {
                 .spoiler(false)
                 .component(TextDisplayBuilder::new("# PAYMENT PROCESS").build())
                 .component(SeparatorBuilder::new().build())
-                .component(TextDisplayBuilder::new(format!("From: {}", self.from)).build())
+                .component(TextDisplayBuilder::new(format!("From: {}", self.from_account)).build())
                 .component(SeparatorBuilder::new().build())
-                .component(TextDisplayBuilder::new(format!("To: {}", self.to)).build())
+                .component(TextDisplayBuilder::new(format!("To: {}", self.to_account)).build())
                 .component(SeparatorBuilder::new().build())
                 .component(TextDisplayBuilder::new(format!("Amount: {}", self.amount)).build())
                 .build(),
@@ -255,7 +255,7 @@ impl TryFrom<&Row> for Payment {
         };
 
         Ok(Payment {
-            from: Id::new_checked(
+            from_account: Id::new_checked(
                 (*row
                     .get_value(next())?
                     .as_integer()
@@ -263,7 +263,7 @@ impl TryFrom<&Row> for Payment {
                 .try_into()?,
             )
             .ok_or_else(|| anyhow::anyhow!("User sending a payment has a zero id"))?,
-            to: Id::new_checked(
+            to_account: Id::new_checked(
                 (*row
                     .get_value(next())?
                     .as_integer()

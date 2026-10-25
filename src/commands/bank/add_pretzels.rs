@@ -4,6 +4,7 @@ use tracing::instrument;
 use twilight_model::{
     application::interaction::application_command::{CommandData, CommandOptionValue},
     gateway::payload::incoming::InteractionCreate,
+    id::Id,
 };
 
 use crate::{
@@ -24,6 +25,20 @@ pub async fn run(
     data: &Box<CommandData>,
 ) -> anyhow::Result<()> {
     defer(state.clone(), &event, true).await?;
+
+    let user = event
+        .member
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("Not a member"))?;
+    let user_roles = &user.roles;
+
+    if !user_roles.contains(&Id::new(1410929363863732234)) // co-owner
+        && !user_roles.contains(&Id::new(1410929110502608896))
+    // owner
+    {
+        respond(state.clone(), &event.token, "Not allowed to run command").await?;
+        return Ok(()); // just to suppress error
+    }
 
     let mut user_id = None;
     let mut amount_to_add = None;
@@ -50,6 +65,10 @@ pub async fn run(
     let old_bank_account = get_bank_account(user_id)
         .await?
         .ok_or_else(|| anyhow::anyhow!("The bank account doesn't exist"))?;
+
+    if old_bank_account.frozen {
+        anyhow::bail!("The account is frozen")
+    }
 
     let new_bank_account = BankAccount {
         account_id: user_id,

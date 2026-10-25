@@ -25,7 +25,7 @@ pub async fn establish_salaries() -> anyhow::Result<()> {
         match upcoming_salary_option {
             Some(upcoming_salary) => {
                 let from_account;
-                if let Some(bank_account) = get_bank_account(upcoming_salary.from).await? {
+                if let Some(bank_account) = get_bank_account(upcoming_salary.from_account).await? {
                     from_account = bank_account;
                 } else {
                     tracing::error!(
@@ -36,7 +36,7 @@ pub async fn establish_salaries() -> anyhow::Result<()> {
                 }
 
                 let to_account;
-                if let Some(bank_account) = get_bank_account(upcoming_salary.to).await? {
+                if let Some(bank_account) = get_bank_account(upcoming_salary.to_account).await? {
                     to_account = bank_account;
                 } else {
                     tracing::error!(
@@ -76,8 +76,8 @@ async fn pay_salary(
 
     let new_salary = Salary {
         id: salary.id,
-        from: salary.from,
-        to: salary.to,
+        from_account: salary.from_account,
+        to_account: salary.to_account,
         amount: salary.amount,
         interval_hours: salary.interval_hours,
         run_at: new_run,
