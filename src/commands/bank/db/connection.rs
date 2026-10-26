@@ -40,8 +40,8 @@ pub async fn get_salary(id: uuid::Uuid) -> anyhow::Result<Option<Salary>> {
 
     let payments = execute(
         &db,
-        DbInstruction::Execute {
-            execute: Cow::Borrowed("SELECT * FROM salaries WHERE id = ?1 LIMIT 1"),
+        DbInstruction::Query {
+            query: Cow::Borrowed("SELECT * FROM salaries WHERE id = ?1 LIMIT 1"),
             params: [id.as_bytes().as_slice()],
         },
     )
@@ -65,8 +65,8 @@ pub async fn get_coming_salary() -> anyhow::Result<Option<Salary>> {
 
     let payments = execute(
         &db,
-        DbInstruction::Execute {
-            execute: Cow::Borrowed("SELECT * FROM salaries ORDER BY run_at ASC LIMIT 1"),
+        DbInstruction::Query {
+            query: Cow::Borrowed("SELECT * FROM salaries ORDER BY run_at ASC LIMIT 1"),
             params: (),
         },
     )
@@ -103,8 +103,8 @@ pub async fn search_salaries(
 
     let payments = execute(
         &db,
-        DbInstruction::Execute {
-            execute: Cow::Borrowed("SELECT * FROM salaries WHERE from = ?1 LIMIT ?2 OFFSET ?3"),
+        DbInstruction::Query {
+            query: Cow::Borrowed("SELECT * FROM salaries WHERE from = ?1 LIMIT ?2 OFFSET ?3"),
             params: [
                 bank_account.account_id.get(),
                 per_page as u64,
@@ -278,8 +278,8 @@ pub async fn get_bank_account(account_id: Id<UserMarker>) -> anyhow::Result<Opti
 
     let accounts = execute(
         &db,
-        DbInstruction::Execute {
-            execute: Cow::Borrowed("SELECT * FROM bank_accounts WHERE id = ?1 LIMIT 1"),
+        DbInstruction::Query {
+            query: Cow::Borrowed("SELECT * FROM bank_accounts WHERE id = ?1 LIMIT 1"),
             params: [account_id.get()],
         },
     )

@@ -14,8 +14,7 @@ use twilight_model::{
     oauth::ApplicationIntegrationType,
 };
 use twilight_util::builder::{
-    InteractionResponseDataBuilder,
-    command::{BooleanBuilder, ChannelBuilder, CommandBuilder, StringBuilder},
+    InteractionResponseDataBuilder, command::{BooleanBuilder, ChannelBuilder, CommandBuilder, IntegerBuilder, StringBuilder, UserBuilder},
 };
 
 use crate::{AppState, Configs, commands};
@@ -167,6 +166,75 @@ pub fn get_commands(configs: &Configs) -> anyhow::Result<Vec<Command>> {
         .integration_types(vec![ApplicationIntegrationType::GuildInstall])
         .validate()?
         .build(),
+        CommandBuilder::new("add_magells", "Adds magells to a bank account (only admins since it can inflate the economy)", CommandType::ChatInput)
+            .option(
+                UserBuilder::new("user", "User to give magells to").required(true),
+            )
+            .option(
+                IntegerBuilder::new("amount", "Amount to add to the bank account").required(true),
+            )
+            .contexts(vec![InteractionContextType::Guild])
+            .validate()?
+            .build(),
+        CommandBuilder::new("remove_magells", "Removes magells from a bank account (only admins since it can inflate the economy)", CommandType::ChatInput)
+            .option(
+                UserBuilder::new("user", "User to remove magells from").required(true),
+            )
+            .option(
+                IntegerBuilder::new("amount", "Amount to remove from the bank account").required(true),
+            )
+            .contexts(vec![InteractionContextType::Guild])
+            .validate()?
+            .build(),
+        CommandBuilder::new("freeze_bank_account", "Freezes (and unfreezes) user's bank account", CommandType::ChatInput)
+            .option(
+                UserBuilder::new("user", "User to freeze").required(true),
+            )
+            .contexts(vec![InteractionContextType::Guild])
+            .validate()?
+            .build(),
+        CommandBuilder::new(
+            "register_bank_account",
+            "Registers a new bank account (once per an account)",
+            CommandType::ChatInput,
+        )
+        .contexts(vec![InteractionContextType::Guild])
+        .integration_types(vec![ApplicationIntegrationType::GuildInstall])
+        .validate()?
+        .build(),
+        CommandBuilder::new(
+            "delete_bank_account", // yea i should rename it later
+            "Delete your bank account (once per an account)",
+            CommandType::ChatInput,
+        )
+        .contexts(vec![InteractionContextType::Guild])
+        .integration_types(vec![ApplicationIntegrationType::GuildInstall])
+        .validate()?
+        .build(),
+        CommandBuilder::new("transfer", "Transfer money between users", CommandType::ChatInput)
+            .option(
+                UserBuilder::new("user", "User to transfer money fuck i will do this shit later").required(true),
+            )
+            .option(
+                IntegerBuilder::new("amount", "Amount to transfer").required(true),
+            )
+            .contexts(vec![InteractionContextType::Guild])
+            .validate()?
+            .build(),
+        // i am gonna rename them later
+         CommandBuilder::new("salary", "Transfer money between users", CommandType::ChatInput)
+            .option(
+                UserBuilder::new("user", "User to transfer money fuck i will do this shit later").required(true),
+            )
+            .option(
+                IntegerBuilder::new("amount", "Amount to transfer").required(true),
+            )
+            .option(
+                IntegerBuilder::new("interval_hours", "").required(true), // later
+            )
+            .contexts(vec![InteractionContextType::Guild])
+            .validate()?
+            .build(),
     ])
 }
 
@@ -187,6 +255,13 @@ pub async fn cmd_handler(
         "Sentence to Morgoft" => commands::pretzel::morgoft::run(state, &event, &data).await,
         "Add Employee Role" => commands::add_role_employee::run(state, &event, &data).await,
         "update_configs" => commands::update_configs::run(state, &event, &data).await,
+        "add_magells" => commands::bank::add_pretzels::run(state, &event, &data).await,
+        "remove_magells" => commands::bank::remove_pretzels::run(state, &event, &data).await,
+        "freeze_bank_account" => commands::bank::freeze::run(state, &event, &data).await,
+        "register_bank_account" => commands::bank::register::run(state, &event, &data).await,
+        "delete_bank_account" => commands::bank::delete_account::run(state, &event, &data).await,
+        "transfer" => commands::bank::transfer::run(state, &event, &data).await,
+        "salary" => commands::bank::salary::run(state, &event, &data).await,
         // discontinued too
         // "channel_manager" => todo!(),
         // "kitty" => todo!(),
