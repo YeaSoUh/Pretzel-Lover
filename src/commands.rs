@@ -14,7 +14,10 @@ use twilight_model::{
     oauth::ApplicationIntegrationType,
 };
 use twilight_util::builder::{
-    InteractionResponseDataBuilder, command::{BooleanBuilder, ChannelBuilder, CommandBuilder, IntegerBuilder, StringBuilder, UserBuilder},
+    InteractionResponseDataBuilder,
+    command::{
+        BooleanBuilder, ChannelBuilder, CommandBuilder, IntegerBuilder, StringBuilder, UserBuilder,
+    },
 };
 
 use crate::{AppState, Configs, commands};
@@ -166,36 +169,38 @@ pub fn get_commands(configs: &Configs) -> anyhow::Result<Vec<Command>> {
         .integration_types(vec![ApplicationIntegrationType::GuildInstall])
         .validate()?
         .build(),
-        CommandBuilder::new("add_magells", "Adds magells to a bank account (only admins since it can inflate the economy)", CommandType::ChatInput)
-            .option(
-                UserBuilder::new("user", "User to give magells to").required(true),
-            )
-            .option(
-                IntegerBuilder::new("amount", "Amount to add to the bank account").required(true),
-            )
-            .contexts(vec![InteractionContextType::Guild])
-            .validate()?
-            .build(),
-        CommandBuilder::new("remove_magells", "Removes magells from a bank account (only admins since it can inflate the economy)", CommandType::ChatInput)
-            .option(
-                UserBuilder::new("user", "User to remove magells from").required(true),
-            )
-            .option(
-                IntegerBuilder::new("amount", "Amount to remove from the bank account").required(true),
-            )
-            .contexts(vec![InteractionContextType::Guild])
-            .validate()?
-            .build(),
-        CommandBuilder::new("freeze_bank_account", "Freezes (and unfreezes) user's bank account", CommandType::ChatInput)
-            .option(
-                UserBuilder::new("user", "User to freeze").required(true),
-            )
-            .contexts(vec![InteractionContextType::Guild])
-            .validate()?
-            .build(),
+        CommandBuilder::new(
+            "add_magells",
+            "Adds magells to a bank account (only admins since it can inflate the economy)",
+            CommandType::ChatInput,
+        )
+        .option(UserBuilder::new("user", "Who to pay").required(true))
+        .option(IntegerBuilder::new("amount", "Amount to transfer").required(true))
+        .contexts(vec![InteractionContextType::Guild])
+        .validate()?
+        .build(),
+        CommandBuilder::new(
+            "remove_magells",
+            "Removes magells from a bank account (only admins since it can inflate the economy)",
+            CommandType::ChatInput,
+        )
+        .option(UserBuilder::new("user", "User to remove magells from").required(true))
+        .option(IntegerBuilder::new("amount", "Amount to remove").required(true))
+        .contexts(vec![InteractionContextType::Guild])
+        .validate()?
+        .build(),
+        CommandBuilder::new(
+            "freeze_bank_account",
+            "Freezes (and unfreezes) user's bank account",
+            CommandType::ChatInput,
+        )
+        .option(UserBuilder::new("user", "User to freeze").required(true))
+        .contexts(vec![InteractionContextType::Guild])
+        .validate()?
+        .build(),
         CommandBuilder::new(
             "register_bank_account",
-            "Registers a new bank account (once per an account)",
+            "Registers a new bank account (one account per user)",
             CommandType::ChatInput,
         )
         .contexts(vec![InteractionContextType::Guild])
@@ -203,38 +208,65 @@ pub fn get_commands(configs: &Configs) -> anyhow::Result<Vec<Command>> {
         .validate()?
         .build(),
         CommandBuilder::new(
-            "delete_bank_account", // yea i should rename it later
-            "Delete your bank account (once per an account)",
+            "delete_bank_account",
+            "Delete your bank account",
             CommandType::ChatInput,
         )
         .contexts(vec![InteractionContextType::Guild])
         .integration_types(vec![ApplicationIntegrationType::GuildInstall])
         .validate()?
         .build(),
-        CommandBuilder::new("transfer", "Transfer money between users", CommandType::ChatInput)
-            .option(
-                UserBuilder::new("user", "User to transfer money fuck i will do this shit later").required(true),
+        CommandBuilder::new(
+            "transfer",
+            "Transfer money between users",
+            CommandType::ChatInput,
+        )
+        .option(UserBuilder::new("user", "Who to pay").required(true))
+        .option(IntegerBuilder::new("amount", "Amount to transfer").required(true))
+        .contexts(vec![InteractionContextType::Guild])
+        .validate()?
+        .build(),
+        CommandBuilder::new(
+            "salary",
+            "Automatically pay someone on a schedule",
+            CommandType::ChatInput,
+        )
+        .option(UserBuilder::new("user", "Who to pay").required(true))
+        .option(IntegerBuilder::new("amount", "Amount to transfer").required(true))
+        .option(IntegerBuilder::new("interval_hours", "How often to pay").required(true))
+        .contexts(vec![InteractionContextType::Guild])
+        .validate()?
+        .build(),
+        CommandBuilder::new(
+            "balance",
+            "Check balance of the user (or yours)",
+            CommandType::ChatInput,
+        )
+        .option(
+            UserBuilder::new(
+                "user",
+                "User to check balance of (if left empty will display your balance)",
             )
-            .option(
-                IntegerBuilder::new("amount", "Amount to transfer").required(true),
+            .required(false),
+        )
+        .contexts(vec![InteractionContextType::Guild])
+        .validate()?
+        .build(),
+        CommandBuilder::new(
+            "user_bank_information",
+            "Check user's bank information (or yours)",
+            CommandType::ChatInput,
+        )
+        .option(
+            UserBuilder::new(
+                "user",
+                "User to check bank information (if left empty will display your information)",
             )
-            .contexts(vec![InteractionContextType::Guild])
-            .validate()?
-            .build(),
-        // i am gonna rename them later
-         CommandBuilder::new("salary", "Transfer money between users", CommandType::ChatInput)
-            .option(
-                UserBuilder::new("user", "User to transfer money fuck i will do this shit later").required(true),
-            )
-            .option(
-                IntegerBuilder::new("amount", "Amount to transfer").required(true),
-            )
-            .option(
-                IntegerBuilder::new("interval_hours", "").required(true), // later
-            )
-            .contexts(vec![InteractionContextType::Guild])
-            .validate()?
-            .build(),
+            .required(false),
+        )
+        .contexts(vec![InteractionContextType::Guild])
+        .validate()?
+        .build(),
     ])
 }
 

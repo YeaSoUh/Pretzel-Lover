@@ -35,9 +35,7 @@ pub async fn run(
         .author_id()
         .ok_or_else(|| anyhow::anyhow!("No author id"))?;
 
-    if state.configs.users_blacklist.contains(
-        &user_id
-    ) {
+    if state.configs.users_blacklist.contains(&user_id) {
         respond(
             state.clone(),
             &event.token,

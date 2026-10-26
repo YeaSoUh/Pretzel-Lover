@@ -50,7 +50,7 @@ pub async fn run(
 
     for option in &cmd.options {
         match (&*option.name, &option.value) {
-            ("user_id", CommandOptionValue::User(user_id2)) => {
+            ("user", CommandOptionValue::User(user_id2)) => {
                 user_id = Some(user_id2.clone());
             }
             ("amount", CommandOptionValue::Integer(amount)) => {

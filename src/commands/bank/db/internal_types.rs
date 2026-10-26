@@ -3,14 +3,15 @@ use std::time::Duration;
 use chrono::{DateTime, Utc};
 use turso::Row;
 use twilight_model::{
-    channel::message::Component, id::{Id, marker::UserMarker}
+    channel::message::Component,
+    id::{Id, marker::UserMarker},
 };
 use twilight_util::builder::message::{ContainerBuilder, SeparatorBuilder, TextDisplayBuilder};
 
 use crate::commands::bank::db::connection::{edit_bank_account, get_bank_account};
 
 pub trait ComponentV2Logger {
-    fn to_embed(&self) -> Component;
+    fn to_component(&self) -> Component;
 }
 
 #[derive(sea_query::Iden)]
@@ -26,6 +27,26 @@ pub struct BankAccount {
     pub account_id: Id<UserMarker>,
     pub amount: i64,
     pub frozen: bool,
+}
+
+impl ComponentV2Logger for BankAccount {
+    fn to_component(&self) -> Component {
+        Component::Container(
+            ContainerBuilder::new()
+                .accent_color(Some(0x216FE7)) // 2191335
+                .spoiler(false)
+                .component(TextDisplayBuilder::new("# BANK ACCOUNT INFORMATION").build())
+                .component(SeparatorBuilder::new().build())
+                .component(
+                    TextDisplayBuilder::new(format!("Account ID: {}", self.account_id)).build(),
+                )
+                .component(SeparatorBuilder::new().build())
+                .component(TextDisplayBuilder::new(format!("Amount: {}", self.amount)).build())
+                .component(SeparatorBuilder::new().build())
+                .component(TextDisplayBuilder::new(format!("Frozen: {}", self.frozen)).build())
+                .build(),
+        )
+    }
 }
 
 impl TryFrom<&Row> for BankAccount {
@@ -98,7 +119,7 @@ impl Salary {
 }
 
 impl ComponentV2Logger for Salary {
-    fn to_embed(&self) -> Component {
+    fn to_component(&self) -> Component {
         Component::Container(
             ContainerBuilder::new()
                 .accent_color(Some(0x216FE7)) // 2191335
@@ -117,8 +138,11 @@ impl ComponentV2Logger for Salary {
                 )
                 .component(SeparatorBuilder::new().build())
                 .component(
-                    TextDisplayBuilder::new(format!("Next salary at: <:t{}:R>", self.run_at.timestamp()))
-                        .build(),
+                    TextDisplayBuilder::new(format!(
+                        "Next salary at: <:t{}:R>",
+                        self.run_at.timestamp()
+                    ))
+                    .build(),
                 )
                 .build(),
         )
@@ -224,7 +248,7 @@ impl Payment {
 }
 
 impl ComponentV2Logger for Payment {
-    fn to_embed(&self) -> Component {
+    fn to_component(&self) -> Component {
         Component::Container(
             ContainerBuilder::new()
                 .accent_color(Some(0x216FE7)) // 2191335
@@ -281,4 +305,3 @@ impl TryFrom<Row> for Payment {
         Payment::try_from(&row)
     }
 }
-

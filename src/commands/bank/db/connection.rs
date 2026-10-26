@@ -19,7 +19,10 @@ static DB: OnceLock<DatabaseStruct> = OnceLock::new();
 
 #[instrument(err)]
 pub async fn establish_database(database_url: &str) -> anyhow::Result<()> {
-    let db = Builder::new_local(database_url).experimental_custom_types(true).build().await?;
+    let db = Builder::new_local(database_url)
+        .experimental_custom_types(true)
+        .build()
+        .await?;
     DB.set(DatabaseStruct {
         database: Arc::new(db),
     })
@@ -29,33 +32,49 @@ pub async fn establish_database(database_url: &str) -> anyhow::Result<()> {
         .get()
         .ok_or_else(|| anyhow::anyhow!("DB is not initialized"))?;
 
-    execute(&db,
-        DbInstruction::Execute { execute: Cow::Borrowed("CREATE TABLE IF NOT EXISTS bank_accounts (
+    execute(
+        &db,
+        DbInstruction::Execute {
+            execute: Cow::Borrowed(
+                "CREATE TABLE IF NOT EXISTS bank_accounts (
             account_id INTEGER NOT NULL PRIMARY KEY,
             amount     INTEGER NOT NULL,
             frozen     BOOLEAN NOT NULL
-            ) STRICT;"
-        ), params: () }
-    ).await?;
+            ) STRICT;",
+            ),
+            params: (),
+        },
+    )
+    .await?;
 
-    execute(&db,
-        DbInstruction::Execute { execute: Cow::Borrowed("CREATE TABLE IF NOT EXISTS salaries (
+    execute(
+        &db,
+        DbInstruction::Execute {
+            execute: Cow::Borrowed(
+                "CREATE TABLE IF NOT EXISTS salaries (
             id             BLOB NOT NULL PRIMARY KEY CHECK (length(id) = 16),
             from_account   INTEGER NOT NULL,
             to_account     INTEGER NOT NULL,
             amount         INTEGER NOT NULL CHECK (amount > 0),
             interval_hours INTEGER NOT NULL CHECK (interval_hours > 0),
             run_at         TIMESTAMP NOT NULL
-            ) STRICT;"
-        ), params: () }
-    ).await?;
-
-    execute(&db,
-        DbInstruction::Execute {
-            execute: Cow::Borrowed("CREATE INDEX IF NOT EXISTS salaries_run_at ON salaries (run_at);"),
+            ) STRICT;",
+            ),
             params: (),
-        }
-    ).await?;
+        },
+    )
+    .await?;
+
+    execute(
+        &db,
+        DbInstruction::Execute {
+            execute: Cow::Borrowed(
+                "CREATE INDEX IF NOT EXISTS salaries_run_at ON salaries (run_at);",
+            ),
+            params: (),
+        },
+    )
+    .await?;
 
     Ok(())
 }

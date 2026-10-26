@@ -20,7 +20,7 @@ pub async fn run(
     event: &Box<InteractionCreate>,
     _data: &Box<CommandData>,
 ) -> anyhow::Result<()> {
-    defer(state.clone(), &event, false).await?;
+    defer(state.clone(), &event, true).await?;
 
     let user_id = event
         .author_id()
