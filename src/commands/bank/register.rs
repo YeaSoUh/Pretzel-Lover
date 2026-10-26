@@ -20,12 +20,23 @@ pub async fn run(
     event: &Box<InteractionCreate>,
     _data: &Box<CommandData>,
 ) -> anyhow::Result<()> {
-    defer(state.clone(), &event, true).await?;
+    defer(state.clone(), &event, false).await?;
+
+    if event
+        .channel
+        .as_ref()
+        .is_none_or(|chn| !state.configs.allowed_channels.contains(&chn.id))
+    {
+        respond(state.clone(), &event.token, "Outside of allowed channels").await?;
+        return Ok(());
+    }
+
+    let user_id = event
+        .author_id()
+        .ok_or_else(|| anyhow::anyhow!("No author id"))?;
 
     if state.configs.users_blacklist.contains(
-        &event
-            .author_id()
-            .ok_or_else(|| anyhow::anyhow!("No user id in author id function"))?,
+        &user_id
     ) {
         respond(
             state.clone(),
@@ -36,9 +47,7 @@ pub async fn run(
     }
 
     let bank_account = BankAccount {
-        account_id: event
-            .author_id()
-            .ok_or_else(|| anyhow::anyhow!("No user id in author id function"))?,
+        account_id: user_id,
         amount: 0,
         frozen: false,
     };

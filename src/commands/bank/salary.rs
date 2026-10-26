@@ -14,7 +14,16 @@ pub async fn run(
     event: &Box<InteractionCreate>,
     data: &Box<CommandData>,
 ) -> anyhow::Result<()> {
-    defer(state.clone(), &event, true).await?;
+    defer(state.clone(), &event, false).await?;
+
+    if event
+        .channel
+        .as_ref()
+        .is_none_or(|chn| !state.configs.allowed_channels.contains(&chn.id))
+    {
+        respond(state.clone(), &event.token, "Outside of allowed channels").await?;
+        return Ok(());
+    }
 
     let user_id_from = event
         .author_id()

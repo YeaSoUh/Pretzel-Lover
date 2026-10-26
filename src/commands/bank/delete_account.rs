@@ -20,7 +20,7 @@ pub async fn run(
     event: &Box<InteractionCreate>,
     _data: &Box<CommandData>,
 ) -> anyhow::Result<()> {
-    defer(state.clone(), &event, true).await?;
+    defer(state.clone(), &event, false).await?;
 
     let user_id = event
         .author_id()
@@ -30,7 +30,7 @@ pub async fn run(
         .await?
         .ok_or_else(|| anyhow::anyhow!("The bank account doesn't exist"))?;
 
-    if state.configs.users_blacklist.contains(&user_id) || bank_account.frozen {
+    if bank_account.frozen {
         respond(
             state.clone(),
             &event.token,

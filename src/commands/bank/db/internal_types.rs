@@ -13,7 +13,6 @@ pub trait ComponentV2Logger {
     fn to_embed(&self) -> Component;
 }
 
-#[allow(dead_code)] // for now
 #[derive(sea_query::Iden)]
 pub(in crate::commands::bank::db) enum BankAccounts {
     Table,
@@ -67,8 +66,8 @@ impl TryFrom<Row> for BankAccount {
 pub(in crate::commands::bank::db) enum Salaries {
     Table,
     Id,
-    From,
-    To,
+    FromAccount,
+    ToAccount,
     Amount,
     IntervalHours,
     RunAt,
