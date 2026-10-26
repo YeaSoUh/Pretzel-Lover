@@ -3,8 +3,7 @@ use std::time::Duration;
 use chrono::{DateTime, Utc};
 use turso::Row;
 use twilight_model::{
-    channel::message::Component,
-    id::{Id, marker::UserMarker},
+    channel::message::Component, id::{Id, marker::UserMarker}
 };
 use twilight_util::builder::message::{ContainerBuilder, SeparatorBuilder, TextDisplayBuilder};
 
@@ -119,7 +118,7 @@ impl ComponentV2Logger for Salary {
                 )
                 .component(SeparatorBuilder::new().build())
                 .component(
-                    TextDisplayBuilder::new(format!("Next salary at: {}", "%Y-%m-%d %H:%M:%S"))
+                    TextDisplayBuilder::new(format!("Next salary at: <:t{}:R>", self.run_at.timestamp()))
                         .build(),
                 )
                 .build(),
@@ -283,3 +282,4 @@ impl TryFrom<Row> for Payment {
         Payment::try_from(&row)
     }
 }
+
