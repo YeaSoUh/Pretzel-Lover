@@ -52,7 +52,7 @@ pub async fn establish_database(database_url: &str) -> anyhow::Result<()> {
         DbInstruction::Execute {
             execute: Cow::Borrowed(
                 "CREATE TABLE IF NOT EXISTS salaries (
-            id             BLOB NOT NULL PRIMARY KEY CHECK (length(id) = 16),
+            id             UUID NOT NULL PRIMARY KEY CHECK (length(id) = 16),
             from_account   INTEGER NOT NULL,
             to_account     INTEGER NOT NULL,
             amount         INTEGER NOT NULL CHECK (amount > 0),
