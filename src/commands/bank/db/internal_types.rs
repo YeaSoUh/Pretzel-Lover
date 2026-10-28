@@ -202,6 +202,7 @@ pub struct Payment {
     pub from_account: Id<UserMarker>,
     pub to_account: Id<UserMarker>,
     pub amount: i64,
+    pub reason: String,
 }
 
 impl Payment {
@@ -260,6 +261,8 @@ impl ComponentV2Logger for Payment {
                 .component(TextDisplayBuilder::new(format!("To: {}", self.to_account)).build())
                 .component(SeparatorBuilder::new().build())
                 .component(TextDisplayBuilder::new(format!("Amount: {}", self.amount)).build())
+                .component(SeparatorBuilder::new().build())
+                .component(TextDisplayBuilder::new(format!("Reason: {}", self.reason)).build())
                 .build(),
         )
     }
@@ -294,6 +297,7 @@ impl TryFrom<&Row> for Payment {
             )
             .ok_or_else(|| anyhow::anyhow!("User receving a payment has a zero id"))?,
             amount: row.get(next())?,
+            reason: row.get(next())?,
         })
     }
 }

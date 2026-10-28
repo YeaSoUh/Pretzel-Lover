@@ -5,7 +5,8 @@ use twilight_model::{
     application::{
         command::{Command, CommandType},
         interaction::{
-            InteractionContextType, application_command::CommandData, modal::ModalInteractionData,
+            InteractionContextType, application_command::CommandData,
+            message_component::MessageComponentInteractionData, modal::ModalInteractionData,
         },
     },
     channel::message::MessageFlags,
@@ -320,7 +321,25 @@ pub async fn modal_handler(
         id if id.starts_with("edit_modal") => {
             commands::pretzel::edit::modal(state, &event, &data).await
         }
-        _ => unreachable!("Non existent command"),
+        _ => unreachable!("Non existent modal"),
+    };
+
+    if let Err(e) = &result {
+        tracing::error!(?e, "AN ERROR!!!!!!!!!!!")
+    }
+    result
+}
+
+#[tracing::instrument(fields(user = ?event.author_id()), skip_all, err)]
+pub async fn message_component_handler(
+    state: Arc<AppState>,
+    event: Box<InteractionCreate>,
+    data: Box<MessageComponentInteractionData>,
+) -> anyhow::Result<()> {
+    let result = match data.as_ref().custom_id.as_str() {
+        "previous_page" => commands::bank::salaries_list::previous_page(state, &event, &data).await,
+        "next_page" => commands::bank::salaries_list::next_page(state, &event, &data).await,
+        _ => unreachable!("Non existent message component"),
     };
 
     if let Err(e) = &result {

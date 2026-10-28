@@ -34,6 +34,7 @@ pub async fn run(
 
     let mut user_id_to = None;
     let mut amount_to_transfer = None;
+    let mut reason = None;
 
     let cmd = data.as_ref();
     if cmd.options.is_empty() {
@@ -48,17 +49,22 @@ pub async fn run(
             ("amount", CommandOptionValue::Integer(amount)) => {
                 amount_to_transfer = Some(amount.clone());
             }
+            ("reason", CommandOptionValue::String(reason2)) => {
+                reason = Some(reason2.clone());
+            }
             _ => {}
         }
     }
     let user_id_to = user_id_to.ok_or_else(|| anyhow::anyhow!("Missing user option"))?;
     let amount_to_transfer =
         amount_to_transfer.ok_or_else(|| anyhow::anyhow!("Missing amount option"))?;
+    let reason = reason.ok_or_else(|| anyhow::anyhow!("Missing reason option"))?;
 
     let payment = Payment {
         from_account: user_id_from,
         to_account: user_id_to,
         amount: amount_to_transfer,
+        reason: reason,
     };
 
     payment.process_payment().await?;

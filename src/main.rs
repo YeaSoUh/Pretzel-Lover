@@ -125,12 +125,14 @@ async fn dispatcher(
                     Event::InteractionCreate(e) => {
                         match e.data.as_ref() {
                             Some(InteractionData::ApplicationCommand(data)) => {
-                                tokio::spawn(commands::cmd_handler(state.clone(), e.clone(), data.clone()));
+                                tokio::spawn(commands::cmd_handler(state, e.clone(), data.clone()));
                             },
                             Some(InteractionData::ModalSubmit(data)) => {
-                                tokio::spawn(commands::modal_handler(state.clone(), e.clone(), data.clone()));
+                                tokio::spawn(commands::modal_handler(state, e.clone(), data.clone()));
                             },
-                            Some(InteractionData::MessageComponent(_)) => { todo!() },
+                            Some(InteractionData::MessageComponent(data)) => {
+                                tokio::spawn(commands::message_component_handler(state, e.clone(), data.clone()));
+                            },
                             Some(invalid) => {
                                 tracing::warn!(?invalid, "Unrecognized API");
                                 continue;

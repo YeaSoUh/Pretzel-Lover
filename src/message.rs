@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use twilight_http::request::channel::reaction::RequestReactionType;
 use twilight_model::{gateway::payload::incoming::MessageCreate, id::Id};
 
 use crate::AppState;
@@ -36,7 +37,7 @@ pub async fn msg_handler(state: Arc<AppState>, event: Box<MessageCreate>) -> any
             .create_reaction(
                 event.channel_id,
                 event.id,
-                &twilight_http::request::channel::reaction::RequestReactionType::Custom {
+                &RequestReactionType::Custom {
                     id: Id::new(1445413531649310761),
                     name: Some("peepohappy"),
                 },
@@ -48,9 +49,7 @@ pub async fn msg_handler(state: Arc<AppState>, event: Box<MessageCreate>) -> any
             .create_reaction(
                 event.channel_id,
                 event.id,
-                &twilight_http::request::channel::reaction::RequestReactionType::Unicode {
-                    name: "🗑️",
-                },
+                &RequestReactionType::Unicode { name: "🗑️" },
             )
             .await?;
 
