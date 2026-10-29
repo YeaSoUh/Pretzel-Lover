@@ -7,7 +7,7 @@ use twilight_model::{
         application_command::CommandData, message_component::MessageComponentInteractionData,
     },
     channel::message::{
-        EmojiReactionType, MessageFlags,
+        Component, EmojiReactionType, MessageFlags,
         component::{ButtonStyle, Container, SeparatorSpacingSize},
     },
     gateway::payload::incoming::InteractionCreate,
@@ -88,9 +88,52 @@ pub async fn run(
 pub async fn previous_page(
     state: Arc<AppState>,
     event: &Box<InteractionCreate>,
-    _data: &Box<MessageComponentInteractionData>,
+    data: &Box<MessageComponentInteractionData>,
 ) -> anyhow::Result<()> {
-    todo!();
+    let container = if let Component::Container(container) = event
+        .message
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("No message in button component"))?
+        .components
+        .get(0)
+        .ok_or_else(|| anyhow::anyhow!("No components"))?
+    {
+        container
+    } else {
+        anyhow::bail!("Not a container component")
+    };
+
+    let page_string = if let Component::TextDisplay(text) = container
+        .components
+        .get(2)
+        .ok_or_else(|| anyhow::anyhow!("No component in the container"))?
+    {
+        text.content
+            .strip_prefix("Page:")
+            .ok_or_else(|| anyhow::anyhow!("No \"Page:\" prefix"))?
+            .parse::<u32>()?
+    } else {
+        anyhow::bail!("no text display component in the container")
+    };
+
+    let timestamp = if let Component::TextDisplay(text) = container
+        .components
+        .get(1)
+        .ok_or_else(|| anyhow::anyhow!("No component in the container"))?
+    {
+        chrono::DateTime::from_timestamp(
+            text.content
+                .strip_prefix("Expires in <t:")
+                .ok_or_else(|| anyhow::anyhow!("No \"Expires in <t:\" prefix"))?
+                .strip_suffix(":R>")
+                .ok_or_else(|| anyhow::anyhow!("No \":R>\" suffifx"))?
+                .parse::<i64>()?,
+            0,
+        )
+        .ok_or_else(|| anyhow::anyhow!("Invalid timestamp"))?
+    } else {
+        anyhow::bail!("no text display component in the container")
+    };
 
     Ok(())
 }
