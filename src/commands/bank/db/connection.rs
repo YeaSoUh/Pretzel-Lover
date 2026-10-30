@@ -34,7 +34,7 @@ pub async fn establish_database(database_url: &str) -> anyhow::Result<()> {
 
     execute(
         &db,
-        DbInstruction::Execute {
+        vec![DbInstruction::Execute {
             execute: Cow::Borrowed(
                 "CREATE TABLE IF NOT EXISTS bank_accounts (
             account_id INTEGER NOT NULL PRIMARY KEY,
@@ -43,13 +43,13 @@ pub async fn establish_database(database_url: &str) -> anyhow::Result<()> {
             ) STRICT;",
             ),
             params: Vec::new(),
-        },
+        }].as_slice(),
     )
     .await?;
 
     execute(
         &db,
-        DbInstruction::Execute {
+        vec![DbInstruction::Execute {
             execute: Cow::Borrowed(
                 "CREATE TABLE IF NOT EXISTS salaries (
             id             UUID NOT NULL PRIMARY KEY CHECK (length(id) = 16),
@@ -61,18 +61,18 @@ pub async fn establish_database(database_url: &str) -> anyhow::Result<()> {
             ) STRICT;"
             ),
             params: Vec::new(),
-        },
+        }].as_slice(),
     )
     .await?;
 
     execute(
         &db,
-        DbInstruction::Execute {
+        vec![DbInstruction::Execute {
             execute: Cow::Borrowed(
                 "CREATE INDEX IF NOT EXISTS salaries_run_at ON salaries (run_at);",
             ),
             params: Vec::new(),
-        },
+        }].as_slice(),
     )
     .await?;
 
@@ -91,10 +91,10 @@ pub async fn get_salary(id: uuid::Uuid) -> anyhow::Result<Option<Salary>> {
 
     let payments = execute(
         &db,
-        DbInstruction::Query {
+        vec![DbInstruction::Query {
             query: Cow::Borrowed("SELECT * FROM salaries WHERE id = ?1 LIMIT 1"),
             params: vec![id.as_bytes().as_slice().into()],
-        },
+        }].as_slice(),
     )
     .await?
     .into_rows();
@@ -116,10 +116,10 @@ pub async fn get_coming_salary() -> anyhow::Result<Option<Salary>> {
 
     let payments = execute(
         &db,
-        DbInstruction::Query {
+        vec![DbInstruction::Query {
             query: Cow::Borrowed("SELECT * FROM salaries ORDER BY run_at ASC LIMIT 1"),
             params: Vec::new(),
-        },
+        }].as_slice(),
     )
     .await?
     .into_rows();
@@ -154,14 +154,14 @@ pub async fn search_salaries(
 
     let payments = execute(
         &db,
-        DbInstruction::Query {
+        vec![DbInstruction::Query {
             query: Cow::Borrowed("SELECT * FROM salaries WHERE from = ?1 LIMIT ?2 OFFSET ?3"),
             params: vec![
                 (bank_account.account_id.get() as i64).into(),
                 per_page.into(),
                 offset.into(),
             ],
-        },
+        }].as_slice(),
     )
     .await?
     .into_rows();
@@ -190,10 +190,10 @@ pub async fn remove_salary(id: uuid::Uuid) -> anyhow::Result<()> {
 
     execute(
         &db,
-        DbInstruction::Execute {
+        vec![DbInstruction::Execute {
             execute: Cow::Borrowed("DELETE FROM salaries WHERE id = ?1"),
             params: vec![id.as_bytes().as_slice().into()],
-        },
+        }].as_slice(),
     )
     .await?;
 
@@ -255,10 +255,10 @@ pub async fn edit_salary(query: &Salary) -> anyhow::Result<()> {
 
     execute(
         db,
-        DbInstruction::Execute {
+        vec![DbInstruction::Execute {
             execute: sql.into(),
             params: turso_params,
-        },
+        }].as_slice(),
     )
     .await?;
 
@@ -311,10 +311,10 @@ pub async fn edit_bank_account(bank_account: &BankAccount) -> anyhow::Result<()>
 
     execute(
         db,
-        DbInstruction::Execute {
+        vec![DbInstruction::Execute {
             execute: sql.into(),
             params: turso_params,
-        },
+        }].as_slice(),
     )
     .await?;
 
@@ -329,10 +329,10 @@ pub async fn get_bank_account(account_id: Id<UserMarker>) -> anyhow::Result<Opti
 
     let accounts = execute(
         &db,
-        DbInstruction::Query {
+        vec![DbInstruction::Query {
             query: Cow::Borrowed("SELECT * FROM bank_accounts WHERE id = ?1 LIMIT 1"),
             params: vec![(account_id.get() as i64).into()],
-        },
+        }].as_slice(),
     )
     .await?
     .into_rows();
@@ -354,19 +354,19 @@ pub async fn delete_bank_account(bank_account: &BankAccount) -> anyhow::Result<(
 
     execute(
         &db,
-        DbInstruction::Execute {
+        vec![DbInstruction::Execute {
             execute: Cow::Borrowed("DELETE FROM bank_accounts WHERE id = ?1"),
             params: vec![(bank_account.account_id.get() as i64).into()],
-        },
+        }].as_slice(),
     )
     .await?;
 
     execute(
         &db,
-        DbInstruction::Execute {
+        vec![DbInstruction::Execute {
             execute: Cow::Borrowed(r#"DELETE FROM salaries WHERE "from" = ?1 OR "to" = ?1"#),
             params: vec![(bank_account.account_id.get() as i64).into()],
-        },
+        }].as_slice(),
     )
     .await?;
 

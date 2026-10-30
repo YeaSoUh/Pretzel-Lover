@@ -89,13 +89,13 @@ pub enum DbInstruction {
 }
 
 impl DbInstruction {
-    pub async fn run(self, conn: &Connection) -> Result<DbResult, turso::Error> {
+    pub async fn run(&self, conn: &Connection) -> Result<DbResult, turso::Error> {
         Ok(match self {
             DbInstruction::Execute { execute, params } => {
-                DbResult::Execute(conn.execute(execute, params).await?)
+                DbResult::Execute(conn.execute(execute.as_ref(), params.clone()).await?)
             }
             DbInstruction::Query { query, params } => {
-                DbResult::Query(conn.query(query, params).await?)
+                DbResult::Query(conn.query(query.as_ref(), params.clone()).await?)
             }
         })
     }

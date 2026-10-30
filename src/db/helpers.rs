@@ -9,40 +9,56 @@ const MAX_ATTEMPTS: u64 = 10;
 #[instrument(skip_all, err)]
 pub async fn execute(
     db: &DatabaseStruct,
-    instruction: DbInstruction,
+    instructions: &[DbInstruction],
 ) -> anyhow::Result<DbResults> {
     let conn = db.get_conn().await?;
 
-    let mut attempts = 1;
-
-    loop {
-        if attempts > MAX_ATTEMPTS {
-            return Err(anyhow::anyhow!("Reached max attempts"));
-        }
+    for attempt in 1..=MAX_ATTEMPTS {
         conn.execute("BEGIN CONCURRENT", ()).await?;
-        match instruction.clone().run(&conn).await {
-            Ok(dbres) => {
-                conn.execute("COMMIT", ()).await?;
-                return Ok(
-                    DbResults::new(vec![dbres])
-                );
+        let mut results = Vec::with_capacity(instructions.len());
+        let mut failure = None;
+
+        for dbinst in instructions {
+            match dbinst.run(&conn).await {
+                Ok(dbres) => results.push(dbres),
+                Err(e) => {
+                    failure = Some(e);
+                    break;
+                }
             }
-            Err(e) if is_retryable(&e) => {
-                conn.execute("ROLLBACK", ()).await?;
-                tracing::warn!(?e, "Retrying request");
-                attempts += 1;
-                tokio::time::sleep(Duration::from_millis(15)).await;
-                continue;
+        }
+
+        match failure {
+            None => {
+                match conn.execute("COMMIT", ()).await {
+                    Ok(_) => return Ok(DbResults::new(results)),
+                    Err(e) if is_retryable(&e) => {
+                        let _ = conn.execute("ROLLBACK", ()).await;
+                        tracing::warn!(?e, attempt, "Commit conflict, retrying");
+                    }
+                    Err(e) => {
+                        let _ = conn.execute("ROLLBACK", ()).await;
+                        return Err(e.into());
+                    }
+                }
             }
-            Err(e) => {
-                conn.execute("ROLLBACK", ()).await?;
+            Some(e) if is_retryable(&e) => {
+                let _ = conn.execute("ROLLBACK", ()).await;
+                tracing::warn!(?e, attempt, "Retrying request");
+            }
+            Some(e) => {
+                let _ = conn.execute("ROLLBACK", ()).await;
                 return Err(e.into());
             }
         }
+
+        tokio::time::sleep(Duration::from_millis(15 * attempt)).await;
     }
+
+    Err(anyhow::anyhow!("Reached max attempts ({})", MAX_ATTEMPTS))
 }
 
-// taken from official turso docs
+// taken from the official turso docs
 pub fn is_retryable(e: &Error) -> bool {
     matches!(e, Error::Busy(_) | Error::BusySnapshot(_))
         || matches!(e, Error::Error(msg) if msg.contains("conflict"))
