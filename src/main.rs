@@ -15,8 +15,7 @@ use twilight_gateway::{
 };
 use twilight_http::Client;
 use twilight_model::{
-    application::interaction::InteractionData,
-    id::{
+    application::interaction::InteractionData, gateway::payload::incoming::InteractionCreate, id::{
         Id,
         marker::{ApplicationMarker, ChannelMarker, UserMarker},
     },
@@ -122,16 +121,18 @@ async fn dispatcher(
 
                 match event {
                     Event::GatewayClose(_) if *shutdown.borrow() => break,
-                    Event::InteractionCreate(e) => {
-                        match e.data.as_ref() {
+                    Event::InteractionCreate(e) => {          
+                        let InteractionCreate(mut interaction) = *e;
+                        
+                        match interaction.data.take() {
                             Some(InteractionData::ApplicationCommand(data)) => {
-                                tokio::spawn(commands::cmd_handler(state, e.clone(), data.clone()));
+                                tokio::spawn(commands::cmd_handler(state, interaction, *data));
                             },
                             Some(InteractionData::ModalSubmit(data)) => {
-                                tokio::spawn(commands::modal_handler(state, e.clone(), data.clone()));
+                                tokio::spawn(commands::modal_handler(state, interaction, *data));
                             },
                             Some(InteractionData::MessageComponent(data)) => {
-                                tokio::spawn(commands::message_component_handler(state, e.clone(), data.clone()));
+                                tokio::spawn(commands::message_component_handler(state, interaction, *data));
                             },
                             Some(invalid) => {
                                 tracing::warn!(?invalid, "Unrecognized API");

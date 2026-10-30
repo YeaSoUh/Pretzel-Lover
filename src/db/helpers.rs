@@ -1,16 +1,16 @@
 use std::time::Duration;
 use tracing::instrument;
-use turso::{Error, IntoParams};
+use turso::Error;
 
-use crate::db::types::{DatabaseStruct, DbInstruction, DbResult};
+use crate::db::types::{DatabaseStruct, DbInstruction, DbResults};
 
 const MAX_ATTEMPTS: u64 = 10;
 
 #[instrument(skip_all, err)]
 pub async fn execute(
     db: &DatabaseStruct,
-    instruction: DbInstruction<impl IntoParams + Clone>,
-) -> anyhow::Result<DbResult> {
+    instruction: DbInstruction,
+) -> anyhow::Result<DbResults> {
     let conn = db.get_conn().await?;
 
     let mut attempts = 1;
@@ -23,7 +23,9 @@ pub async fn execute(
         match instruction.clone().run(&conn).await {
             Ok(dbres) => {
                 conn.execute("COMMIT", ()).await?;
-                return Ok(dbres);
+                return Ok(
+                    DbResults::new(vec![dbres])
+                );
             }
             Err(e) if is_retryable(&e) => {
                 conn.execute("ROLLBACK", ()).await?;

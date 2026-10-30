@@ -2,8 +2,7 @@ use std::sync::Arc;
 
 use tracing::instrument;
 use twilight_model::{
-    application::interaction::application_command::{CommandData, CommandOptionValue},
-    gateway::payload::incoming::InteractionCreate,
+    application::interaction::{Interaction, application_command::{CommandData, CommandOptionValue}}
 };
 
 use crate::{
@@ -14,8 +13,8 @@ use crate::{
 #[instrument(skip_all, err)]
 pub async fn run(
     state: Arc<AppState>,
-    event: &Box<InteractionCreate>,
-    data: &Box<CommandData>,
+    event: Interaction,
+    data: CommandData,
 ) -> anyhow::Result<()> {
     defer(state.clone(), &event, false).await?;
 
@@ -34,12 +33,11 @@ pub async fn run(
 
     let mut user_id = None;
 
-    let cmd = data.as_ref();
-    if cmd.options.is_empty() {
+    if data.options.is_empty() {
         anyhow::bail!("No options")
     }
 
-    for option in &cmd.options {
+    for option in &data.options {
         match (&*option.name, &option.value) {
             ("user", CommandOptionValue::User(user_id2)) => {
                 user_id = Some(user_id2.clone());

@@ -2,8 +2,7 @@ use std::sync::Arc;
 
 use tracing::instrument;
 use twilight_model::{
-    application::interaction::application_command::CommandData,
-    gateway::payload::incoming::InteractionCreate,
+    application::interaction::{Interaction, application_command::CommandData}
 };
 
 use crate::{
@@ -17,8 +16,8 @@ use crate::{
 #[instrument(skip_all, err)]
 pub async fn run(
     state: Arc<AppState>,
-    event: &Box<InteractionCreate>,
-    _data: &Box<CommandData>,
+    event: Interaction,
+    _data: CommandData,
 ) -> anyhow::Result<()> {
     defer(state.clone(), &event, false).await?;
 

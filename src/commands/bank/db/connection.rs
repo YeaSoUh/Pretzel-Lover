@@ -42,7 +42,7 @@ pub async fn establish_database(database_url: &str) -> anyhow::Result<()> {
             frozen     BOOLEAN NOT NULL
             ) STRICT;",
             ),
-            params: (),
+            params: Vec::new(),
         },
     )
     .await?;
@@ -58,9 +58,9 @@ pub async fn establish_database(database_url: &str) -> anyhow::Result<()> {
             amount         INTEGER NOT NULL CHECK (amount > 0),
             interval_hours INTEGER NOT NULL CHECK (interval_hours > 0),
             run_at         TIMESTAMP NOT NULL
-            ) STRICT;",
+            ) STRICT;"
             ),
-            params: (),
+            params: Vec::new(),
         },
     )
     .await?;
@@ -71,7 +71,7 @@ pub async fn establish_database(database_url: &str) -> anyhow::Result<()> {
             execute: Cow::Borrowed(
                 "CREATE INDEX IF NOT EXISTS salaries_run_at ON salaries (run_at);",
             ),
-            params: (),
+            params: Vec::new(),
         },
     )
     .await?;
@@ -93,7 +93,7 @@ pub async fn get_salary(id: uuid::Uuid) -> anyhow::Result<Option<Salary>> {
         &db,
         DbInstruction::Query {
             query: Cow::Borrowed("SELECT * FROM salaries WHERE id = ?1 LIMIT 1"),
-            params: [id.as_bytes().as_slice()],
+            params: vec![id.as_bytes().as_slice().into()],
         },
     )
     .await?
@@ -118,7 +118,7 @@ pub async fn get_coming_salary() -> anyhow::Result<Option<Salary>> {
         &db,
         DbInstruction::Query {
             query: Cow::Borrowed("SELECT * FROM salaries ORDER BY run_at ASC LIMIT 1"),
-            params: (),
+            params: Vec::new(),
         },
     )
     .await?
@@ -156,10 +156,10 @@ pub async fn search_salaries(
         &db,
         DbInstruction::Query {
             query: Cow::Borrowed("SELECT * FROM salaries WHERE from = ?1 LIMIT ?2 OFFSET ?3"),
-            params: [
-                bank_account.account_id.get(),
-                per_page as u64,
-                offset as u64,
+            params: vec![
+                (bank_account.account_id.get() as i64).into(),
+                per_page.into(),
+                offset.into(),
             ],
         },
     )
@@ -192,7 +192,7 @@ pub async fn remove_salary(id: uuid::Uuid) -> anyhow::Result<()> {
         &db,
         DbInstruction::Execute {
             execute: Cow::Borrowed("DELETE FROM salaries WHERE id = ?1"),
-            params: [id.as_bytes().as_slice()],
+            params: vec![id.as_bytes().as_slice().into()],
         },
     )
     .await?;
@@ -331,7 +331,7 @@ pub async fn get_bank_account(account_id: Id<UserMarker>) -> anyhow::Result<Opti
         &db,
         DbInstruction::Query {
             query: Cow::Borrowed("SELECT * FROM bank_accounts WHERE id = ?1 LIMIT 1"),
-            params: [account_id.get()],
+            params: vec![(account_id.get() as i64).into()],
         },
     )
     .await?
@@ -356,7 +356,7 @@ pub async fn delete_bank_account(bank_account: &BankAccount) -> anyhow::Result<(
         &db,
         DbInstruction::Execute {
             execute: Cow::Borrowed("DELETE FROM bank_accounts WHERE id = ?1"),
-            params: [bank_account.account_id.get()],
+            params: vec![(bank_account.account_id.get() as i64).into()],
         },
     )
     .await?;
@@ -365,7 +365,7 @@ pub async fn delete_bank_account(bank_account: &BankAccount) -> anyhow::Result<(
         &db,
         DbInstruction::Execute {
             execute: Cow::Borrowed(r#"DELETE FROM salaries WHERE "from" = ?1 OR "to" = ?1"#),
-            params: [bank_account.account_id.get()],
+            params: vec![(bank_account.account_id.get() as i64).into()],
         },
     )
     .await?;

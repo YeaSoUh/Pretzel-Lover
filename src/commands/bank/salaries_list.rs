@@ -4,14 +4,11 @@ use chrono::{DateTime, Utc};
 use tracing::instrument;
 use twilight_model::{
     application::interaction::{
-        application_command::CommandData, message_component::MessageComponentInteractionData,
-    },
-    channel::message::{
+        Interaction, application_command::CommandData, message_component::MessageComponentInteractionData,
+    }, channel::message::{
         Component, EmojiReactionType, MessageFlags,
         component::{ButtonStyle, Container, SeparatorSpacingSize},
-    },
-    gateway::payload::incoming::InteractionCreate,
-    id::{Id, marker::UserMarker},
+    }, id::{Id, marker::UserMarker},
 };
 use twilight_util::builder::message::{
     ActionRowBuilder, ButtonBuilder, ContainerBuilder, SeparatorBuilder, TextDisplayBuilder,
@@ -32,8 +29,8 @@ use crate::{
 #[instrument(skip_all, err)]
 pub async fn run(
     state: Arc<AppState>,
-    event: &Box<InteractionCreate>,
-    _data: &Box<CommandData>,
+    event: Interaction,
+    _data: CommandData,
 ) -> anyhow::Result<()> {
     defer(state.clone(), &event, true).await?;
 
@@ -87,8 +84,8 @@ pub async fn run(
 #[instrument(skip_all, err)]
 pub async fn previous_page(
     state: Arc<AppState>,
-    event: &Box<InteractionCreate>,
-    data: &Box<MessageComponentInteractionData>,
+    event: Interaction,
+    data: MessageComponentInteractionData,
 ) -> anyhow::Result<()> {
     let container = if let Component::Container(container) = event
         .message
@@ -141,8 +138,8 @@ pub async fn previous_page(
 #[instrument(skip_all, err)]
 pub async fn next_page(
     state: Arc<AppState>,
-    event: &Box<InteractionCreate>,
-    _data: &Box<MessageComponentInteractionData>,
+    event: Interaction,
+    _data: MessageComponentInteractionData,
 ) -> anyhow::Result<()> {
     todo!();
 

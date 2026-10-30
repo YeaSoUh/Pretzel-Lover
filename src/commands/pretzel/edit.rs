@@ -8,16 +8,11 @@ use tokio::time::Instant;
 use tracing::instrument;
 use twilight_model::{
     application::interaction::{
-        application_command::{CommandData, CommandOptionValue},
-        modal::{ModalInteractionComponent, ModalInteractionData},
-    },
-    channel::message::{
+        Interaction, application_command::{CommandData, CommandOptionValue}, modal::{ModalInteractionComponent, ModalInteractionData},
+    }, channel::message::{
         AllowedMentions, Component, MentionType, MessageFlags,
         component::{TextInput, TextInputStyle},
-    },
-    gateway::payload::incoming::InteractionCreate,
-    http::attachment::Attachment,
-    id::{
+    }, http::attachment::Attachment, id::{
         Id,
         marker::{ChannelMarker, MessageMarker},
     },
@@ -58,8 +53,8 @@ pub fn run_once() {
 #[instrument(skip_all, err)]
 pub async fn run(
     state: Arc<AppState>,
-    event: &Box<InteractionCreate>,
-    data: &Box<CommandData>,
+    event: Interaction,
+    data: CommandData,
 ) -> anyhow::Result<()> {
     let user = event
         .member
@@ -91,12 +86,11 @@ pub async fn run(
     let mut message_channel_id: Id<ChannelMarker> = Id::new(1);
     let mut message_id: Id<MessageMarker> = Id::new(1);
 
-    let cmd = data.as_ref();
-    if cmd.options.is_empty() {
+    if data.options.is_empty() {
         anyhow::bail!("No options")
     }
 
-    for option in &cmd.options {
+    for option in &data.options {
         match (&*option.name, &option.value) {
             ("message_url", CommandOptionValue::String(message_url)) => {
                 let mut url_iter = message_url.split("/");
@@ -236,8 +230,8 @@ pub async fn run(
 #[instrument(skip_all, err)]
 pub async fn modal(
     state: Arc<AppState>,
-    event: &Box<InteractionCreate>,
-    data: &Box<ModalInteractionData>,
+    event: Interaction,
+    data: ModalInteractionData,
 ) -> anyhow::Result<()> {
     let extra_params = MODAL_INFO_MAP
         .remove(&data.custom_id)

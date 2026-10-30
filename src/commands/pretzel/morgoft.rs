@@ -3,8 +3,7 @@ use std::sync::Arc;
 use tracing::instrument;
 use twilight_http::request::AuditLogReason;
 use twilight_model::{
-    application::interaction::application_command::CommandData, channel::message::MessageFlags,
-    gateway::payload::incoming::InteractionCreate, id::Id,
+    application::interaction::{Interaction, application_command::CommandData}, channel::message::MessageFlags, id::Id,
 };
 
 use crate::{AppState, commands};
@@ -12,8 +11,8 @@ use crate::{AppState, commands};
 #[instrument(skip_all, err)]
 pub async fn run(
     state: Arc<AppState>,
-    event: &Box<InteractionCreate>,
-    data: &Box<CommandData>,
+    event: Interaction,
+    data: CommandData,
 ) -> anyhow::Result<()> {
     commands::defer(state.clone(), &event, true).await?;
 

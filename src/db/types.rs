@@ -1,6 +1,6 @@
-use std::{borrow::Cow, sync::Arc, time::Duration};
+use std::{borrow::Cow, ops::{Deref, DerefMut}, sync::Arc, time::Duration};
 
-use turso::{Connection, Database, IntoParams, Rows};
+use turso::{Connection, Database, Rows, Value};
 
 pub struct DatabaseStruct {
     pub(crate) database: Arc<Database>,
@@ -19,13 +19,11 @@ impl DatabaseStruct {
 }
 
 pub enum DbResult {
-    #[allow(dead_code)]
     Execute(u64),
     Query(Rows),
 }
 
 impl DbResult {
-    #[allow(dead_code)]
     pub fn as_u64(&self) -> Option<u64> {
         match self {
             DbResult::Execute(num) => Some(*num),
@@ -40,19 +38,57 @@ impl DbResult {
     }
 }
 
+pub struct DbResults {
+    results: Vec<DbResult>,
+}
+
+impl DbResults {
+    pub fn new(results: Vec<DbResult>) -> Self {
+        Self {
+            results,
+        }
+    }
+    
+    pub fn into_inner(self) -> Vec<DbResult> {
+        self.results
+    }
+
+    pub fn as_u64(&self) -> Option<u64> {
+        self.first()?.as_u64()
+    }
+    
+    pub fn into_rows(self) -> Option<Rows> {
+        self.results.into_iter().next()?.into_rows()
+    }
+}
+
+impl Deref for DbResults {
+    type Target = Vec<DbResult>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.results
+    }
+}
+
+impl DerefMut for DbResults {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.results
+    }
+}
+
 #[derive(Debug, Clone)]
-pub enum DbInstruction<P: IntoParams> {
+pub enum DbInstruction {
     Execute {
         execute: Cow<'static, str>,
-        params: P,
+        params: Vec<Value>,
     },
     Query {
         query: Cow<'static, str>,
-        params: P,
+        params: Vec<Value>,
     },
 }
 
-impl<P: IntoParams> DbInstruction<P> {
+impl DbInstruction {
     pub async fn run(self, conn: &Connection) -> Result<DbResult, turso::Error> {
         Ok(match self {
             DbInstruction::Execute { execute, params } => {

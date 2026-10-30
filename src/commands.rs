@@ -5,12 +5,11 @@ use twilight_model::{
     application::{
         command::{Command, CommandType},
         interaction::{
-            InteractionContextType, application_command::CommandData,
+            Interaction, InteractionContextType, application_command::CommandData,
             message_component::MessageComponentInteractionData, modal::ModalInteractionData,
         },
     },
     channel::message::MessageFlags,
-    gateway::payload::incoming::InteractionCreate,
     http::interaction::{InteractionResponse, InteractionResponseData, InteractionResponseType},
     oauth::ApplicationIntegrationType,
 };
@@ -34,7 +33,7 @@ pub mod update_configs;
 
 pub async fn defer(
     state: Arc<AppState>,
-    event: &InteractionCreate,
+    event: &Interaction,
     ephemeral: bool,
 ) -> Result<Response<EmptyBody>, twilight_http::Error> {
     let ephemeral = {
@@ -274,27 +273,27 @@ pub fn get_commands(configs: &Configs) -> anyhow::Result<Vec<Command>> {
 #[tracing::instrument(fields(user = ?event.author_id()), skip_all, err)]
 pub async fn cmd_handler(
     state: Arc<AppState>,
-    event: Box<InteractionCreate>,
-    data: Box<CommandData>,
+    event: Interaction,
+    data: CommandData,
 ) -> anyhow::Result<()> {
-    let result = match data.as_ref().name.as_str() {
+    let result = match data.name.as_str() {
         // they are discontinued due to low usage but they can come back
         //"edit_db" => commands::edit::run(state, &event, &data).await,
         //"get_db" => commands::get::run(state, &event, &data).await,
         //"remove_db" => commands::remove::run(state, &event, &data).await,
         //"search_db" => commands::search::run(state, &event, &data).await,
-        "say" => commands::pretzel::say::run(state, &event, &data).await,
-        "edit" => commands::pretzel::edit::run(state, &event, &data).await,
-        "Sentence to Morgoft" => commands::pretzel::morgoft::run(state, &event, &data).await,
-        "Add Employee Role" => commands::add_role_employee::run(state, &event, &data).await,
-        "update_configs" => commands::update_configs::run(state, &event, &data).await,
-        "add_magells" => commands::bank::add_pretzels::run(state, &event, &data).await,
-        "remove_magells" => commands::bank::remove_pretzels::run(state, &event, &data).await,
-        "freeze_bank_account" => commands::bank::freeze::run(state, &event, &data).await,
-        "register_bank_account" => commands::bank::register::run(state, &event, &data).await,
-        "delete_bank_account" => commands::bank::delete_account::run(state, &event, &data).await,
-        "transfer" => commands::bank::transfer::run(state, &event, &data).await,
-        "salary" => commands::bank::salary::run(state, &event, &data).await,
+        "say" => commands::pretzel::say::run(state, event, data).await,
+        "edit" => commands::pretzel::edit::run(state, event, data).await,
+        "Sentence to Morgoft" => commands::pretzel::morgoft::run(state, event, data).await,
+        "Add Employee Role" => commands::add_role_employee::run(state, event, data).await,
+        "update_configs" => commands::update_configs::run(state, event, data).await,
+        "add_magells" => commands::bank::add_pretzels::run(state, event, data).await,
+        "remove_magells" => commands::bank::remove_pretzels::run(state, event, data).await,
+        "freeze_bank_account" => commands::bank::freeze::run(state, event, data).await,
+        "register_bank_account" => commands::bank::register::run(state, event, data).await,
+        "delete_bank_account" => commands::bank::delete_account::run(state, event, data).await,
+        "transfer" => commands::bank::transfer::run(state, event, data).await,
+        "salary" => commands::bank::salary::run(state, event, data).await,
         // discontinued too
         // "channel_manager" => todo!(),
         // "kitty" => todo!(),
@@ -311,15 +310,15 @@ pub async fn cmd_handler(
 #[tracing::instrument(fields(user = ?event.author_id()), skip_all, err)]
 pub async fn modal_handler(
     state: Arc<AppState>,
-    event: Box<InteractionCreate>,
-    data: Box<ModalInteractionData>,
+    event: Interaction,
+    data: ModalInteractionData,
 ) -> anyhow::Result<()> {
-    let result = match data.as_ref().custom_id.as_str() {
+    let result = match data.custom_id.as_str() {
         id if id.starts_with("say_modal") => {
-            commands::pretzel::say::modal(state, &event, &data).await
+            commands::pretzel::say::modal(state, event, data).await
         }
         id if id.starts_with("edit_modal") => {
-            commands::pretzel::edit::modal(state, &event, &data).await
+            commands::pretzel::edit::modal(state, event, data).await
         }
         _ => unreachable!("Non existent modal"),
     };
@@ -333,12 +332,12 @@ pub async fn modal_handler(
 #[tracing::instrument(fields(user = ?event.author_id()), skip_all, err)]
 pub async fn message_component_handler(
     state: Arc<AppState>,
-    event: Box<InteractionCreate>,
-    data: Box<MessageComponentInteractionData>,
+    event: Interaction,
+    data: MessageComponentInteractionData,
 ) -> anyhow::Result<()> {
-    let result = match data.as_ref().custom_id.as_str() {
-        "previous_page" => commands::bank::salaries_list::previous_page(state, &event, &data).await,
-        "next_page" => commands::bank::salaries_list::next_page(state, &event, &data).await,
+    let result = match data.custom_id.as_str() {
+        "previous_page" => commands::bank::salaries_list::previous_page(state, event, data).await,
+        "next_page" => commands::bank::salaries_list::next_page(state, event, data).await,
         _ => unreachable!("Non existent message component"),
     };
 
