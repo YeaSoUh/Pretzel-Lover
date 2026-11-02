@@ -10,11 +10,10 @@ use twilight_model::{
         },
     },
     channel::message::MessageFlags,
-    http::interaction::{InteractionResponse, InteractionResponseData, InteractionResponseType},
+    http::interaction::InteractionResponseData,
     oauth::ApplicationIntegrationType,
 };
 use twilight_util::builder::{
-    InteractionResponseDataBuilder,
     command::{
         BooleanBuilder, ChannelBuilder, CommandBuilder, IntegerBuilder, StringBuilder, UserBuilder,
     },
@@ -36,13 +35,7 @@ pub async fn defer(
     event: &Interaction,
     ephemeral: bool,
 ) -> Result<Response<EmptyBody>, twilight_http::Error> {
-    let ephemeral = {
-        if ephemeral {
-            Some(MessageFlags::EPHEMERAL)
-        } else {
-            None
-        }
-    };
+    let ephemeral = ephemeral.then(|| MessageFlags::EPHEMERAL);
 
     state
         .client
@@ -52,21 +45,10 @@ pub async fn defer(
             &event.token,
             &twilight_model::http::interaction::InteractionResponse {
                 kind: twilight_model::http::interaction::InteractionResponseType::DeferredChannelMessageWithSource,
-                data: {
-                    if let Some(flags) = ephemeral {
-                        Some(InteractionResponseDataBuilder::new().flags(flags).build())
-                    } else { None }
-                },
+                data: Some(InteractionResponseData {flags: ephemeral, ..Default::default()}),
             },
         )
         .await
-}
-
-pub fn response(data: InteractionResponseData) -> InteractionResponse {
-    InteractionResponse {
-        kind: InteractionResponseType::ChannelMessageWithSource,
-        data: Some(data),
-    }
 }
 
 pub async fn respond(state: Arc<AppState>, token: &str, content: &str) -> anyhow::Result<()> {

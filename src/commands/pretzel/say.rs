@@ -8,27 +8,29 @@ use tokio::time::Instant;
 use tracing::instrument;
 use twilight_model::{
     application::interaction::{
-        Interaction, application_command::{CommandData, CommandOptionValue}, modal::{ModalInteractionComponent, ModalInteractionData},
-    }, channel::message::{
+        Interaction,
+        application_command::{CommandData, CommandOptionValue},
+        modal::{ModalInteractionComponent, ModalInteractionData},
+    },
+    channel::message::{
         AllowedMentions, Component, MentionType, MessageFlags,
         component::{TextInput, TextInputStyle},
-    }, http::attachment::Attachment, id::{
+    },
+    http::attachment::Attachment,
+    id::{
         Id,
         marker::{ChannelMarker, MessageMarker, StickerMarker},
     },
 };
 use twilight_util::builder::{
-    InteractionResponseDataBuilder,
+    interaction_response::{ChannelMessageBuilder, ModalBuilder},
     message::{FileUploadBuilder, LabelBuilder, TextDisplayBuilder},
 };
 use uuid::Uuid;
 
 use crate::{
     AppState,
-    commands::{
-        pretzel::helpers::purge::{Expiring, purge},
-        response,
-    },
+    commands::pretzel::helpers::purge::{Expiring, purge},
 };
 
 struct ModalInfo {
@@ -78,12 +80,10 @@ pub async fn run(
             .create_response(
                 event.id,
                 &event.token,
-                &response(
-                    InteractionResponseDataBuilder::new()
-                        .content("Not allowed to run command")
-                        .flags(MessageFlags::EPHEMERAL)
-                        .build(),
-                ),
+                &ChannelMessageBuilder::new()
+                    .content("Not allowed to run command")
+                    .flags(MessageFlags::EPHEMERAL)
+                    .build(),
             )
             .await?;
         return Ok(()); // just to suppress error
@@ -137,12 +137,10 @@ pub async fn run(
             .create_response(
                 event.id,
                 &event.token,
-                &response(
-                    InteractionResponseDataBuilder::new()
-                        .content("No message id in reply")
-                        .flags(MessageFlags::EPHEMERAL)
-                        .build(),
-                ),
+                &ChannelMessageBuilder::new()
+                    .content("No message id in reply")
+                    .flags(MessageFlags::EPHEMERAL)
+                    .build(),
             )
             .await?;
         anyhow::bail!("No message id in reply");
@@ -158,12 +156,10 @@ pub async fn run(
                 .create_response(
                     event.id,
                     &event.token,
-                    &response(
-                        InteractionResponseDataBuilder::new()
-                            .content("No channel id in reply")
-                            .flags(MessageFlags::EPHEMERAL)
-                            .build(),
-                    ),
+                    &ChannelMessageBuilder::new()
+                        .content("No channel id in reply")
+                        .flags(MessageFlags::EPHEMERAL)
+                        .build(),
                 )
                 .await?;
             anyhow::bail!("No channel id in reply");
@@ -178,12 +174,10 @@ pub async fn run(
                     .create_response(
                         event.id,
                         &event.token,
-                        &response(
-                            InteractionResponseDataBuilder::new()
-                                .content(&format!("An error happened:\n{e}"))
-                                .flags(MessageFlags::EPHEMERAL)
-                                .build(),
-                        ),
+                        &ChannelMessageBuilder::new()
+                            .content(&format!("An error happened:\n{e}"))
+                            .flags(MessageFlags::EPHEMERAL)
+                            .build(),
                     )
                     .await?;
                 return Err(e.into());
@@ -202,12 +196,10 @@ pub async fn run(
                 .create_response(
                     event.id,
                     &event.token,
-                    &response(
-                        InteractionResponseDataBuilder::new()
-                            .content("Failed to parse channel id in forward link")
-                            .flags(MessageFlags::EPHEMERAL)
-                            .build(),
-                    ),
+                    &ChannelMessageBuilder::new()
+                        .content("Failed to parse channel id in forward link")
+                        .flags(MessageFlags::EPHEMERAL)
+                        .build(),
                 )
                 .await?;
             anyhow::bail!("No channel id in forward");
@@ -222,12 +214,10 @@ pub async fn run(
                     .create_response(
                         event.id,
                         &event.token,
-                        &response(
-                            InteractionResponseDataBuilder::new()
-                                .content("Failed to parse channel id in forward link")
-                                .flags(MessageFlags::EPHEMERAL)
-                                .build(),
-                        ),
+                        &ChannelMessageBuilder::new()
+                            .content("Failed to parse channel id in forward link")
+                            .flags(MessageFlags::EPHEMERAL)
+                            .build(),
                     )
                     .await?;
                 return Err(e.into());
@@ -241,12 +231,10 @@ pub async fn run(
                 .create_response(
                     event.id,
                     &event.token,
-                    &response(
-                        InteractionResponseDataBuilder::new()
-                            .content("No channel id in forward link")
-                            .flags(MessageFlags::EPHEMERAL)
-                            .build(),
-                    ),
+                    &ChannelMessageBuilder::new()
+                        .content("No channel id in forward link")
+                        .flags(MessageFlags::EPHEMERAL)
+                        .build(),
                 )
                 .await?;
             anyhow::bail!("No channel id in forward");
@@ -261,12 +249,10 @@ pub async fn run(
                     .create_response(
                         event.id,
                         &event.token,
-                        &response(
-                            InteractionResponseDataBuilder::new()
-                                .content("Failed to parse message id in forward link")
-                                .flags(MessageFlags::EPHEMERAL)
-                                .build(),
-                        ),
+                        &ChannelMessageBuilder::new()
+                            .content("Failed to parse message id in forward link")
+                            .flags(MessageFlags::EPHEMERAL)
+                            .build(),
                     )
                     .await?;
                 return Err(e.into());
@@ -289,79 +275,69 @@ pub async fn run(
     }
 
     let modal_id = format!("say_modal:{}", Uuid::new_v4());
-    let components = InteractionResponseDataBuilder::new()
-        .custom_id(&modal_id)
-        .title("Say")
-        .components([
-            Component::Label(
-                LabelBuilder::new(
-                    "Content",
-                    Component::TextInput(TextInput {
-                        id: Some(0),
-                        custom_id: "content".to_string(),
-                        max_length: Some(2000),
-                        min_length: Some(1),
-                        required: Some(false),
-                        style: TextInputStyle::Paragraph,
-                        placeholder: None,
-                        #[allow(deprecated)] // can't make a textinput without a deprecated label
-                        label: None,
-                        value: None,
-                    }),
-                )
-                .description("Type what for bot to say")
-                .build(),
-            ),
-            Component::Label(
-                LabelBuilder::new(
-                    "JSON",
-                    Component::TextInput(TextInput {
-                        id: Some(0),
-                        custom_id: "JSON".to_string(),
-                        max_length: Some(4000),
-                        min_length: Some(1),
-                        required: Some(false),
-                        style: TextInputStyle::Paragraph,
-                        placeholder: None,
-                        #[allow(deprecated)] // can't make a textinput without a deprecated label
-                        label: None,
-                        value: None,
-                    }),
-                )
-                .description("A JSON field for making custom messages (will overwrite content but not files field)")
-                .build(),
-            ),
-            Component::Label(
-                LabelBuilder::new(
-                    "File upload",
-                    Component::FileUpload(
-                        FileUploadBuilder::new("file_upload")
-                            .max_values(10)
-                            .required(false)
-                            .id(1)
-                            .build(),
-                    ),
-                )
-                .build(),
-            ),
-            Component::TextDisplay(
-                TextDisplayBuilder::new("# Extra Info:\n## How to make images and videos spoilered?\nDownload a file and add \"SPOILER_\" at the start of a file name, otherwise it won't work")
-                .build()
+    let modal = ModalBuilder::new(&modal_id, "Say", [
+        Component::Label(
+            LabelBuilder::new(
+                "Content",
+                Component::TextInput(TextInput {
+                    id: Some(0),
+                    custom_id: "content".to_string(),
+                    max_length: Some(2000),
+                    min_length: Some(1),
+                    required: Some(false),
+                    style: TextInputStyle::Paragraph,
+                    placeholder: None,
+                    #[allow(deprecated)] // can't make a textinput without a deprecated label
+                    label: None,
+                    value: None,
+                }),
             )
-        ])
+            .description("Type what for bot to say")
+            .build(),
+        ),
+        Component::Label(
+            LabelBuilder::new(
+                "JSON",
+                Component::TextInput(TextInput {
+                    id: Some(0),
+                    custom_id: "JSON".to_string(),
+                    max_length: Some(4000),
+                    min_length: Some(1),
+                    required: Some(false),
+                    style: TextInputStyle::Paragraph,
+                    placeholder: None,
+                    #[allow(deprecated)] // can't make a textinput without a deprecated label
+                    label: None,
+                    value: None,
+                }),
+            )
+            .description("A JSON field for making custom messages (will overwrite content but not files field)")
+            .build(),
+        ),
+        Component::Label(
+            LabelBuilder::new(
+                "File upload",
+                Component::FileUpload(
+                    FileUploadBuilder::new("file_upload")
+                        .max_values(10)
+                        .required(false)
+                        .id(1)
+                        .build(),
+                ),
+            )
+            .build(),
+        ),
+        Component::TextDisplay(
+            TextDisplayBuilder::new("# Extra Info:\n## How to make images and videos spoilered?\nDownload a file and add \"SPOILER_\" at the start of a file name, otherwise it won't work")
+            .build()
+        )
+    ])
         .build();
 
     state
         .client
         .interaction(state.application_id)
-        .create_response(
-            event.id,
-            &event.token,
-            &twilight_model::http::interaction::InteractionResponse {
-                kind: twilight_model::http::interaction::InteractionResponseType::Modal,
-                data: Some(components),
-            },
-        )
+        .create_response(event.id, &event.token, &modal)
         .await?;
 
     MODAL_INFO_MAP.insert(
@@ -458,12 +434,10 @@ pub async fn modal(
             .create_response(
                 event.id,
                 &event.token,
-                &response(
-                    InteractionResponseDataBuilder::new()
-                        .content("No message content provided to send")
-                        .flags(MessageFlags::EPHEMERAL)
-                        .build(),
-                ),
+                &ChannelMessageBuilder::new()
+                    .content("No message content provided to send")
+                    .flags(MessageFlags::EPHEMERAL)
+                    .build(),
             )
             .await?;
         anyhow::bail!("No message content provided to send");
@@ -499,15 +473,13 @@ pub async fn modal(
             .create_response(
                 event.id,
                 &event.token,
-                &response(
-                    InteractionResponseDataBuilder::new()
-                        .content(&format!(
-                            "There was an error while sending a message:\n{}",
-                            e.to_string()
-                        ))
-                        .flags(MessageFlags::EPHEMERAL)
-                        .build(),
-                ),
+                &ChannelMessageBuilder::new()
+                    .content(&format!(
+                        "There was an error while sending a message:\n{}",
+                        e.to_string()
+                    ))
+                    .flags(MessageFlags::EPHEMERAL)
+                    .build(),
             )
             .await?;
         return Err(e.into());
@@ -531,15 +503,13 @@ pub async fn modal(
                 .create_response(
                     event.id,
                     &event.token,
-                    &response(
-                        InteractionResponseDataBuilder::new()
-                            .content(&format!(
-                                "There was an error while sending a message:\n{}",
-                                e.to_string()
-                            ))
-                            .flags(MessageFlags::EPHEMERAL)
-                            .build(),
-                    ),
+                    &ChannelMessageBuilder::new()
+                        .content(&format!(
+                            "There was an error while sending a message:\n{}",
+                            e.to_string()
+                        ))
+                        .flags(MessageFlags::EPHEMERAL)
+                        .build(),
                 )
                 .await?;
             return Err(e.into());
@@ -552,12 +522,10 @@ pub async fn modal(
         .create_response(
             event.id,
             &event.token,
-            &response(
-                InteractionResponseDataBuilder::new()
-                    .content("Message has been sent")
-                    .flags(MessageFlags::EPHEMERAL)
-                    .build(),
-            ),
+            &ChannelMessageBuilder::new()
+                .content("Message has been sent")
+                .flags(MessageFlags::EPHEMERAL)
+                .build(),
         )
         .await?;
 

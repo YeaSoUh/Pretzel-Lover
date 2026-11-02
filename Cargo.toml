@@ -12,10 +12,10 @@ anyhow = "1"
 rustls = { version = "0.23", features = ["ring"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-twilight-model = "0.17"
-twilight-http = { version = "0.17", features = ["simd-json"] }
-twilight-gateway = { version = "0.17", features = ["simd-json"] }
-twilight-util = { version = "0.17", features = ["builder"] }
+twilight-model = "0.18"
+twilight-http = { version = "0.18", features = ["simd-json"] }
+twilight-gateway = { version = "0.18", features = ["simd-json"] }
+twilight-util = { version = "0.18", features = ["builder"] }
 turso = "0.8"
 chrono = "0.4"
 sea-query = { version = "1.0", features = ["derive", "backend-sqlite"] }

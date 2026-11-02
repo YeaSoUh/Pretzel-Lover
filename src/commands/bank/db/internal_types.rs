@@ -8,7 +8,7 @@ use twilight_model::{
 };
 use twilight_util::builder::message::{ContainerBuilder, SeparatorBuilder, TextDisplayBuilder};
 
-use crate::commands::bank::db::connection::{edit_bank_account, get_bank_account};
+use crate::commands::bank::db::connection::{get_bank_account, transfer_pretzels};
 
 pub trait ComponentV2Logger {
     fn to_component(&self) -> Component;
@@ -227,22 +227,13 @@ impl Payment {
         }
 
         if from_account.amount - self.amount < 0 {
-            anyhow::bail!("Insufficient amount");
+            anyhow::bail!("Not enough money to transfer");
+        }
+        if from_account.frozen || to_account.frozen {
+            anyhow::bail!("Frozen account")
         }
 
-        let new_from_account = &BankAccount {
-            account_id: from_account.account_id,
-            amount: from_account.amount - self.amount,
-            frozen: from_account.frozen,
-        };
-        let new_to_account = &BankAccount {
-            account_id: to_account.account_id,
-            amount: to_account.amount + self.amount,
-            frozen: to_account.frozen,
-        };
-
-        edit_bank_account(new_from_account).await?;
-        edit_bank_account(new_to_account).await?;
+        transfer_pretzels(&from_account, &to_account, self.amount).await?;
 
         Ok(())
     }

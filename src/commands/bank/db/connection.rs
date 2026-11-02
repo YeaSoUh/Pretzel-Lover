@@ -8,10 +8,8 @@ use turso::Builder;
 use twilight_model::id::{Id, marker::UserMarker};
 
 use crate::{
-    commands::bank::db::internal_types::{BankAccount, BankAccounts, Salaries, Salary},
-    db::{
-        helpers::execute,
-        types::{DatabaseStruct, DbInstruction},
+    commands::bank::db::internal_types::{BankAccount, BankAccounts, Salaries, Salary}, db::{
+        helpers::execute, types::{DatabaseStruct, DbInstruction, DbResults},
     },
 };
 
@@ -43,7 +41,8 @@ pub async fn establish_database(database_url: &str) -> anyhow::Result<()> {
             ) STRICT;",
             ),
             params: Vec::new(),
-        }].as_slice(),
+        }]
+        .as_slice(),
     )
     .await?;
 
@@ -58,10 +57,11 @@ pub async fn establish_database(database_url: &str) -> anyhow::Result<()> {
             amount         INTEGER NOT NULL CHECK (amount > 0),
             interval_hours INTEGER NOT NULL CHECK (interval_hours > 0),
             run_at         TIMESTAMP NOT NULL
-            ) STRICT;"
+            ) STRICT;",
             ),
             params: Vec::new(),
-        }].as_slice(),
+        }]
+        .as_slice(),
     )
     .await?;
 
@@ -72,7 +72,8 @@ pub async fn establish_database(database_url: &str) -> anyhow::Result<()> {
                 "CREATE INDEX IF NOT EXISTS salaries_run_at ON salaries (run_at);",
             ),
             params: Vec::new(),
-        }].as_slice(),
+        }]
+        .as_slice(),
     )
     .await?;
 
@@ -94,7 +95,8 @@ pub async fn get_salary(id: uuid::Uuid) -> anyhow::Result<Option<Salary>> {
         vec![DbInstruction::Query {
             query: Cow::Borrowed("SELECT * FROM salaries WHERE id = ?1 LIMIT 1"),
             params: vec![id.as_bytes().as_slice().into()],
-        }].as_slice(),
+        }]
+        .as_slice(),
     )
     .await?
     .into_rows();
@@ -119,7 +121,8 @@ pub async fn get_coming_salary() -> anyhow::Result<Option<Salary>> {
         vec![DbInstruction::Query {
             query: Cow::Borrowed("SELECT * FROM salaries ORDER BY run_at ASC LIMIT 1"),
             params: Vec::new(),
-        }].as_slice(),
+        }]
+        .as_slice(),
     )
     .await?
     .into_rows();
@@ -161,7 +164,8 @@ pub async fn search_salaries(
                 per_page.into(),
                 offset.into(),
             ],
-        }].as_slice(),
+        }]
+        .as_slice(),
     )
     .await?
     .into_rows();
@@ -193,7 +197,8 @@ pub async fn remove_salary(id: uuid::Uuid) -> anyhow::Result<()> {
         vec![DbInstruction::Execute {
             execute: Cow::Borrowed("DELETE FROM salaries WHERE id = ?1"),
             params: vec![id.as_bytes().as_slice().into()],
-        }].as_slice(),
+        }]
+        .as_slice(),
     )
     .await?;
 
@@ -227,13 +232,15 @@ pub async fn edit_salary(query: &Salary) -> anyhow::Result<()> {
                 .into(),
         ];
 
-        let conflict = sea_query::OnConflict::columns([Salaries::RunAt]);
-
         sea_query::Query::insert()
             .into_table(Salaries::Table)
             .columns(columns)
             .values(values)?
-            .on_conflict(conflict)
+            .on_conflict(
+                sea_query::OnConflict::column(Salaries::Id)
+                    .update_column(Salaries::RunAt)
+                    .to_owned(),
+            )
             .build(sea_query::SqliteQueryBuilder)
     };
 
@@ -258,7 +265,8 @@ pub async fn edit_salary(query: &Salary) -> anyhow::Result<()> {
         vec![DbInstruction::Execute {
             execute: sql.into(),
             params: turso_params,
-        }].as_slice(),
+        }]
+        .as_slice(),
     )
     .await?;
 
@@ -283,13 +291,15 @@ pub async fn edit_bank_account(bank_account: &BankAccount) -> anyhow::Result<()>
             bank_account.frozen.into(),
         ];
 
-        let conflict = sea_query::OnConflict::columns([BankAccounts::Amount, BankAccounts::Frozen]);
-
         sea_query::Query::insert()
             .into_table(BankAccounts::Table)
             .columns(columns)
             .values(values)?
-            .on_conflict(conflict)
+            .on_conflict(
+                sea_query::OnConflict::column(BankAccounts::AccountId)
+                    .update_columns([BankAccounts::Frozen, BankAccounts::Amount])
+                    .to_owned(),
+            )
             .build(sea_query::SqliteQueryBuilder)
     };
 
@@ -314,7 +324,8 @@ pub async fn edit_bank_account(bank_account: &BankAccount) -> anyhow::Result<()>
         vec![DbInstruction::Execute {
             execute: sql.into(),
             params: turso_params,
-        }].as_slice(),
+        }]
+        .as_slice(),
     )
     .await?;
 
@@ -330,9 +341,10 @@ pub async fn get_bank_account(account_id: Id<UserMarker>) -> anyhow::Result<Opti
     let accounts = execute(
         &db,
         vec![DbInstruction::Query {
-            query: Cow::Borrowed("SELECT * FROM bank_accounts WHERE id = ?1 LIMIT 1"),
+            query: Cow::Borrowed("SELECT * FROM bank_accounts WHERE account_id = ?1 LIMIT 1"),
             params: vec![(account_id.get() as i64).into()],
-        }].as_slice(),
+        }]
+        .as_slice(),
     )
     .await?
     .into_rows();
@@ -355,9 +367,10 @@ pub async fn delete_bank_account(bank_account: &BankAccount) -> anyhow::Result<(
     execute(
         &db,
         vec![DbInstruction::Execute {
-            execute: Cow::Borrowed("DELETE FROM bank_accounts WHERE id = ?1"),
+            execute: Cow::Borrowed("DELETE FROM bank_accounts WHERE account_id = ?1"),
             params: vec![(bank_account.account_id.get() as i64).into()],
-        }].as_slice(),
+        }]
+        .as_slice(),
     )
     .await?;
 
@@ -366,9 +379,117 @@ pub async fn delete_bank_account(bank_account: &BankAccount) -> anyhow::Result<(
         vec![DbInstruction::Execute {
             execute: Cow::Borrowed(r#"DELETE FROM salaries WHERE "from" = ?1 OR "to" = ?1"#),
             params: vec![(bank_account.account_id.get() as i64).into()],
-        }].as_slice(),
+        }]
+        .as_slice(),
     )
     .await?;
 
     Ok(())
+}
+
+#[instrument(err)]
+pub async fn transfer_pretzels(
+    from: &BankAccount,
+    to: &BankAccount,
+    amount: i64,
+) -> anyhow::Result<DbResults> {
+    let db = DB
+        .get()
+        .ok_or_else(|| anyhow::anyhow!("DB is not initialized"))?;
+
+    let ((from_sql, from_query_values), (to_sql, to_query_values)) = {
+        let columns = vec![
+            BankAccounts::AccountId,
+            BankAccounts::Amount,
+            BankAccounts::Frozen,
+        ];
+        let values: Vec<sea_query::SimpleExpr> = vec![
+            from.account_id.get().into(),
+            (from.amount - amount).into(),
+            from.frozen.into(),
+        ];
+
+        let from_query = sea_query::Query::insert()
+            .into_table(BankAccounts::Table)
+            .columns(columns)
+            .values(values)?
+            .on_conflict(
+                sea_query::OnConflict::column(BankAccounts::AccountId)
+                    .update_columns([BankAccounts::Frozen, BankAccounts::Amount])
+                    .to_owned(),
+            )
+            .build(sea_query::SqliteQueryBuilder);
+
+        let columns = vec![
+            BankAccounts::AccountId,
+            BankAccounts::Amount,
+            BankAccounts::Frozen,
+        ];
+        let values: Vec<sea_query::SimpleExpr> = vec![
+            to.account_id.get().into(),
+            (to.amount + amount).into(),
+            to.frozen.into(),
+        ];
+
+        let to_query = sea_query::Query::insert()
+            .into_table(BankAccounts::Table)
+            .columns(columns)
+            .values(values)?
+            .on_conflict(
+                sea_query::OnConflict::column(BankAccounts::AccountId)
+                    .update_columns([BankAccounts::Frozen, BankAccounts::Amount])
+                    .to_owned(),
+            )
+            .build(sea_query::SqliteQueryBuilder);
+
+        (from_query, to_query)
+    };
+
+    let from_turso_params: Vec<turso::Value> = from_query_values
+        .into_iter()
+        .map(|v| {
+            Ok(match v {
+                sea_query::Value::Int(Some(i)) => turso::Value::Integer(i as i64),
+                sea_query::Value::BigInt(Some(i)) => turso::Value::Integer(i),
+                sea_query::Value::BigUnsigned(Some(i)) => turso::Value::Integer(i64::try_from(i)?),
+                sea_query::Value::Double(Some(f)) => turso::Value::Real(f),
+                sea_query::Value::String(Some(s)) => turso::Value::Text(s),
+                sea_query::Value::Bool(Some(b)) => turso::Value::Integer(b as i64),
+                sea_query::Value::Bytes(Some(b)) => turso::Value::Blob(b),
+                other => anyhow::bail!("unsupported sea query value:\n{other:?}"),
+            })
+        })
+        .collect::<anyhow::Result<_>>()?;
+
+    let to_turso_params: Vec<turso::Value> = to_query_values
+        .into_iter()
+        .map(|v| {
+            Ok(match v {
+                sea_query::Value::Int(Some(i)) => turso::Value::Integer(i as i64),
+                sea_query::Value::BigInt(Some(i)) => turso::Value::Integer(i),
+                sea_query::Value::BigUnsigned(Some(i)) => turso::Value::Integer(i64::try_from(i)?),
+                sea_query::Value::Double(Some(f)) => turso::Value::Real(f),
+                sea_query::Value::String(Some(s)) => turso::Value::Text(s),
+                sea_query::Value::Bool(Some(b)) => turso::Value::Integer(b as i64),
+                sea_query::Value::Bytes(Some(b)) => turso::Value::Blob(b),
+                other => anyhow::bail!("unsupported sea query value:\n{other:?}"),
+            })
+        })
+        .collect::<anyhow::Result<_>>()?;
+
+    execute(
+        &db,
+        vec![
+            DbInstruction::Execute {
+                execute: Cow::Owned(from_sql),
+                params: from_turso_params,
+            },
+            DbInstruction::Execute {
+                execute: Cow::Owned(to_sql),
+                params: to_turso_params,
+            },
+        ]
+        .as_slice(),
+    )
+    .await
 }

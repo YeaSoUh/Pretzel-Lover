@@ -4,9 +4,8 @@ use tracing::instrument;
 
 use crate::commands::bank::db::{
     connection::{
-        edit_bank_account, edit_salary, get_bank_account, get_coming_salary, remove_salary,
-    },
-    internal_types::{
+        edit_salary, get_bank_account, get_coming_salary, remove_salary, transfer_pretzels,
+    }, internal_types::{
         BankAccount, Salary,
         SalaryState::{Due, Wait},
     },
@@ -84,20 +83,7 @@ async fn pay_salary(
     };
 
     edit_salary(&new_salary).await?;
-
-    let new_from_account = &BankAccount {
-        account_id: from_account.account_id,
-        amount: from_account.amount - salary.amount,
-        frozen: from_account.frozen,
-    };
-    let new_to_account = &BankAccount {
-        account_id: to_account.account_id,
-        amount: to_account.amount + salary.amount,
-        frozen: to_account.frozen,
-    };
-
-    edit_bank_account(new_from_account).await?;
-    edit_bank_account(new_to_account).await?;
+    transfer_pretzels(&from_account, &to_account, salary.amount).await?;
 
     Ok(())
 }
