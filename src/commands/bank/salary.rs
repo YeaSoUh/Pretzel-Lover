@@ -7,10 +7,8 @@ use tracing::instrument;
 use twilight_model::application::interaction::{Interaction, application_command::{CommandData, CommandOptionValue}};
 
 use crate::{
-    AppState,
-    commands::{
-        bank::db::{connection::edit_salary, internal_types::Salary},
-        defer, respond,
+    AppState, commands::{
+        bank::db::{connection::edit_salary_instruction, internal_types::{DbTransaction, Salary}}, defer, respond,
     },
 };
 
@@ -72,7 +70,7 @@ pub async fn run(
         run_at: chrono::Utc::now() + chrono::Duration::hours(interval_hours),
     };
 
-    edit_salary(&salary).await?;
+    DbTransaction::new(vec![edit_salary_instruction(&salary).await?]).run().await?;
 
     respond(
         state.clone(),

@@ -6,13 +6,10 @@ use twilight_model::{
 };
 
 use crate::{
-    AppState,
-    commands::{
+    AppState, commands::{
         bank::db::{
-            connection::{edit_bank_account, get_bank_account},
-            internal_types::BankAccount,
-        },
-        defer, respond,
+            connection::{edit_bank_account_instruction, get_bank_account}, internal_types::{BankAccount, DbTransaction},
+        }, defer, respond,
     },
 };
 
@@ -72,7 +69,7 @@ pub async fn run(
         amount: amount_to_add + old_bank_account.amount,
         frozen: old_bank_account.frozen,
     };
-    edit_bank_account(&new_bank_account).await?;
+    DbTransaction::new(vec![edit_bank_account_instruction(&new_bank_account).await?]).run().await?;
 
     respond(
         state.clone(),

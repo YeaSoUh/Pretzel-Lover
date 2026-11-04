@@ -9,7 +9,7 @@ use twilight_model::id::{Id, marker::UserMarker};
 
 use crate::{
     commands::bank::db::internal_types::{BankAccount, BankAccounts, Salaries, Salary}, db::{
-        helpers::execute, types::{DatabaseStruct, DbInstruction, DbResults},
+        helpers::execute, types::{DatabaseStruct, DbInstruction},
     },
 };
 
@@ -80,6 +80,12 @@ pub async fn establish_database(database_url: &str) -> anyhow::Result<()> {
     Ok(())
 }
 
+pub fn get_db() -> anyhow::Result<&'static DatabaseStruct> {
+    Ok(DB
+        .get()
+        .ok_or_else(|| anyhow::anyhow!("DB is not initialized"))?)
+}
+
 #[instrument(err)]
 pub async fn get_salary(id: uuid::Uuid) -> anyhow::Result<Option<Salary>> {
     if id.get_version_num() != 7 {
@@ -136,9 +142,6 @@ pub async fn get_coming_salary() -> anyhow::Result<Option<Salary>> {
     Ok(None)
 }
 
-// i will make a paginator later
-// or not i thought of an idea without using cache but still have paginator style for a user
-// this might stay the same if my plan goes correctly
 #[instrument(err)]
 pub async fn search_salaries(
     bank_account: &BankAccount,
@@ -183,34 +186,19 @@ pub async fn search_salaries(
 }
 
 #[instrument(err)]
-pub async fn remove_salary(id: uuid::Uuid) -> anyhow::Result<()> {
+pub async fn remove_salary_instruction(id: uuid::Uuid) -> anyhow::Result<DbInstruction> {
     if id.get_version_num() != 7 {
         anyhow::bail!("Invalid UUID version")
     }
 
-    let db = DB
-        .get()
-        .ok_or_else(|| anyhow::anyhow!("DB is not initialized"))?;
-
-    execute(
-        &db,
-        vec![DbInstruction::Execute {
-            execute: Cow::Borrowed("DELETE FROM salaries WHERE id = ?1"),
-            params: vec![id.as_bytes().as_slice().into()],
-        }]
-        .as_slice(),
-    )
-    .await?;
-
-    Ok(())
+    Ok(DbInstruction::Execute {
+        execute: Cow::Borrowed("DELETE FROM salaries WHERE id = ?1"),
+        params: vec![id.as_bytes().as_slice().into()],
+    })
 }
 
 #[instrument(err)]
-pub async fn edit_salary(query: &Salary) -> anyhow::Result<()> {
-    let db = DB
-        .get()
-        .ok_or_else(|| anyhow::anyhow!("DB is not initialized"))?;
-
+pub async fn edit_salary_instruction(query: &Salary) -> anyhow::Result<DbInstruction> {
     let (sql, query_values) = {
         let columns = vec![
             Salaries::Id,
@@ -259,26 +247,15 @@ pub async fn edit_salary(query: &Salary) -> anyhow::Result<()> {
             })
         })
         .collect::<anyhow::Result<_>>()?;
-
-    execute(
-        db,
-        vec![DbInstruction::Execute {
-            execute: sql.into(),
-            params: turso_params,
-        }]
-        .as_slice(),
-    )
-    .await?;
-
-    Ok(())
+    
+    Ok(DbInstruction::Execute {
+        execute: sql.into(),
+        params: turso_params,
+    })
 }
 
 #[instrument(err)]
-pub async fn edit_bank_account(bank_account: &BankAccount) -> anyhow::Result<()> {
-    let db = DB
-        .get()
-        .ok_or_else(|| anyhow::anyhow!("DB is not initialized"))?;
-
+pub async fn edit_bank_account_instruction(bank_account: &BankAccount) -> anyhow::Result<DbInstruction> {
     let (sql, query_values) = {
         let columns = vec![
             BankAccounts::AccountId,
@@ -319,17 +296,10 @@ pub async fn edit_bank_account(bank_account: &BankAccount) -> anyhow::Result<()>
         })
         .collect::<anyhow::Result<_>>()?;
 
-    execute(
-        db,
-        vec![DbInstruction::Execute {
-            execute: sql.into(),
-            params: turso_params,
-        }]
-        .as_slice(),
-    )
-    .await?;
-
-    Ok(())
+    Ok(DbInstruction::Execute {
+        execute: sql.into(),
+        params: turso_params,
+    })
 }
 
 #[instrument(err)]
@@ -359,44 +329,25 @@ pub async fn get_bank_account(account_id: Id<UserMarker>) -> anyhow::Result<Opti
 }
 
 #[instrument(err)]
-pub async fn delete_bank_account(bank_account: &BankAccount) -> anyhow::Result<()> {
-    let db = DB
-        .get()
-        .ok_or_else(|| anyhow::anyhow!("DB is not initialized"))?;
-
-    execute(
-        &db,
-        vec![DbInstruction::Execute {
+pub async fn delete_bank_account_instruction(bank_account: &BankAccount) -> anyhow::Result<Vec<DbInstruction>> {
+    Ok(vec![
+        DbInstruction::Execute {
             execute: Cow::Borrowed("DELETE FROM bank_accounts WHERE account_id = ?1"),
             params: vec![(bank_account.account_id.get() as i64).into()],
-        }]
-        .as_slice(),
-    )
-    .await?;
-
-    execute(
-        &db,
-        vec![DbInstruction::Execute {
+        },
+        DbInstruction::Execute {
             execute: Cow::Borrowed(r#"DELETE FROM salaries WHERE "from" = ?1 OR "to" = ?1"#),
             params: vec![(bank_account.account_id.get() as i64).into()],
-        }]
-        .as_slice(),
-    )
-    .await?;
-
-    Ok(())
+        },
+    ])
 }
 
 #[instrument(err)]
-pub async fn transfer_pretzels(
+pub async fn transfer_pretzels_instruction(
     from: &BankAccount,
     to: &BankAccount,
     amount: i64,
-) -> anyhow::Result<DbResults> {
-    let db = DB
-        .get()
-        .ok_or_else(|| anyhow::anyhow!("DB is not initialized"))?;
-
+) -> anyhow::Result<Vec<DbInstruction>> {
     let ((from_sql, from_query_values), (to_sql, to_query_values)) = {
         let columns = vec![
             BankAccounts::AccountId,
@@ -477,19 +428,14 @@ pub async fn transfer_pretzels(
         })
         .collect::<anyhow::Result<_>>()?;
 
-    execute(
-        &db,
-        vec![
-            DbInstruction::Execute {
-                execute: Cow::Owned(from_sql),
-                params: from_turso_params,
-            },
-            DbInstruction::Execute {
-                execute: Cow::Owned(to_sql),
-                params: to_turso_params,
-            },
-        ]
-        .as_slice(),
-    )
-    .await
+    Ok(vec![
+        DbInstruction::Execute {
+            execute: Cow::Owned(from_sql),
+            params: from_turso_params,
+        },
+        DbInstruction::Execute {
+            execute: Cow::Owned(to_sql),
+            params: to_turso_params,
+        },
+    ])
 }

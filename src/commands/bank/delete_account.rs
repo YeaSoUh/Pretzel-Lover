@@ -4,10 +4,8 @@ use tracing::instrument;
 use twilight_model::application::interaction::{Interaction, application_command::CommandData};
 
 use crate::{
-    AppState,
-    commands::{
-        bank::db::connection::{delete_bank_account, get_bank_account},
-        defer, respond,
+    AppState, commands::{
+        bank::db::{connection::{delete_bank_account_instruction, get_bank_account}, internal_types::DbTransaction}, defer, respond,
     },
 };
 
@@ -37,7 +35,7 @@ pub async fn run(
         return Ok(());
     }
 
-    delete_bank_account(&bank_account).await?;
+    DbTransaction::new(delete_bank_account_instruction(&bank_account).await?).run().await?;
 
     respond(
         state.clone(),

@@ -8,10 +8,34 @@ use twilight_model::{
 };
 use twilight_util::builder::message::{ContainerBuilder, SeparatorBuilder, TextDisplayBuilder};
 
-use crate::commands::bank::db::connection::{get_bank_account, transfer_pretzels};
+use crate::{
+    commands::bank::db::connection::{get_bank_account, get_db, transfer_pretzels_instruction},
+    db::{
+        helpers::execute,
+        types::{DbInstruction, DbResults},
+    },
+};
 
 pub trait ComponentV2Logger {
     fn to_component(&self) -> Component;
+}
+
+pub struct DbTransaction {
+    instructions: Vec<DbInstruction>,
+}
+
+impl DbTransaction {
+    pub fn new(instructions: Vec<DbInstruction>) -> DbTransaction {
+        DbTransaction {
+            instructions: instructions,
+        }
+    }
+
+    pub async fn run(&self) -> anyhow::Result<DbResults> {
+        let db = get_db()?;
+
+        Ok(execute(db, self.instructions.as_slice()).await?)
+    }
 }
 
 #[derive(sea_query::Iden)]
@@ -208,6 +232,8 @@ pub struct Payment {
 impl Payment {
     // aka pay
     pub async fn process_payment(&self) -> anyhow::Result<()> {
+        let db = get_db()?;
+        
         let from_account;
         if let Some(bank_account) = get_bank_account(self.to_account).await? {
             from_account = bank_account;
@@ -233,7 +259,7 @@ impl Payment {
             anyhow::bail!("Frozen account")
         }
 
-        transfer_pretzels(&from_account, &to_account, self.amount).await?;
+        execute(db, transfer_pretzels_instruction(&from_account, &to_account, self.amount).await?.as_slice()).await?;
 
         Ok(())
     }

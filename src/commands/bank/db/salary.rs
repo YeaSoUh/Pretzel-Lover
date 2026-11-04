@@ -4,10 +4,9 @@ use tracing::instrument;
 
 use crate::commands::bank::db::{
     connection::{
-        edit_salary, get_bank_account, get_coming_salary, remove_salary, transfer_pretzels,
+        edit_salary_instruction, get_bank_account, get_coming_salary, remove_salary_instruction, transfer_pretzels_instruction,
     }, internal_types::{
-        BankAccount, Salary,
-        SalaryState::{Due, Wait},
+        BankAccount, DbTransaction, Salary, SalaryState::{Due, Wait},
     },
 };
 
@@ -30,7 +29,7 @@ pub async fn establish_salaries() -> anyhow::Result<()> {
                     tracing::error!(
                         "Bank account sending salary doesn't exist; Deleted the salary just in case"
                     );
-                    remove_salary(uuid::Uuid::from_bytes(upcoming_salary.id)).await?;
+                    DbTransaction::new(vec![remove_salary_instruction(uuid::Uuid::from_bytes(upcoming_salary.id)).await?]).run().await?;
                     continue;
                 }
 
@@ -41,7 +40,7 @@ pub async fn establish_salaries() -> anyhow::Result<()> {
                     tracing::error!(
                         "Bank account receiving salary doesn't exist; Deleted the salary just in case"
                     );
-                    remove_salary(uuid::Uuid::from_bytes(upcoming_salary.id)).await?;
+                    DbTransaction::new(vec![remove_salary_instruction(uuid::Uuid::from_bytes(upcoming_salary.id)).await?]).run().await?;
                     continue;
                 }
 
@@ -49,7 +48,7 @@ pub async fn establish_salaries() -> anyhow::Result<()> {
                     || from_account.frozen
                     || to_account.frozen
                 {
-                    remove_salary(uuid::Uuid::from_bytes(upcoming_salary.id)).await?;
+                    DbTransaction::new(vec![remove_salary_instruction(uuid::Uuid::from_bytes(upcoming_salary.id)).await?]).run().await?;
                     continue;
                 }
 
@@ -82,8 +81,9 @@ async fn pay_salary(
         run_at: new_run,
     };
 
-    edit_salary(&new_salary).await?;
-    transfer_pretzels(&from_account, &to_account, salary.amount).await?;
+    let mut instructions = vec![edit_salary_instruction(&new_salary).await?];
+    instructions.append(&mut transfer_pretzels_instruction(&from_account, &to_account, salary.amount).await?);
+    DbTransaction::new(instructions).run().await?;
 
     Ok(())
 }
