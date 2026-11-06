@@ -44,6 +44,8 @@ pub fn run_once() {
     tokio::spawn(purge(Arc::clone(&MODAL_INFO_MAP), Duration::from_hours(1)));
 }
 
+const INAPPROPRIATE_FLAGS: u64 = (1 << 4) | (1 << 6) | (1 << 7);
+
 #[instrument(skip_all, err)]
 pub async fn run(
     state: Arc<AppState>,
@@ -254,6 +256,24 @@ pub async fn modal(
                             .attachments
                             .get(file_id)
                             .ok_or_else(|| anyhow::anyhow!("Didn't find any attachments"))?;
+
+                        if file.flags.ok_or_else(|| anyhow::anyhow!("Doesn't have any flags"))?.bits() & INAPPROPRIATE_FLAGS != 0 {
+                            state
+                                .client
+                                .interaction(state.application_id)
+                                .create_response(
+                                    event.id,
+                                    &event.token,
+                                    &ChannelMessageBuilder::new()
+                                        .content("Detected innapropriate content in provided attachments")
+                                        .flags(MessageFlags::EPHEMERAL)
+                                        .build(),
+                                )
+                                .await?;
+                            tracing::error!("Detected innapropriate content by {}", event.author_id().ok_or_else(|| anyhow::anyhow!("No author id"))?.get());
+                            return Ok(());
+                        }
+                        
                         files.push(Attachment::from_bytes(
                             file.filename.clone(),
                             reqwest::get(&file.proxy_url).await?.bytes().await?.to_vec(),
