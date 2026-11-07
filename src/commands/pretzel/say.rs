@@ -428,7 +428,7 @@ pub async fn modal(
                                         .build(),
                                 )
                                 .await?;
-                            tracing::error!("Detected innapropriate content by {}", event.author_id().ok_or_else(|| anyhow::anyhow!("No author id"))?.get());
+                            tracing::error!("Detected inappropriate content by {}", event.author_id().ok_or_else(|| anyhow::anyhow!("No author id"))?.get());
                             return Ok(());
                         }
 
