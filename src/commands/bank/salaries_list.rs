@@ -53,7 +53,7 @@ pub async fn run(
     }
 
     let page = 1;
-    let salaries = match search_salaries(&bank_account, page).await? {
+    let salaries = match search_salaries(&bank_account, page - 1).await? {
         Some(salaries) => salaries,
         None => {
             respond(state.clone(), &event.token, "No salaries yet").await?;
@@ -69,7 +69,7 @@ pub async fn run(
         .flags(MessageFlags::IS_COMPONENTS_V2)
         .components(&[salaries_list_container(
             page.into(),
-            salaries,
+            &salaries,
             false,
             false,
             expiration_date,
@@ -85,8 +85,26 @@ pub async fn run(
 pub async fn previous_page(
     state: Arc<AppState>,
     event: Interaction,
-    data: MessageComponentInteractionData,
+    _data: MessageComponentInteractionData,
 ) -> anyhow::Result<()> {
+    let user_id = event
+        .author_id()
+        .ok_or_else(|| anyhow::anyhow!("No author id"))?;
+
+    let bank_account = get_bank_account(user_id)
+        .await?
+        .ok_or_else(|| anyhow::anyhow!("The bank account doesn't exist"))?;
+
+    if bank_account.frozen {
+        respond(
+            state.clone(),
+            &event.token,
+            "You are not allowed to delete a bank account",
+        )
+        .await?;
+        return Ok(());
+    }
+
     let container = if let Component::Container(container) = event
         .message
         .as_ref()
@@ -100,7 +118,7 @@ pub async fn previous_page(
         anyhow::bail!("Not a container component")
     };
 
-    let page_string = if let Component::TextDisplay(text) = container
+    let page = if let Component::TextDisplay(text) = container
         .components
         .get(2)
         .ok_or_else(|| anyhow::anyhow!("No component in the container"))?
@@ -132,6 +150,44 @@ pub async fn previous_page(
         anyhow::bail!("no text display component in the container")
     };
 
+    let salaries = search_salaries(&bank_account, page).await?;
+
+    if let Some(ref salaries) = salaries && (page <= 1 || Utc::now() > timestamp) {
+        state
+            .client
+            .interaction(state.application_id)
+            .update_followup(&event.token, event.message.ok_or_else(|| anyhow::anyhow!("No message in event"))?.id)
+            .components(Some(&[salaries_list_container(
+                page.into(),
+                salaries,
+                true,
+                if Utc::now() > timestamp {true} else {false},
+                timestamp,
+                &user_id,
+            )
+            .into()]))
+            .await?;
+
+        return Ok(());
+    }
+
+    let salaries = salaries.ok_or_else(|| anyhow::anyhow!("No salaries"))?;
+
+    state
+        .client
+        .interaction(state.application_id)
+        .update_followup(&event.token, event.message.ok_or_else(|| anyhow::anyhow!("No message in event"))?.id)
+        .components(Some(&[salaries_list_container(
+            page.into(),
+            &salaries,
+            false,
+            false,
+            timestamp,
+            &user_id,
+        )
+        .into()]))
+        .await?;
+
     Ok(())
 }
 
@@ -141,14 +197,113 @@ pub async fn next_page(
     event: Interaction,
     _data: MessageComponentInteractionData,
 ) -> anyhow::Result<()> {
-    todo!();
+    let user_id = event
+        .author_id()
+        .ok_or_else(|| anyhow::anyhow!("No author id"))?;
+
+    let bank_account = get_bank_account(user_id)
+        .await?
+        .ok_or_else(|| anyhow::anyhow!("The bank account doesn't exist"))?;
+
+    if bank_account.frozen {
+        respond(
+            state.clone(),
+            &event.token,
+            "You are not allowed to delete a bank account",
+        )
+        .await?;
+        return Ok(());
+    }
+
+    let container = if let Component::Container(container) = event
+        .message
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("No message in button component"))?
+        .components
+        .get(0)
+        .ok_or_else(|| anyhow::anyhow!("No components"))?
+    {
+        container
+    } else {
+        anyhow::bail!("Not a container component")
+    };
+
+    let page = if let Component::TextDisplay(text) = container
+        .components
+        .get(2)
+        .ok_or_else(|| anyhow::anyhow!("No component in the container"))?
+    {
+        text.content
+            .strip_prefix("Page:")
+            .ok_or_else(|| anyhow::anyhow!("No \"Page:\" prefix"))?
+            .parse::<u32>()?
+    } else {
+        anyhow::bail!("no text display component in the container")
+    };
+
+    let timestamp = if let Component::TextDisplay(text) = container
+        .components
+        .get(1)
+        .ok_or_else(|| anyhow::anyhow!("No component in the container"))?
+    {
+        chrono::DateTime::from_timestamp(
+            text.content
+                .strip_prefix("Expires in <t:")
+                .ok_or_else(|| anyhow::anyhow!("No \"Expires in <t:\" prefix"))?
+                .strip_suffix(":R>")
+                .ok_or_else(|| anyhow::anyhow!("No \":R>\" suffifx"))?
+                .parse::<i64>()?,
+            0,
+        )
+        .ok_or_else(|| anyhow::anyhow!("Invalid timestamp"))?
+    } else {
+        anyhow::bail!("no text display component in the container")
+    };
+
+    let salaries = search_salaries(&bank_account, page + 1).await?;
+
+    if let Some(ref salaries) = salaries && (page <= 1 || Utc::now() > timestamp) {
+        state
+            .client
+            .interaction(state.application_id)
+            .update_followup(&event.token, event.message.ok_or_else(|| anyhow::anyhow!("No message in event"))?.id)
+            .components(Some(&[salaries_list_container(
+                page.into(),
+                salaries,
+                if Utc::now() > timestamp {true} else {false},
+                true,
+                timestamp,
+                &user_id,
+            )
+            .into()]))
+            .await?;
+
+        return Ok(());
+    }
+
+    let salaries = salaries.ok_or_else(|| anyhow::anyhow!("No salaries"))?;
+
+    state
+        .client
+        .interaction(state.application_id)
+        .update_followup(&event.token, event.message.ok_or_else(|| anyhow::anyhow!("No message in event"))?.id)
+        .components(Some(&[salaries_list_container(
+            page.into(),
+            &salaries,
+            false,
+            false,
+            timestamp,
+            &user_id,
+        )
+        .into()]))
+        .await?;
 
     Ok(())
 }
 
 fn salaries_list_container(
     page: u32,
-    salaries: Vec<Salary>,
+    salaries: &Vec<Salary>,
     previous_page_disabled: bool,
     next_page_disabled: bool,
     expiration_date: DateTime<Utc>,
