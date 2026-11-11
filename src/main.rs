@@ -24,8 +24,7 @@ use twilight_model::{
 };
 
 use crate::{
-    commands::get_commands,
-    helpers::sync_configs::{get_receiver, set_watch},
+    commands::{bank::db::connection::establish_database, get_commands}, helpers::sync_configs::{get_receiver, set_watch},
 };
 
 #[derive(Deserialize, Clone, Default, Debug)]
@@ -82,7 +81,7 @@ async fn main() -> anyhow::Result<()> {
     commands::pretzel::say::run_once();
     commands::pretzel::edit::run_once();
 
-    //establish_database(&configs.database_url).await?;
+    establish_database(&configs.database_url).await?;
 
     set_watch(Arc::new(AppState {
         client: Arc::clone(&client),
