@@ -15,7 +15,9 @@ use twilight_gateway::{
 };
 use twilight_http::Client;
 use twilight_model::{
-    application::interaction::InteractionData, gateway::payload::incoming::InteractionCreate, id::{
+    application::interaction::InteractionData,
+    gateway::payload::incoming::InteractionCreate,
+    id::{
         Id,
         marker::{ApplicationMarker, ChannelMarker, UserMarker},
     },
@@ -121,9 +123,9 @@ async fn dispatcher(
 
                 match event {
                     Event::GatewayClose(_) if *shutdown.borrow() => break,
-                    Event::InteractionCreate(e) => {          
+                    Event::InteractionCreate(e) => {
                         let InteractionCreate(mut interaction) = *e;
-                        
+
                         match interaction.data.take() {
                             Some(InteractionData::ApplicationCommand(data)) => {
                                 tokio::spawn(commands::cmd_handler(state, interaction, *data));

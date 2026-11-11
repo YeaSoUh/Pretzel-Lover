@@ -13,10 +13,8 @@ use twilight_model::{
     http::interaction::InteractionResponseData,
     oauth::ApplicationIntegrationType,
 };
-use twilight_util::builder::{
-    command::{
-        BooleanBuilder, ChannelBuilder, CommandBuilder, IntegerBuilder, StringBuilder, UserBuilder,
-    },
+use twilight_util::builder::command::{
+    BooleanBuilder, ChannelBuilder, CommandBuilder, IntegerBuilder, StringBuilder, UserBuilder,
 };
 
 use crate::{AppState, Configs, commands};
@@ -249,6 +247,10 @@ pub fn get_commands(configs: &Configs) -> anyhow::Result<Vec<Command>> {
         .contexts(vec![InteractionContextType::Guild])
         .validate()?
         .build(),
+        CommandBuilder::new("salaries", "Check your salaries", CommandType::ChatInput)
+            .contexts(vec![InteractionContextType::Guild])
+            .validate()?
+            .build(),
     ])
 }
 

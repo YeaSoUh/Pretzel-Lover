@@ -29,19 +29,17 @@ pub async fn execute(
         }
 
         match failure {
-            None => {
-                match conn.execute("COMMIT", ()).await {
-                    Ok(_) => return Ok(DbResults::new(results)),
-                    Err(e) if is_retryable(&e) => {
-                        let _ = conn.execute("ROLLBACK", ()).await;
-                        tracing::warn!(?e, attempt, "Commit conflict, retrying");
-                    }
-                    Err(e) => {
-                        let _ = conn.execute("ROLLBACK", ()).await;
-                        return Err(e.into());
-                    }
+            None => match conn.execute("COMMIT", ()).await {
+                Ok(_) => return Ok(DbResults::new(results)),
+                Err(e) if is_retryable(&e) => {
+                    let _ = conn.execute("ROLLBACK", ()).await;
+                    tracing::warn!(?e, attempt, "Commit conflict, retrying");
                 }
-            }
+                Err(e) => {
+                    let _ = conn.execute("ROLLBACK", ()).await;
+                    return Err(e.into());
+                }
+            },
             Some(e) if is_retryable(&e) => {
                 let _ = conn.execute("ROLLBACK", ()).await;
                 tracing::warn!(?e, attempt, "Retrying request");

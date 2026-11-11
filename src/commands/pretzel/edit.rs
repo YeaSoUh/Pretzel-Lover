@@ -8,21 +8,29 @@ use tokio::time::Instant;
 use tracing::instrument;
 use twilight_model::{
     application::interaction::{
-        Interaction, application_command::{CommandData, CommandOptionValue}, modal::{ModalInteractionComponent, ModalInteractionData},
-    }, channel::message::{
+        Interaction,
+        application_command::{CommandData, CommandOptionValue},
+        modal::{ModalInteractionComponent, ModalInteractionData},
+    },
+    channel::message::{
         AllowedMentions, Component, MentionType, MessageFlags,
         component::{TextInput, TextInputStyle},
-    }, http::attachment::Attachment, id::{
+    },
+    http::attachment::Attachment,
+    id::{
         Id,
         marker::{ChannelMarker, MessageMarker},
     },
 };
-use twilight_util::builder::{interaction_response::{ChannelMessageBuilder, ModalBuilder}, message::{FileUploadBuilder, LabelBuilder, TextDisplayBuilder}};
+use twilight_util::builder::{
+    interaction_response::{ChannelMessageBuilder, ModalBuilder},
+    message::{FileUploadBuilder, LabelBuilder, TextDisplayBuilder},
+};
 use uuid::Uuid;
 
 use crate::{
     AppState,
-    commands::pretzel::helpers::purge::{Expiring, purge}
+    commands::pretzel::helpers::purge::{Expiring, purge},
 };
 
 struct ModalInfo {
@@ -61,7 +69,8 @@ pub async fn run(
     if (!user_roles.contains(&Id::new(1410929363863732234)) // co-owner
         && !user_roles.contains(&Id::new(1410929110502608896)) // owner
         && !user_roles.contains(&Id::new(1559773167780626453))) // magellanic president
-    && user.user.as_ref().ok_or_else(|| anyhow::anyhow!("No user"))?.id != Id::new(1021835061433225296) // owner of the bot
+    && user.user.as_ref().ok_or_else(|| anyhow::anyhow!("No user"))?.id != Id::new(1021835061433225296)
+    // owner of the bot
     {
         state
             .client
@@ -193,11 +202,7 @@ pub async fn run(
     state
         .client
         .interaction(state.application_id)
-        .create_response(
-            event.id,
-            &event.token,
-            &modal,
-        )
+        .create_response(event.id, &event.token, &modal)
         .await?;
 
     MODAL_INFO_MAP.insert(
@@ -258,7 +263,13 @@ pub async fn modal(
                             .get(file_id)
                             .ok_or_else(|| anyhow::anyhow!("Didn't find any attachments"))?;
 
-                        if file.flags.ok_or_else(|| anyhow::anyhow!("Doesn't have any flags"))?.bits() & INAPPROPRIATE_FLAGS != 0 {
+                        if file
+                            .flags
+                            .ok_or_else(|| anyhow::anyhow!("Doesn't have any flags"))?
+                            .bits()
+                            & INAPPROPRIATE_FLAGS
+                            != 0
+                        {
                             state
                                 .client
                                 .interaction(state.application_id)
@@ -271,10 +282,16 @@ pub async fn modal(
                                         .build(),
                                 )
                                 .await?;
-                            tracing::error!("Detected inappropriate content by {}", event.author_id().ok_or_else(|| anyhow::anyhow!("No author id"))?.get());
+                            tracing::error!(
+                                "Detected inappropriate content by {}",
+                                event
+                                    .author_id()
+                                    .ok_or_else(|| anyhow::anyhow!("No author id"))?
+                                    .get()
+                            );
                             return Ok(());
                         }
-                        
+
                         files.push(Attachment::from_bytes(
                             file.filename.clone(),
                             reqwest::get(&file.proxy_url).await?.bytes().await?.to_vec(),

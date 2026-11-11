@@ -2,7 +2,9 @@ use std::sync::Arc;
 
 use tracing::instrument;
 use twilight_model::{
-    application::interaction::{Interaction, application_command::CommandData}, channel::message::MessageFlags, id::Id,
+    application::interaction::{Interaction, application_command::CommandData},
+    channel::message::MessageFlags,
+    id::Id,
 };
 
 use crate::{AppState, commands, helpers::sync_configs::update_configs};

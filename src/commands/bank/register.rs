@@ -1,13 +1,16 @@
 use std::sync::Arc;
 
 use tracing::instrument;
-use twilight_model::{
-    application::interaction::{Interaction, application_command::CommandData}
-};
+use twilight_model::application::interaction::{Interaction, application_command::CommandData};
 
 use crate::{
-    AppState, commands::{
-        bank::db::{connection::edit_bank_account_instruction, internal_types::{BankAccount, DbTransaction}}, defer, respond,
+    AppState,
+    commands::{
+        bank::db::{
+            connection::edit_bank_account_instruction,
+            internal_types::{BankAccount, DbTransaction},
+        },
+        defer, respond,
     },
 };
 
@@ -47,7 +50,9 @@ pub async fn run(
         frozen: false,
     };
 
-    DbTransaction::new(vec![edit_bank_account_instruction(&bank_account).await?]).run().await?;
+    DbTransaction::new(vec![edit_bank_account_instruction(&bank_account).await?])
+        .run()
+        .await?;
 
     respond(
         state.clone(),

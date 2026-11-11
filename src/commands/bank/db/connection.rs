@@ -8,8 +8,10 @@ use turso::Builder;
 use twilight_model::id::{Id, marker::UserMarker};
 
 use crate::{
-    commands::bank::db::internal_types::{BankAccount, BankAccounts, Salaries, Salary}, db::{
-        helpers::execute, types::{DatabaseStruct, DbInstruction},
+    commands::bank::db::internal_types::{BankAccount, BankAccounts, Salaries, Salary},
+    db::{
+        helpers::execute,
+        types::{DatabaseStruct, DbInstruction},
     },
 };
 
@@ -247,7 +249,7 @@ pub async fn edit_salary_instruction(query: &Salary) -> anyhow::Result<DbInstruc
             })
         })
         .collect::<anyhow::Result<_>>()?;
-    
+
     Ok(DbInstruction::Execute {
         execute: sql.into(),
         params: turso_params,
@@ -255,7 +257,9 @@ pub async fn edit_salary_instruction(query: &Salary) -> anyhow::Result<DbInstruc
 }
 
 #[instrument(err)]
-pub async fn edit_bank_account_instruction(bank_account: &BankAccount) -> anyhow::Result<DbInstruction> {
+pub async fn edit_bank_account_instruction(
+    bank_account: &BankAccount,
+) -> anyhow::Result<DbInstruction> {
     let (sql, query_values) = {
         let columns = vec![
             BankAccounts::AccountId,
@@ -329,7 +333,9 @@ pub async fn get_bank_account(account_id: Id<UserMarker>) -> anyhow::Result<Opti
 }
 
 #[instrument(err)]
-pub async fn delete_bank_account_instruction(bank_account: &BankAccount) -> anyhow::Result<Vec<DbInstruction>> {
+pub async fn delete_bank_account_instruction(
+    bank_account: &BankAccount,
+) -> anyhow::Result<Vec<DbInstruction>> {
     Ok(vec![
         DbInstruction::Execute {
             execute: Cow::Borrowed("DELETE FROM bank_accounts WHERE account_id = ?1"),

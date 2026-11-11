@@ -75,7 +75,8 @@ pub async fn run(
     if (!user_roles.contains(&Id::new(1410929363863732234)) // co-owner
         && !user_roles.contains(&Id::new(1410929110502608896)) // owner
         && !user_roles.contains(&Id::new(1559773167780626453))) // magellanic president
-    && user.user.as_ref().ok_or_else(|| anyhow::anyhow!("No user"))?.id != Id::new(1021835061433225296) // owner of the bot
+    && user.user.as_ref().ok_or_else(|| anyhow::anyhow!("No user"))?.id != Id::new(1021835061433225296)
+    // owner of the bot
     {
         state
             .client

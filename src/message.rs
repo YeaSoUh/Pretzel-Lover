@@ -7,7 +7,13 @@ use crate::AppState;
 
 #[tracing::instrument(fields(user = ?event.author.id), skip_all, err)]
 pub async fn msg_handler(state: Arc<AppState>, event: Box<MessageCreate>) -> anyhow::Result<()> {
-    if event.author.bot || (event.content.is_empty() && event.attachments.is_empty()) || event.guild_id.ok_or_else(||anyhow::anyhow!("Message wasn't send in a guild"))? == Id::new(1559771694145601566) {
+    if event.author.bot
+        || (event.content.is_empty() && event.attachments.is_empty())
+        || event
+            .guild_id
+            .ok_or_else(|| anyhow::anyhow!("Message wasn't send in a guild"))?
+            == Id::new(1559771694145601566)
+    {
         return Ok(());
     }
 

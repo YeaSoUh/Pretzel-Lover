@@ -1,4 +1,9 @@
-use std::{borrow::Cow, ops::{Deref, DerefMut}, sync::Arc, time::Duration};
+use std::{
+    borrow::Cow,
+    ops::{Deref, DerefMut},
+    sync::Arc,
+    time::Duration,
+};
 
 use turso::{Connection, Database, Rows, Value};
 
@@ -44,11 +49,9 @@ pub struct DbResults {
 
 impl DbResults {
     pub fn new(results: Vec<DbResult>) -> Self {
-        Self {
-            results,
-        }
+        Self { results }
     }
-    
+
     pub fn into_inner(self) -> Vec<DbResult> {
         self.results
     }
@@ -56,7 +59,7 @@ impl DbResults {
     pub fn as_u64(&self) -> Option<u64> {
         self.first()?.as_u64()
     }
-    
+
     pub fn into_rows(self) -> Option<Rows> {
         self.results.into_iter().next()?.into_rows()
     }

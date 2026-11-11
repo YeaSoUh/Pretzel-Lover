@@ -2,7 +2,11 @@ use std::sync::Arc;
 
 use tracing::instrument;
 use twilight_model::{
-    application::interaction::{Interaction, application_command::{CommandData, CommandOptionValue}}, channel::message::MessageFlags,
+    application::interaction::{
+        Interaction,
+        application_command::{CommandData, CommandOptionValue},
+    },
+    channel::message::MessageFlags,
 };
 
 use crate::{

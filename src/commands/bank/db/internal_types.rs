@@ -233,7 +233,7 @@ impl Payment {
     // aka pay
     pub async fn process_payment(&self) -> anyhow::Result<()> {
         let db = get_db()?;
-        
+
         let from_account;
         if let Some(bank_account) = get_bank_account(self.to_account).await? {
             from_account = bank_account;
@@ -259,7 +259,13 @@ impl Payment {
             anyhow::bail!("Frozen account")
         }
 
-        execute(db, transfer_pretzels_instruction(&from_account, &to_account, self.amount).await?.as_slice()).await?;
+        execute(
+            db,
+            transfer_pretzels_instruction(&from_account, &to_account, self.amount)
+                .await?
+                .as_slice(),
+        )
+        .await?;
 
         Ok(())
     }

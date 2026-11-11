@@ -1,8 +1,9 @@
 use std::sync::Arc;
 
 use tracing::instrument;
-use twilight_model::{
-    application::interaction::{Interaction, application_command::{CommandData, CommandOptionValue}}
+use twilight_model::application::interaction::{
+    Interaction,
+    application_command::{CommandData, CommandOptionValue},
 };
 
 use crate::{

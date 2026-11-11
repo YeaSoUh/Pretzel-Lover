@@ -4,11 +4,14 @@ use chrono::{DateTime, Utc};
 use tracing::instrument;
 use twilight_model::{
     application::interaction::{
-        Interaction, application_command::CommandData, message_component::MessageComponentInteractionData,
-    }, channel::message::{
+        Interaction, application_command::CommandData,
+        message_component::MessageComponentInteractionData,
+    },
+    channel::message::{
         Component, EmojiReactionType, MessageFlags,
         component::{ButtonStyle, Container, SeparatorSpacingSize},
-    }, id::{Id, marker::UserMarker},
+    },
+    id::{Id, marker::UserMarker},
 };
 use twilight_util::builder::message::{
     ActionRowBuilder, ButtonBuilder, ContainerBuilder, SeparatorBuilder, TextDisplayBuilder,
@@ -152,16 +155,24 @@ pub async fn previous_page(
 
     let salaries = search_salaries(&bank_account, page).await?;
 
-    if let Some(ref salaries) = salaries && (page <= 1 || Utc::now() > timestamp) {
+    if let Some(ref salaries) = salaries
+        && (page <= 1 || Utc::now() > timestamp)
+    {
         state
             .client
             .interaction(state.application_id)
-            .update_followup(&event.token, event.message.ok_or_else(|| anyhow::anyhow!("No message in event"))?.id)
+            .update_followup(
+                &event.token,
+                event
+                    .message
+                    .ok_or_else(|| anyhow::anyhow!("No message in event"))?
+                    .id,
+            )
             .components(Some(&[salaries_list_container(
                 page.into(),
                 salaries,
                 true,
-                if Utc::now() > timestamp {true} else {false},
+                if Utc::now() > timestamp { true } else { false },
                 timestamp,
                 &user_id,
             )
@@ -176,7 +187,13 @@ pub async fn previous_page(
     state
         .client
         .interaction(state.application_id)
-        .update_followup(&event.token, event.message.ok_or_else(|| anyhow::anyhow!("No message in event"))?.id)
+        .update_followup(
+            &event.token,
+            event
+                .message
+                .ok_or_else(|| anyhow::anyhow!("No message in event"))?
+                .id,
+        )
         .components(Some(&[salaries_list_container(
             page.into(),
             &salaries,
@@ -262,15 +279,23 @@ pub async fn next_page(
 
     let salaries = search_salaries(&bank_account, page + 1).await?;
 
-    if let Some(ref salaries) = salaries && (page <= 1 || Utc::now() > timestamp) {
+    if let Some(ref salaries) = salaries
+        && (page <= 1 || Utc::now() > timestamp)
+    {
         state
             .client
             .interaction(state.application_id)
-            .update_followup(&event.token, event.message.ok_or_else(|| anyhow::anyhow!("No message in event"))?.id)
+            .update_followup(
+                &event.token,
+                event
+                    .message
+                    .ok_or_else(|| anyhow::anyhow!("No message in event"))?
+                    .id,
+            )
             .components(Some(&[salaries_list_container(
                 page.into(),
                 salaries,
-                if Utc::now() > timestamp {true} else {false},
+                if Utc::now() > timestamp { true } else { false },
                 true,
                 timestamp,
                 &user_id,
@@ -286,7 +311,13 @@ pub async fn next_page(
     state
         .client
         .interaction(state.application_id)
-        .update_followup(&event.token, event.message.ok_or_else(|| anyhow::anyhow!("No message in event"))?.id)
+        .update_followup(
+            &event.token,
+            event
+                .message
+                .ok_or_else(|| anyhow::anyhow!("No message in event"))?
+                .id,
+        )
         .components(Some(&[salaries_list_container(
             page.into(),
             &salaries,

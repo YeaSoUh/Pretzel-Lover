@@ -2,14 +2,21 @@ use std::sync::Arc;
 
 use tracing::instrument;
 use twilight_model::{
-    application::interaction::{Interaction, application_command::{CommandData, CommandOptionValue}}, id::Id,
+    application::interaction::{
+        Interaction,
+        application_command::{CommandData, CommandOptionValue},
+    },
+    id::Id,
 };
 
 use crate::{
-    AppState, commands::{
+    AppState,
+    commands::{
         bank::db::{
-            connection::{edit_bank_account_instruction, get_bank_account}, internal_types::{BankAccount, DbTransaction},
-        }, defer, respond,
+            connection::{edit_bank_account_instruction, get_bank_account},
+            internal_types::{BankAccount, DbTransaction},
+        },
+        defer, respond,
     },
 };
 
@@ -30,7 +37,8 @@ pub async fn run(
     if (!user_roles.contains(&Id::new(1410929363863732234)) // co-owner
             && !user_roles.contains(&Id::new(1410929110502608896)) // owner
             && !user_roles.contains(&Id::new(1559773167780626453))) // magellanic president
-        && user.user.as_ref().ok_or_else(|| anyhow::anyhow!("No user"))?.id != Id::new(1021835061433225296) // owner of the bot
+        && user.user.as_ref().ok_or_else(|| anyhow::anyhow!("No user"))?.id != Id::new(1021835061433225296)
+    // owner of the bot
     {
         respond(state.clone(), &event.token, "Not allowed to run command").await?;
         return Ok(()); // just to suppress error
@@ -61,7 +69,11 @@ pub async fn run(
         amount: old_bank_account.amount,
         frozen: !old_bank_account.frozen,
     };
-    DbTransaction::new(vec![edit_bank_account_instruction(&new_bank_account).await?]).run().await?;
+    DbTransaction::new(vec![
+        edit_bank_account_instruction(&new_bank_account).await?,
+    ])
+    .run()
+    .await?;
 
     respond(
         state.clone(),
