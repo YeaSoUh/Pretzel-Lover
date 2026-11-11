@@ -56,7 +56,7 @@ pub async fn run(
     }
 
     let page = 1;
-    let salaries = match search_salaries(&bank_account, page - 1).await? {
+    let salaries = match search_salaries(&bank_account, page).await? {
         Some(salaries) => salaries,
         None => {
             respond(state.clone(), &event.token, "No salaries yet").await?;
@@ -128,7 +128,7 @@ pub async fn previous_page(
     {
         text.content
             .strip_prefix("Page:")
-            .ok_or_else(|| anyhow::anyhow!("No \"Page:\" prefix"))?
+            .ok_or_else(|| anyhow::anyhow!("No \"Page\" prefix"))?
             .parse::<u32>()?
     } else {
         anyhow::bail!("no text display component in the container")
@@ -252,7 +252,7 @@ pub async fn next_page(
     {
         text.content
             .strip_prefix("Page:")
-            .ok_or_else(|| anyhow::anyhow!("No \"Page:\" prefix"))?
+            .ok_or_else(|| anyhow::anyhow!("No \"Page\" prefix"))?
             .parse::<u32>()?
     } else {
         anyhow::bail!("no text display component in the container")

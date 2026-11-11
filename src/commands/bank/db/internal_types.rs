@@ -235,7 +235,7 @@ impl Payment {
         let db = get_db()?;
 
         let from_account;
-        if let Some(bank_account) = get_bank_account(self.to_account).await? {
+        if let Some(bank_account) = get_bank_account(self.from_account).await? {
             from_account = bank_account;
         } else {
             return Err(anyhow::anyhow!(

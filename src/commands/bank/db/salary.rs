@@ -9,7 +9,7 @@ use crate::commands::bank::db::{
     },
     internal_types::{
         BankAccount, DbTransaction, Salary,
-        SalaryState::{Due, Wait},
+        SalaryState::Wait,
     },
 };
 
@@ -25,13 +25,14 @@ pub async fn establish_salaries() -> anyhow::Result<()> {
 
         match upcoming_salary_option {
             Some(upcoming_salary) => {
+                if let Wait(duration) = upcoming_salary.state() {
+                    tokio::time::sleep(duration).await;
+                }
                 let from_account;
                 if let Some(bank_account) = get_bank_account(upcoming_salary.from_account).await? {
                     from_account = bank_account;
                 } else {
-                    tracing::error!(
-                        "Bank account sending salary doesn't exist; Deleted the salary just in case"
-                    );
+                    tracing::error!("Bank account sending salary doesn't exist;");
                     DbTransaction::new(vec![
                         remove_salary_instruction(uuid::Uuid::from_bytes(upcoming_salary.id))
                             .await?,
@@ -45,9 +46,7 @@ pub async fn establish_salaries() -> anyhow::Result<()> {
                 if let Some(bank_account) = get_bank_account(upcoming_salary.to_account).await? {
                     to_account = bank_account;
                 } else {
-                    tracing::error!(
-                        "Bank account receiving salary doesn't exist; Deleted the salary just in case"
-                    );
+                    tracing::error!("Bank account receiving salary doesn't exist");
                     DbTransaction::new(vec![
                         remove_salary_instruction(uuid::Uuid::from_bytes(upcoming_salary.id))
                             .await?,
@@ -69,13 +68,9 @@ pub async fn establish_salaries() -> anyhow::Result<()> {
                     .await?;
                     continue;
                 }
-
-                match upcoming_salary.state() {
-                    Due => pay_salary(&upcoming_salary, &from_account, &to_account).await?,
-                    Wait(duration) => {
-                        tokio::time::sleep(duration).await;
-                        pay_salary(&upcoming_salary, &from_account, &to_account).await?;
-                    }
+                let result = pay_salary(&upcoming_salary, &from_account, &to_account).await;
+                if result.is_err() {
+                    tokio::time::sleep(Duration::from_secs(10)).await
                 }
             }
             None => tokio::time::sleep(Duration::from_mins(5)).await,

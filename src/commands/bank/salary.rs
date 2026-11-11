@@ -69,6 +69,16 @@ pub async fn run(
     let interval_hours =
         interval_hours.ok_or_else(|| anyhow::anyhow!("Missing interval_hours option"))?;
 
+    if user_id_from == user_id_to {
+        anyhow::bail!("Can't give yourself money")
+    }
+    if amount_to_transfer < 0 {
+        anyhow::bail!("Can't have negative amount")
+    }
+    if interval_hours < 0 {
+        anyhow::bail!("Can't have negative time")
+    }
+
     let salary = Salary {
         id: *uuid::Uuid::now_v7().as_bytes(),
         from_account: user_id_from,

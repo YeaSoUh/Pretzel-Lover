@@ -3,6 +3,7 @@ use std::{
     sync::{Arc, OnceLock},
 };
 
+use sea_query::ExprTrait;
 use tracing::instrument;
 use turso::Builder;
 use twilight_model::id::{Id, marker::UserMarker};
@@ -38,7 +39,7 @@ pub async fn establish_database(database_url: &str) -> anyhow::Result<()> {
             execute: Cow::Borrowed(
                 "CREATE TABLE IF NOT EXISTS bank_accounts (
             account_id INTEGER NOT NULL PRIMARY KEY,
-            amount     INTEGER NOT NULL,
+            amount     INTEGER NOT NULL CHECK (amount > 0),
             frozen     BOOLEAN NOT NULL
             ) STRICT;",
             ),
@@ -163,7 +164,9 @@ pub async fn search_salaries(
     let payments = execute(
         &db,
         vec![DbInstruction::Query {
-            query: Cow::Borrowed("SELECT * FROM salaries WHERE from = ?1 LIMIT ?2 OFFSET ?3"),
+            query: Cow::Borrowed(
+                "SELECT * FROM salaries WHERE from_account = ?1 LIMIT ?2 OFFSET ?3",
+            ),
             params: vec![
                 (bank_account.account_id.get() as i64).into(),
                 per_page.into(),
@@ -342,7 +345,9 @@ pub async fn delete_bank_account_instruction(
             params: vec![(bank_account.account_id.get() as i64).into()],
         },
         DbInstruction::Execute {
-            execute: Cow::Borrowed(r#"DELETE FROM salaries WHERE "from" = ?1 OR "to" = ?1"#),
+            execute: Cow::Borrowed(
+                "DELETE FROM salaries WHERE from_account = ?1 OR to_account = ?1",
+            ),
             params: vec![(bank_account.account_id.get() as i64).into()],
         },
     ])
@@ -362,7 +367,7 @@ pub async fn transfer_pretzels_instruction(
         ];
         let values: Vec<sea_query::SimpleExpr> = vec![
             from.account_id.get().into(),
-            (from.amount - amount).into(),
+            from.amount.into(),
             from.frozen.into(),
         ];
 
@@ -372,7 +377,12 @@ pub async fn transfer_pretzels_instruction(
             .values(values)?
             .on_conflict(
                 sea_query::OnConflict::column(BankAccounts::AccountId)
-                    .update_columns([BankAccounts::Frozen, BankAccounts::Amount])
+                    .update_column(BankAccounts::Frozen)
+                    .value(
+                        BankAccounts::Amount,
+                        sea_query::Expr::col(BankAccounts::Amount)
+                            .sub(sea_query::Expr::value(amount)),
+                    )
                     .to_owned(),
             )
             .build(sea_query::SqliteQueryBuilder);
@@ -384,7 +394,7 @@ pub async fn transfer_pretzels_instruction(
         ];
         let values: Vec<sea_query::SimpleExpr> = vec![
             to.account_id.get().into(),
-            (to.amount + amount).into(),
+            to.amount.into(),
             to.frozen.into(),
         ];
 
@@ -394,7 +404,12 @@ pub async fn transfer_pretzels_instruction(
             .values(values)?
             .on_conflict(
                 sea_query::OnConflict::column(BankAccounts::AccountId)
-                    .update_columns([BankAccounts::Frozen, BankAccounts::Amount])
+                    .update_column(BankAccounts::Frozen)
+                    .value(
+                        BankAccounts::Amount,
+                        sea_query::Expr::col(BankAccounts::Amount)
+                            .add(sea_query::Expr::value(amount)),
+                    )
                     .to_owned(),
             )
             .build(sea_query::SqliteQueryBuilder);

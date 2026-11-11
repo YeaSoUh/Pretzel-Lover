@@ -59,6 +59,13 @@ pub async fn run(
         amount_to_transfer.ok_or_else(|| anyhow::anyhow!("Missing amount option"))?;
     let reason = reason.ok_or_else(|| anyhow::anyhow!("Missing reason option"))?;
 
+    if user_id_from == user_id_to {
+        anyhow::bail!("Can't give yourself money")
+    }
+    if amount_to_transfer < 0 {
+        anyhow::bail!("Can't have negative amount")
+    }
+
     let payment = Payment {
         from_account: user_id_from,
         to_account: user_id_to,
