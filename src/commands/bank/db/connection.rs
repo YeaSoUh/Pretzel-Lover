@@ -28,10 +28,6 @@ pub async fn establish_database(database_url: &str) -> anyhow::Result<()> {
         database: Arc::new(db),
     })
     .map_err(|_| anyhow::anyhow!("DB is already initialized"))?;
-
-    let db = DB
-        .get()
-        .ok_or_else(|| anyhow::anyhow!("DB is not initialized"))?;
     
     Ok(())
 }
