@@ -28,7 +28,58 @@ pub async fn establish_database(database_url: &str) -> anyhow::Result<()> {
         database: Arc::new(db),
     })
     .map_err(|_| anyhow::anyhow!("DB is already initialized"))?;
-    
+
+    let db = DB
+        .get()
+        .ok_or_else(|| anyhow::anyhow!("DB is not initialized"))?;
+
+    execute(
+        &db,
+        vec![DbInstruction::Execute {
+            execute: Cow::Borrowed(
+                "CREATE TABLE IF NOT EXISTS bank_accounts (
+                account_id INTEGER NOT NULL PRIMARY KEY,
+                amount     INTEGER NOT NULL CHECK (amount > 0),
+                frozen     BOOLEAN NOT NULL
+                ) STRICT;",
+            ),
+            params: Vec::new(),
+        }]
+        .as_slice(),
+    )
+    .await?;
+
+    execute(
+        &db,
+        vec![DbInstruction::Execute {
+            execute: Cow::Borrowed(
+                "CREATE TABLE IF NOT EXISTS salaries (
+                id             UUID NOT NULL PRIMARY KEY CHECK (length(id) = 16),
+                from_account   INTEGER NOT NULL,
+                to_account     INTEGER NOT NULL,
+                amount         INTEGER NOT NULL CHECK (amount > 0),
+                interval_hours INTEGER NOT NULL CHECK (interval_hours > 0),
+                run_at         TIMESTAMP NOT NULL
+                ) STRICT;",
+            ),
+            params: Vec::new(),
+        }]
+        .as_slice(),
+    )
+    .await?;
+
+    execute(
+        &db,
+        vec![DbInstruction::Execute {
+            execute: Cow::Borrowed(
+                "CREATE INDEX IF NOT EXISTS salaries_run_at ON salaries (run_at);",
+            ),
+            params: Vec::new(),
+        }]
+        .as_slice(),
+    )
+    .await?;
+
     Ok(())
 }
 
