@@ -280,6 +280,7 @@ pub async fn cmd_handler(
         "Sentence to Morgoft" => commands::pretzel::morgoft::run(state, event, data).await,
         "Add Employee Role" => commands::add_role_employee::run(state, event, data).await,
         "update_configs" => commands::update_configs::run(state, event, data).await,
+        "balance" => commands::bank::balance::run(state, event, data).await,
         "add_magells" => commands::bank::add_pretzels::run(state, event, data).await,
         "remove_magells" => commands::bank::remove_pretzels::run(state, event, data).await,
         "freeze_bank_account" => commands::bank::freeze::run(state, event, data).await,
