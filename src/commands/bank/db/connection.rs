@@ -36,7 +36,7 @@ pub async fn establish_database(database_url: &str) -> anyhow::Result<()> {
     conn.execute(
         "CREATE TABLE IF NOT EXISTS bank_accounts (
         account_id INTEGER NOT NULL PRIMARY KEY,
-        amount     INTEGER NOT NULL CHECK (amount > 0),
+        amount     INTEGER NOT NULL CHECK (amount >= 0),
         frozen     BOOLEAN NOT NULL
         ) STRICT;",
         (),
