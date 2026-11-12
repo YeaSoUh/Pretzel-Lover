@@ -49,7 +49,7 @@ pub async fn run(
         respond(
             state.clone(),
             &event.token,
-            "You are not allowed to delete a bank account",
+            "You are not allowed to run this command",
         )
         .await?;
         return Ok(());
@@ -102,7 +102,7 @@ pub async fn previous_page(
         respond(
             state.clone(),
             &event.token,
-            "You are not allowed to delete a bank account",
+            "You are not allowed to rurn this command",
         )
         .await?;
         return Ok(());
@@ -127,7 +127,7 @@ pub async fn previous_page(
         .ok_or_else(|| anyhow::anyhow!("No component in the container"))?
     {
         text.content
-            .strip_prefix("Page:")
+            .strip_prefix("Page ")
             .ok_or_else(|| anyhow::anyhow!("No \"Page\" prefix"))?
             .parse::<u32>()?
     } else {
@@ -251,7 +251,7 @@ pub async fn next_page(
         .ok_or_else(|| anyhow::anyhow!("No component in the container"))?
     {
         text.content
-            .strip_prefix("Page:")
+            .strip_prefix("Page ")
             .ok_or_else(|| anyhow::anyhow!("No \"Page\" prefix"))?
             .parse::<u32>()?
     } else {
