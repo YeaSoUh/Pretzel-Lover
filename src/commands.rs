@@ -121,6 +121,7 @@ pub fn get_commands(configs: &Configs) -> anyhow::Result<Vec<Command>> {
                 "Should Discord say the message's content?",
             ))
             .contexts(vec![InteractionContextType::Guild])
+            .integration_types(vec![ApplicationIntegrationType::GuildInstall])
             .validate()?
             .build(),
         CommandBuilder::new("edit", "Edits a message by a bot", CommandType::ChatInput)
@@ -128,6 +129,7 @@ pub fn get_commands(configs: &Configs) -> anyhow::Result<Vec<Command>> {
                 StringBuilder::new("message_url", "Insert a message link to edit").required(true),
             )
             .contexts(vec![InteractionContextType::Guild])
+            .integration_types(vec![ApplicationIntegrationType::GuildInstall])
             .validate()?
             .build(),
         CommandBuilder::new("Sentence to Morgoft", "", CommandType::User)
@@ -157,6 +159,7 @@ pub fn get_commands(configs: &Configs) -> anyhow::Result<Vec<Command>> {
         .option(UserBuilder::new("user", "Who to pay").required(true))
         .option(IntegerBuilder::new("amount", "Amount to transfer").required(true))
         .contexts(vec![InteractionContextType::Guild])
+        .integration_types(vec![ApplicationIntegrationType::GuildInstall])
         .validate()?
         .build(),
         CommandBuilder::new(
@@ -167,6 +170,7 @@ pub fn get_commands(configs: &Configs) -> anyhow::Result<Vec<Command>> {
         .option(UserBuilder::new("user", "User to remove magells from").required(true))
         .option(IntegerBuilder::new("amount", "Amount to remove").required(true))
         .contexts(vec![InteractionContextType::Guild])
+        .integration_types(vec![ApplicationIntegrationType::GuildInstall])
         .validate()?
         .build(),
         CommandBuilder::new(
@@ -176,6 +180,7 @@ pub fn get_commands(configs: &Configs) -> anyhow::Result<Vec<Command>> {
         )
         .option(UserBuilder::new("user", "User to freeze").required(true))
         .contexts(vec![InteractionContextType::Guild])
+        .integration_types(vec![ApplicationIntegrationType::GuildInstall])
         .validate()?
         .build(),
         CommandBuilder::new(
@@ -204,6 +209,7 @@ pub fn get_commands(configs: &Configs) -> anyhow::Result<Vec<Command>> {
         .option(UserBuilder::new("user", "Who to pay").required(true))
         .option(IntegerBuilder::new("amount", "Amount to transfer").required(true))
         .contexts(vec![InteractionContextType::Guild])
+        .integration_types(vec![ApplicationIntegrationType::GuildInstall])
         .validate()?
         .build(),
         CommandBuilder::new(
@@ -215,6 +221,7 @@ pub fn get_commands(configs: &Configs) -> anyhow::Result<Vec<Command>> {
         .option(IntegerBuilder::new("amount", "Amount to transfer").required(true))
         .option(IntegerBuilder::new("interval_hours", "How often to pay").required(true))
         .contexts(vec![InteractionContextType::Guild])
+        .integration_types(vec![ApplicationIntegrationType::GuildInstall])
         .validate()?
         .build(),
         CommandBuilder::new(
@@ -230,6 +237,7 @@ pub fn get_commands(configs: &Configs) -> anyhow::Result<Vec<Command>> {
             .required(false),
         )
         .contexts(vec![InteractionContextType::Guild])
+        .integration_types(vec![ApplicationIntegrationType::GuildInstall])
         .validate()?
         .build(),
         CommandBuilder::new(
@@ -245,6 +253,7 @@ pub fn get_commands(configs: &Configs) -> anyhow::Result<Vec<Command>> {
             .required(false),
         )
         .contexts(vec![InteractionContextType::Guild])
+        .integration_types(vec![ApplicationIntegrationType::GuildInstall])
         .validate()?
         .build(),
         CommandBuilder::new("salaries", "Check your salaries", CommandType::ChatInput)
