@@ -29,9 +29,7 @@ pub async fn establish_database(database_url: &str) -> anyhow::Result<()> {
     })
     .map_err(|_| anyhow::anyhow!("DB is already initialized"))?;
 
-    let db = DB
-        .get()
-        .ok_or_else(|| anyhow::anyhow!("DB is not initialized"))?;
+    let db = get_db()?;
 
     execute(
         &db,
