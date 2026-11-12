@@ -29,38 +29,6 @@ pub async fn establish_database(database_url: &str) -> anyhow::Result<()> {
     })
     .map_err(|_| anyhow::anyhow!("DB is already initialized"))?;
 
-    let db = get_db()?;
-
-    let conn = db.get_conn().await?;
-
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS bank_accounts (
-        account_id INTEGER NOT NULL PRIMARY KEY,
-        amount     INTEGER NOT NULL CHECK (amount >= 0),
-        frozen     BOOLEAN NOT NULL
-        ) STRICT;",
-        (),
-    )
-    .await?;
-
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS salaries (
-        id             UUID NOT NULL PRIMARY KEY CHECK (length(id) = 16),
-        from_account   INTEGER NOT NULL,
-        to_account     INTEGER NOT NULL,
-        amount         INTEGER NOT NULL CHECK (amount > 0),
-        interval_hours INTEGER NOT NULL CHECK (interval_hours > 0),
-        run_at         TIMESTAMP NOT NULL
-        ) STRICT;",
-        (),
-    )
-    .await?;
-
-    conn.execute(
-        "CREATE INDEX IF NOT EXISTS salaries_run_at ON salaries (run_at);",
-        (),
-    )
-    .await?;
     Ok(())
 }
 

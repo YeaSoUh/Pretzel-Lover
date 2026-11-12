@@ -285,6 +285,7 @@ pub async fn cmd_handler(
         "freeze_bank_account" => commands::bank::freeze::run(state, event, data).await,
         "register_bank_account" => commands::bank::register::run(state, event, data).await,
         "delete_bank_account" => commands::bank::delete_account::run(state, event, data).await,
+        "user_bank_information" => commands::bank::account_information::run(state, event, data).await,
         "transfer" => commands::bank::transfer::run(state, event, data).await,
         "salary" => commands::bank::salary::run(state, event, data).await,
         // discontinued too
