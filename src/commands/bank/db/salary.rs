@@ -7,10 +7,7 @@ use crate::commands::bank::db::{
         edit_salary_instruction, get_bank_account, get_coming_salary, remove_salary_instruction,
         transfer_pretzels_instruction,
     },
-    internal_types::{
-        BankAccount, DbTransaction, Salary,
-        SalaryState::Wait,
-    },
+    internal_types::{BankAccount, DbTransaction, Salary, SalaryState::Wait},
 };
 
 #[instrument(err)]

@@ -285,7 +285,13 @@ impl ComponentV2Logger for Payment {
                 .component(SeparatorBuilder::new().build())
                 .component(TextDisplayBuilder::new(format!("Amount: {}", self.amount)).build())
                 .component(SeparatorBuilder::new().build())
-                .component(TextDisplayBuilder::new(format!("Reason: {}", self.reason.as_deref().unwrap_or("No reason provided"))).build())
+                .component(
+                    TextDisplayBuilder::new(format!(
+                        "Reason: {}",
+                        self.reason.as_deref().unwrap_or("No reason provided")
+                    ))
+                    .build(),
+                )
                 .build(),
         )
     }

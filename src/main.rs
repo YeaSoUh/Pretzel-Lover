@@ -24,7 +24,8 @@ use twilight_model::{
 };
 
 use crate::{
-    commands::{bank::db::connection::establish_database, get_commands}, helpers::sync_configs::{get_receiver, set_watch},
+    commands::{bank::db::connection::establish_database, get_commands},
+    helpers::sync_configs::{get_receiver, set_watch},
 };
 
 #[derive(Deserialize, Clone, Default, Debug)]

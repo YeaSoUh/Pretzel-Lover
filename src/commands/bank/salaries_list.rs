@@ -13,8 +13,11 @@ use twilight_model::{
     },
     id::{Id, marker::UserMarker},
 };
-use twilight_util::builder::message::{
-    ActionRowBuilder, ButtonBuilder, ContainerBuilder, SeparatorBuilder, TextDisplayBuilder,
+use twilight_util::builder::{
+    interaction_response::UpdateMessageBuilder,
+    message::{
+        ActionRowBuilder, ButtonBuilder, ContainerBuilder, SeparatorBuilder, TextDisplayBuilder,
+    },
 };
 use uuid::Uuid;
 
@@ -102,7 +105,7 @@ pub async fn previous_page(
         respond(
             state.clone(),
             &event.token,
-            "You are not allowed to rurn this command",
+            "You are not allowed to run this command",
         )
         .await?;
         return Ok(());
@@ -161,22 +164,20 @@ pub async fn previous_page(
         state
             .client
             .interaction(state.application_id)
-            .update_followup(
+            .create_response(
+                event.id,
                 &event.token,
-                event
-                    .message
-                    .ok_or_else(|| anyhow::anyhow!("No message in event"))?
-                    .id,
+                &UpdateMessageBuilder::new()
+                    .components([salaries_list_container(
+                        page.into(),
+                        salaries,
+                        true,
+                        Utc::now() > timestamp,
+                        timestamp,
+                        &user_id,
+                    )])
+                    .build(),
             )
-            .components(Some(&[salaries_list_container(
-                page.into(),
-                salaries,
-                true,
-                if Utc::now() > timestamp { true } else { false },
-                timestamp,
-                &user_id,
-            )
-            .into()]))
             .await?;
 
         return Ok(());
@@ -226,7 +227,7 @@ pub async fn next_page(
         respond(
             state.clone(),
             &event.token,
-            "You are not allowed to delete a bank account",
+            "You are not allowed to run this command",
         )
         .await?;
         return Ok(());
@@ -285,22 +286,20 @@ pub async fn next_page(
         state
             .client
             .interaction(state.application_id)
-            .update_followup(
+            .create_response(
+                event.id,
                 &event.token,
-                event
-                    .message
-                    .ok_or_else(|| anyhow::anyhow!("No message in event"))?
-                    .id,
+                &UpdateMessageBuilder::new()
+                    .components([salaries_list_container(
+                        page.into(),
+                        salaries,
+                        Utc::now() > timestamp,
+                        true,
+                        timestamp,
+                        &user_id,
+                    )])
+                    .build(),
             )
-            .components(Some(&[salaries_list_container(
-                page.into(),
-                salaries,
-                if Utc::now() > timestamp { true } else { false },
-                true,
-                timestamp,
-                &user_id,
-            )
-            .into()]))
             .await?;
 
         return Ok(());
