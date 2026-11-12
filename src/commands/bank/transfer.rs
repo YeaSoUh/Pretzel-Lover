@@ -57,7 +57,7 @@ pub async fn run(
     let user_id_to = user_id_to.ok_or_else(|| anyhow::anyhow!("Missing user option"))?;
     let amount_to_transfer =
         amount_to_transfer.ok_or_else(|| anyhow::anyhow!("Missing amount option"))?;
-    let reason = reason.ok_or_else(|| anyhow::anyhow!("Missing reason option"))?;
+    reason = reason.filter(|x| !x.is_empty());
 
     if user_id_from == user_id_to {
         anyhow::bail!("Can't give yourself money")

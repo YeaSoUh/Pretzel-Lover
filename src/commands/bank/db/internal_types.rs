@@ -226,7 +226,7 @@ pub struct Payment {
     pub from_account: Id<UserMarker>,
     pub to_account: Id<UserMarker>,
     pub amount: i64,
-    pub reason: String,
+    pub reason: Option<String>,
 }
 
 impl Payment {
@@ -285,7 +285,7 @@ impl ComponentV2Logger for Payment {
                 .component(SeparatorBuilder::new().build())
                 .component(TextDisplayBuilder::new(format!("Amount: {}", self.amount)).build())
                 .component(SeparatorBuilder::new().build())
-                .component(TextDisplayBuilder::new(format!("Reason: {}", self.reason)).build())
+                .component(TextDisplayBuilder::new(format!("Reason: {}", self.reason.as_deref().unwrap_or("No reason provided"))).build())
                 .build(),
         )
     }

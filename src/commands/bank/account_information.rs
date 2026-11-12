@@ -39,11 +39,7 @@ pub async fn run(
     }
 
     let mut user_id = None;
-
-    if data.options.is_empty() {
-        anyhow::bail!("No options")
-    }
-
+    
     for option in &data.options {
         match (&*option.name, &option.value) {
             ("user", CommandOptionValue::User(user_id2)) => {

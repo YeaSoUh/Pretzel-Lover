@@ -258,6 +258,7 @@ pub fn get_commands(configs: &Configs) -> anyhow::Result<Vec<Command>> {
         .build(),
         CommandBuilder::new("salaries", "Check your salaries", CommandType::ChatInput)
             .contexts(vec![InteractionContextType::Guild])
+            .integration_types(vec![ApplicationIntegrationType::GuildInstall])
             .validate()?
             .build(),
     ])
@@ -289,6 +290,7 @@ pub async fn cmd_handler(
         "user_bank_information" => commands::bank::account_information::run(state, event, data).await,
         "transfer" => commands::bank::transfer::run(state, event, data).await,
         "salary" => commands::bank::salary::run(state, event, data).await,
+        "salaries" => commands::bank::salaries_list::run(state, event, data).await,
         // discontinued too
         // "channel_manager" => todo!(),
         // "kitty" => todo!(),
