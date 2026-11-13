@@ -36,7 +36,8 @@ pub async fn run(
 
     if (!user_roles.contains(&Id::new(1410929363863732234)) // co-owner
             && !user_roles.contains(&Id::new(1410929110502608896)) // owner
-            && !user_roles.contains(&Id::new(1559773167780626453))) // magellanic president
+            && !user_roles.contains(&Id::new(1559773167780626453)) // magellanic president
+            && !user_roles.contains(&Id::new(1569003594152149063))) // high rank officials
         && user.user.as_ref().ok_or_else(|| anyhow::anyhow!("No user"))?.id != Id::new(1021835061433225296)
     // owner of the bot
     {
@@ -65,9 +66,19 @@ pub async fn run(
     let user_id = user_id.ok_or_else(|| anyhow::anyhow!("Missing user option"))?;
     let amount_to_add = amount_to_add.ok_or_else(|| anyhow::anyhow!("Missing amount option"))?;
 
-    let old_bank_account = get_bank_account(user_id)
-        .await?
-        .ok_or_else(|| anyhow::anyhow!("The bank account doesn't exist"))?;
+    let old_bank_account = match get_bank_account(user_id).await? {
+        Some(bank) => bank,
+        None => {
+            respond(
+                state.clone(),
+                &event.token,
+                "You or the user you picked has no bank account registered",
+            )
+            .await?;
+
+            return Ok(());
+        }
+    };
 
     if old_bank_account.frozen {
         anyhow::bail!("The account is frozen")

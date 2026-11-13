@@ -73,9 +73,10 @@ pub async fn run(
     let user_roles = &user.roles;
 
     if (!user_roles.contains(&Id::new(1410929363863732234)) // co-owner
-        && !user_roles.contains(&Id::new(1410929110502608896)) // owner
-        && !user_roles.contains(&Id::new(1559773167780626453))) // magellanic president
-    && user.user.as_ref().ok_or_else(|| anyhow::anyhow!("No user"))?.id != Id::new(1021835061433225296)
+            && !user_roles.contains(&Id::new(1410929110502608896)) // owner
+            && !user_roles.contains(&Id::new(1559773167780626453)) // magellanic president
+            && !user_roles.contains(&Id::new(1569003594152149063))) // high rank officials
+        && user.user.as_ref().ok_or_else(|| anyhow::anyhow!("No user"))?.id != Id::new(1021835061433225296)
     // owner of the bot
     {
         state
@@ -418,33 +419,33 @@ pub async fn modal(
                             .get(file_id)
                             .ok_or_else(|| anyhow::anyhow!("Didn't find any attachments"))?;
 
-                        if file
-                            .flags
-                            .ok_or_else(|| anyhow::anyhow!("Doesn't have any flags"))?
-                            .bits()
-                            & INAPPROPRIATE_FLAGS
-                            != 0
-                        {
-                            state
-                                .client
-                                .interaction(state.application_id)
-                                .create_response(
-                                    event.id,
-                                    &event.token,
-                                    &ChannelMessageBuilder::new()
-                                        .content("Detected innapropriate content in provided attachments")
-                                        .flags(MessageFlags::EPHEMERAL)
-                                        .build(),
-                                )
-                                .await?;
-                            tracing::error!(
-                                "Detected inappropriate content by {}",
-                                event
-                                    .author_id()
-                                    .ok_or_else(|| anyhow::anyhow!("No author id"))?
-                                    .get()
-                            );
-                            return Ok(());
+                        if let Some(flags) = file.flags {
+                            if flags
+                                .bits()
+                                & INAPPROPRIATE_FLAGS
+                                != 0
+                            {
+                                state
+                                    .client
+                                    .interaction(state.application_id)
+                                    .create_response(
+                                        event.id,
+                                        &event.token,
+                                        &ChannelMessageBuilder::new()
+                                            .content("Detected innapropriate content in provided attachments")
+                                            .flags(MessageFlags::EPHEMERAL)
+                                            .build(),
+                                    )
+                                    .await?;
+                                tracing::error!(
+                                    "Detected inappropriate content by {}",
+                                    event
+                                        .author_id()
+                                        .ok_or_else(|| anyhow::anyhow!("No author id"))?
+                                        .get()
+                                );
+                                return Ok(());
+                            }
                         }
 
                         files.push(Attachment::from_bytes(

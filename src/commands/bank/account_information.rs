@@ -53,9 +53,19 @@ pub async fn run(
         None => author_id,
     };
 
-    let bank_account = get_bank_account(user_id)
-        .await?
-        .ok_or_else(|| anyhow::anyhow!("Bank account wasn't found"))?;
+    let bank_account = match get_bank_account(user_id).await? {
+        Some(bank) => bank,
+        None => {
+            respond(
+                state.clone(),
+                &event.token,
+                "You or the user you picked has no bank account registered",
+            )
+            .await?;
+
+            return Ok(());
+        }
+    };
 
     state
         .client

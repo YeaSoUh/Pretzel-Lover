@@ -63,20 +63,70 @@ pub async fn run(
             _ => {}
         }
     }
-    let user_id_to = user_id_to.ok_or_else(|| anyhow::anyhow!("Missing user option"))?;
-    let amount_to_transfer =
-        amount_to_transfer.ok_or_else(|| anyhow::anyhow!("Missing amount option"))?;
-    let interval_hours =
-        interval_hours.ok_or_else(|| anyhow::anyhow!("Missing interval_hours option"))?;
+    let user_id_to = match user_id_to {
+        Some(user_id) => user_id,
+        None => {
+            respond(
+                state.clone(),
+                &event.token,
+                "Missing user to send money",
+            ).await?;
+
+            return Ok(());
+        }
+    };
+    let amount_to_transfer = match amount_to_transfer {
+        Some(amount) => amount,
+        None => {
+            respond(
+                state.clone(),
+                &event.token,
+                "Missing amount to send",
+            ).await?;
+
+            return Ok(());
+        }
+    };
+    let interval_hours = match interval_hour {
+        Some(interval) => interval,
+        None => {
+            respond(
+                state.clone(),
+                &event.token,
+                "Missing interval in hours",
+            ).await?;
+
+            return Ok(());
+        }
+    };
+    
 
     if user_id_from == user_id_to {
-        anyhow::bail!("Can't give yourself money")
+        respond(
+            state.clone(),
+            &event.token,
+            "Can't give yourself money",
+        ).await?;
+
+        return Ok(());
     }
     if amount_to_transfer < 0 {
-        anyhow::bail!("Can't have negative amount")
+        respond(
+            state.clone(),
+            &event.token,
+            "Can't have negative amount",
+        ).await?;
+
+        return Ok(());
     }
     if interval_hours < 0 {
-        anyhow::bail!("Can't have negative time")
+        respond(
+            state.clone(),
+            &event.token,
+            "Can't have negative time",
+        ).await?;
+
+        return Ok(());
     }
 
     let salary = Salary {

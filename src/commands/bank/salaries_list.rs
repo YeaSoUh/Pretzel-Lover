@@ -44,9 +44,19 @@ pub async fn run(
         .author_id()
         .ok_or_else(|| anyhow::anyhow!("No author id"))?;
 
-    let bank_account = get_bank_account(user_id)
-        .await?
-        .ok_or_else(|| anyhow::anyhow!("The bank account doesn't exist"))?;
+    let bank_account = match get_bank_account(user_id).await? {
+        Some(bank) => bank,
+        None => {
+            respond(
+                state.clone(),
+                &event.token,
+                "You or the user you picked has no bank account registered",
+            )
+            .await?;
+
+            return Ok(());
+        }
+    };
 
     if bank_account.frozen {
         respond(

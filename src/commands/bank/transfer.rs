@@ -73,7 +73,17 @@ pub async fn run(
         reason: reason,
     };
 
-    payment.process_payment().await?;
+    let result = payment.process_payment().await;
+
+    if let Err(e) = result {
+        respond(
+            state.clone(),
+            &event.token,
+            &format!("{}", e.to_string()),
+        ).await?;
+        
+        return e.into();
+    }
 
     respond(
         state.clone(),
