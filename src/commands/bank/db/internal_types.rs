@@ -185,7 +185,7 @@ impl TryFrom<&Row> for Salary {
             i
         };
 
-        print(row.get(5));
+        tracing::debug!(row.get(5)?);
 
         Ok(Salary {
             id: Uuid::parse_str(&row.get::<String>(next())?)?,
