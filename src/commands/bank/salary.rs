@@ -87,7 +87,7 @@ pub async fn run(
             return Ok(());
         }
     };
-    let interval_hours = match interval_hour {
+    let interval_hours = match interval_hours {
         Some(interval) => interval,
         None => {
             respond(
