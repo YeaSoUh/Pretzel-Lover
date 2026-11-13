@@ -82,7 +82,7 @@ pub async fn run(
             &format!("{}", e.to_string()),
         ).await?;
         
-        return e.into();
+        return Err(e);
     }
 
     respond(
