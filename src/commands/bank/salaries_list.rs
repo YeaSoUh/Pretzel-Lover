@@ -372,7 +372,7 @@ fn salaries_list_container(
                 salary.to_account,
                 salary.interval_hours,
                 salary.run_at.timestamp(),
-                Uuid::from_bytes(salary.id).to_string()
+                salary.id.to_string()
             ),
             _ => format!(
                 "Getting salary from {} every {} hour(s), next payment in {}.",

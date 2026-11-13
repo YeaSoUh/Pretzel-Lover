@@ -31,7 +31,7 @@ pub async fn establish_salaries() -> anyhow::Result<()> {
                 } else {
                     tracing::error!("Bank account sending salary doesn't exist;");
                     DbTransaction::new(vec![
-                        remove_salary_instruction(uuid::Uuid::from_bytes(upcoming_salary.id))
+                        remove_salary_instruction(upcoming_salary.id)
                             .await?,
                     ])
                     .run()
@@ -45,7 +45,7 @@ pub async fn establish_salaries() -> anyhow::Result<()> {
                 } else {
                     tracing::error!("Bank account receiving salary doesn't exist");
                     DbTransaction::new(vec![
-                        remove_salary_instruction(uuid::Uuid::from_bytes(upcoming_salary.id))
+                        remove_salary_instruction(upcoming_salary.id)
                             .await?,
                     ])
                     .run()
@@ -58,7 +58,7 @@ pub async fn establish_salaries() -> anyhow::Result<()> {
                     || to_account.frozen
                 {
                     DbTransaction::new(vec![
-                        remove_salary_instruction(uuid::Uuid::from_bytes(upcoming_salary.id))
+                        remove_salary_instruction(upcoming_salary.id)
                             .await?,
                     ])
                     .run()

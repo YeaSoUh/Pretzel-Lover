@@ -130,7 +130,7 @@ pub async fn run(
     }
 
     let salary = Salary {
-        id: *uuid::Uuid::now_v7().as_bytes(),
+        id: uuid::Uuid::now_v7(),
         from_account: user_id_from,
         to_account: user_id_to,
         interval_hours: interval_hours,

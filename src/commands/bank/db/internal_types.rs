@@ -7,6 +7,7 @@ use twilight_model::{
     id::{Id, marker::UserMarker},
 };
 use twilight_util::builder::message::{ContainerBuilder, SeparatorBuilder, TextDisplayBuilder};
+use uuid::Uuid;
 
 use crate::{
     commands::bank::db::connection::{get_bank_account, get_db, transfer_pretzels_instruction},
@@ -126,7 +127,7 @@ pub enum SalaryState {
 
 #[derive(Debug)]
 pub struct Salary {
-    pub id: [u8; 16], // BLOB (raw binary data) of uuid v7
+    pub id: Uuid,
     pub from_account: Id<UserMarker>,
     pub to_account: Id<UserMarker>,
     pub amount: i64,
@@ -185,7 +186,7 @@ impl TryFrom<&Row> for Salary {
         };
 
         Ok(Salary {
-            id: row.get(next())?,
+            id: Uuid::parse_str(&row.get::<String>(next())?)?,
             from_account: Id::new_checked(
                 (*row
                     .get_value(next())?
