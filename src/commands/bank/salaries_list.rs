@@ -19,7 +19,6 @@ use twilight_util::builder::{
         ActionRowBuilder, ButtonBuilder, ContainerBuilder, SeparatorBuilder, TextDisplayBuilder,
     },
 };
-use uuid::Uuid;
 
 use crate::{
     AppState,

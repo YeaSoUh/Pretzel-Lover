@@ -163,7 +163,7 @@ pub async fn edit_salary_instruction(query: &Salary) -> anyhow::Result<DbInstruc
             Salaries::RunAt,
         ];
         let values: Vec<sea_query::SimpleExpr> = vec![
-            query.id.as_slice().into(),
+            query.id.as_bytes().into(),
             query.from_account.get().into(),
             query.to_account.get().into(),
             query.amount.into(),
