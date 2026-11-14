@@ -52,7 +52,7 @@ pub async fn run(
     let id = match id {
         Some(id2) => id2,
         None => {
-            respond(state.clone(), &event.token, "Missing user to send money").await?;
+            respond(state.clone(), &event.token, "No provided id").await?;
 
             return Ok(());
         }

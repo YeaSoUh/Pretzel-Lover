@@ -268,7 +268,7 @@ pub fn get_commands(configs: &Configs) -> anyhow::Result<Vec<Command>> {
         )
         .option(
             StringBuilder::new("id", "Provide an id of a salary to remove (in /salaries)")
-                .required(false),
+                .required(true),
         )
         .contexts(vec![InteractionContextType::Guild])
         .integration_types(vec![ApplicationIntegrationType::GuildInstall])
