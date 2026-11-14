@@ -208,7 +208,7 @@ impl TryFrom<&Row> for Salary {
             amount: row.get(next())?,
             interval_hours: row.get(next())?,
             // changed from reading as UTC to reading it as NaiveDate because turso decodes it without a timezone
-            run_at: NaiveDateTime::parse_from_str(row.get(next())?, "%Y-%m-%d %H:%M:%S%.f").map(|n| n.and_utc())?,
+            run_at: NaiveDateTime::parse_from_str(&row.get::<String>(next())?, "%Y-%m-%d %H:%M:%S%.f").map(|n| n.and_utc())?,
         })
     }
 }
