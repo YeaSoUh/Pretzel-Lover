@@ -261,6 +261,22 @@ pub fn get_commands(configs: &Configs) -> anyhow::Result<Vec<Command>> {
             .integration_types(vec![ApplicationIntegrationType::GuildInstall])
             .validate()?
             .build(),
+        CommandBuilder::new(
+            "remove_salary",
+            "Remove salary with an id",
+            CommandType::ChatInput,
+        )
+        .option(
+            StringBuilder::new(
+                "id",
+                "Provide an id of a salary to remove (in /salaries)",
+            )
+            .required(false),
+        )
+        .contexts(vec![InteractionContextType::Guild])
+        .integration_types(vec![ApplicationIntegrationType::GuildInstall])
+        .validate()?
+        .build(),
     ])
 }
 
