@@ -267,11 +267,8 @@ pub fn get_commands(configs: &Configs) -> anyhow::Result<Vec<Command>> {
             CommandType::ChatInput,
         )
         .option(
-            StringBuilder::new(
-                "id",
-                "Provide an id of a salary to remove (in /salaries)",
-            )
-            .required(false),
+            StringBuilder::new("id", "Provide an id of a salary to remove (in /salaries)")
+                .required(false),
         )
         .contexts(vec![InteractionContextType::Guild])
         .integration_types(vec![ApplicationIntegrationType::GuildInstall])
@@ -309,6 +306,7 @@ pub async fn cmd_handler(
         "transfer" => commands::bank::transfer::run(state, event, data).await,
         "salary" => commands::bank::salary::run(state, event, data).await,
         "salaries" => commands::bank::salaries_list::run(state, event, data).await,
+        "remove_salary" => commands::bank::remove_salary::run(state, event, data).await,
         // discontinued too
         // "channel_manager" => todo!(),
         // "kitty" => todo!(),

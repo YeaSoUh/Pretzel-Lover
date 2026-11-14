@@ -76,12 +76,8 @@ pub async fn run(
     let result = payment.process_payment().await;
 
     if let Err(e) = result {
-        respond(
-            state.clone(),
-            &event.token,
-            &format!("{}", e.to_string()),
-        ).await?;
-        
+        respond(state.clone(), &event.token, &format!("{}", e.to_string())).await?;
+
         return Err(e);
     }
 

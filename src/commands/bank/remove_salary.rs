@@ -11,10 +11,10 @@ use twilight_model::application::interaction::{
 use uuid::Uuid;
 
 use crate::{
-    AppState, commands::{
-        bank::db::{
-            connection::remove_salary_instruction, internal_types::DbTransaction,
-        }, defer, respond,
+    AppState,
+    commands::{
+        bank::db::{connection::remove_salary_instruction, internal_types::DbTransaction},
+        defer, respond,
     },
 };
 
@@ -39,7 +39,7 @@ pub async fn run(
         anyhow::bail!("No options")
     }
 
-    let mut id = None;  
+    let mut id = None;
 
     for option in &data.options {
         match (&*option.name, &option.value) {
@@ -52,20 +52,18 @@ pub async fn run(
     let id = match id {
         Some(id2) => id2,
         None => {
-            respond(
-                state.clone(),
-                &event.token,
-                "Missing user to send money",
-            ).await?;
+            respond(state.clone(), &event.token, "Missing user to send money").await?;
 
             return Ok(());
         }
     };
 
-    let result = DbTransaction::new(vec![remove_salary_instruction(Uuid::parse_str(&id)?).await?])
-        .run()
-        .await;
-    
+    let result = DbTransaction::new(vec![
+        remove_salary_instruction(Uuid::parse_str(&id)?).await?,
+    ])
+    .run()
+    .await;
+
     if let Err(e) = result {
         respond(
             state.clone(),
@@ -73,7 +71,7 @@ pub async fn run(
             "Invalid salary id or another error",
         )
         .await?;
-        
+
         return Err(e);
     }
 

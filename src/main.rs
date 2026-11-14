@@ -24,7 +24,10 @@ use twilight_model::{
 };
 
 use crate::{
-    commands::{bank::db::connection::establish_database, get_commands},
+    commands::{
+        bank::db::{connection::establish_database, salary::establish_salaries},
+        get_commands,
+    },
     helpers::sync_configs::{get_receiver, set_watch},
 };
 
@@ -83,6 +86,7 @@ async fn main() -> anyhow::Result<()> {
     commands::pretzel::edit::run_once();
 
     establish_database(&configs.database_url).await?;
+    tokio::spawn(establish_salaries());
 
     set_watch(Arc::new(AppState {
         client: Arc::clone(&client),

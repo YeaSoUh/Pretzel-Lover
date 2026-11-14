@@ -30,12 +30,9 @@ pub async fn establish_salaries() -> anyhow::Result<()> {
                     from_account = bank_account;
                 } else {
                     tracing::error!("Bank account sending salary doesn't exist;");
-                    DbTransaction::new(vec![
-                        remove_salary_instruction(upcoming_salary.id)
-                            .await?,
-                    ])
-                    .run()
-                    .await?;
+                    DbTransaction::new(vec![remove_salary_instruction(upcoming_salary.id).await?])
+                        .run()
+                        .await?;
                     continue;
                 }
 
@@ -44,12 +41,9 @@ pub async fn establish_salaries() -> anyhow::Result<()> {
                     to_account = bank_account;
                 } else {
                     tracing::error!("Bank account receiving salary doesn't exist");
-                    DbTransaction::new(vec![
-                        remove_salary_instruction(upcoming_salary.id)
-                            .await?,
-                    ])
-                    .run()
-                    .await?;
+                    DbTransaction::new(vec![remove_salary_instruction(upcoming_salary.id).await?])
+                        .run()
+                        .await?;
                     continue;
                 }
 
@@ -57,12 +51,9 @@ pub async fn establish_salaries() -> anyhow::Result<()> {
                     || from_account.frozen
                     || to_account.frozen
                 {
-                    DbTransaction::new(vec![
-                        remove_salary_instruction(upcoming_salary.id)
-                            .await?,
-                    ])
-                    .run()
-                    .await?;
+                    DbTransaction::new(vec![remove_salary_instruction(upcoming_salary.id).await?])
+                        .run()
+                        .await?;
                     continue;
                 }
                 let result = pay_salary(&upcoming_salary, &from_account, &to_account).await;

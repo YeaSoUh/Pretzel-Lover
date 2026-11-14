@@ -265,11 +265,7 @@ pub async fn modal(
                             .ok_or_else(|| anyhow::anyhow!("Didn't find any attachments"))?;
 
                         if let Some(flags) = file.flags {
-                            if flags
-                                .bits()
-                                & INAPPROPRIATE_FLAGS
-                                != 0
-                            {
+                            if flags.bits() & INAPPROPRIATE_FLAGS != 0 {
                                 state
                                     .client
                                     .interaction(state.application_id)

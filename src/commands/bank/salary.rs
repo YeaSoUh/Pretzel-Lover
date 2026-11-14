@@ -66,11 +66,7 @@ pub async fn run(
     let user_id_to = match user_id_to {
         Some(user_id) => user_id,
         None => {
-            respond(
-                state.clone(),
-                &event.token,
-                "Missing user to send money",
-            ).await?;
+            respond(state.clone(), &event.token, "Missing user to send money").await?;
 
             return Ok(());
         }
@@ -78,11 +74,7 @@ pub async fn run(
     let amount_to_transfer = match amount_to_transfer {
         Some(amount) => amount,
         None => {
-            respond(
-                state.clone(),
-                &event.token,
-                "Missing amount to send",
-            ).await?;
+            respond(state.clone(), &event.token, "Missing amount to send").await?;
 
             return Ok(());
         }
@@ -90,41 +82,24 @@ pub async fn run(
     let interval_hours = match interval_hours {
         Some(interval) => interval,
         None => {
-            respond(
-                state.clone(),
-                &event.token,
-                "Missing interval in hours",
-            ).await?;
+            respond(state.clone(), &event.token, "Missing interval in hours").await?;
 
             return Ok(());
         }
     };
-    
 
     if user_id_from == user_id_to {
-        respond(
-            state.clone(),
-            &event.token,
-            "Can't give yourself money",
-        ).await?;
+        respond(state.clone(), &event.token, "Can't give yourself money").await?;
 
         return Ok(());
     }
     if amount_to_transfer < 0 {
-        respond(
-            state.clone(),
-            &event.token,
-            "Can't have negative amount",
-        ).await?;
+        respond(state.clone(), &event.token, "Can't have negative amount").await?;
 
         return Ok(());
     }
     if interval_hours < 0 {
-        respond(
-            state.clone(),
-            &event.token,
-            "Can't have negative time",
-        ).await?;
+        respond(state.clone(), &event.token, "Can't have negative time").await?;
 
         return Ok(());
     }

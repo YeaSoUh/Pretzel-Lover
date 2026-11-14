@@ -60,7 +60,7 @@ pub async fn run(
             return Ok(());
         }
     };
-        
+
     respond(
         state.clone(),
         &event.token,
