@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDateTime, Utc};
 use turso::Row;
 use twilight_model::{
     channel::message::Component,
@@ -207,12 +207,8 @@ impl TryFrom<&Row> for Salary {
             .ok_or_else(|| anyhow::anyhow!("User receving salary has a zero id"))?,
             amount: row.get(next())?,
             interval_hours: row.get(next())?,
-            run_at: DateTime::parse_from_rfc3339(
-                row.get_value(next())?
-                    .as_text()
-                    .ok_or_else(|| anyhow::anyhow!("Invalid ISO 8601 datetime format"))?,
-            )?
-            .with_timezone(&Utc),
+            // changed from reading as UTC to reading it as NaiveDate because turso decodes it without a timezone
+            run_at: NaiveDateTime::parse_from_str(row.get(next())?, "%Y-%m-%d %H:%M:%S%.f").map(|n| n.and_utc())?,
         })
     }
 }
