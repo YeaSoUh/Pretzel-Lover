@@ -35,10 +35,6 @@ pub async fn run(
         return Ok(());
     }
 
-    let user_id_from = event
-        .author_id()
-        .ok_or_else(|| anyhow::anyhow!("No author id"))?;
-
     if data.options.is_empty() {
         anyhow::bail!("No options")
     }
