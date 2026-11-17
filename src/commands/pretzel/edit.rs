@@ -24,12 +24,19 @@ use twilight_model::{
     },
 };
 use twilight_util::builder::{
-    interaction_response::{ChannelMessageBuilder, ModalBuilder}, message::{ContainerBuilder, FileUploadBuilder, LabelBuilder, SeparatorBuilder, TextDisplayBuilder},
+    interaction_response::{ChannelMessageBuilder, ModalBuilder},
+    message::{
+        ContainerBuilder, FileUploadBuilder, LabelBuilder, SeparatorBuilder, TextDisplayBuilder,
+    },
 };
 use uuid::Uuid;
 
 use crate::{
-    AppState, commands::{bank::db::internal_types::ComponentV2Logger, pretzel::helpers::purge::{Expiring, purge}},
+    AppState,
+    commands::{
+        bank::db::internal_types::ComponentV2Logger,
+        pretzel::helpers::purge::{Expiring, purge},
+    },
 };
 
 struct EditResult<'a> {
@@ -446,16 +453,22 @@ pub async fn modal(
         message_channel_id: extra_params.message_channel_id,
         content: text,
         json: json_bytes,
-        attachments: Some(files)
+        attachments: Some(files),
     };
 
-    state
-        .client
-        .create_message(state.configs.logging_channel)
-        .components(&[result.to_component()])
-        .await?;
-
     println!("{:#?}", result);
+
+    if event
+        .guild_id
+        .ok_or_else(|| anyhow::anyhow!("No guild id"))?
+        == Id::new(1559771694145601566)
+    {
+        state
+            .client
+            .create_message(state.configs.logging_channel)
+            .components(&[result.to_component()])
+            .await?;
+    }
 
     Ok(())
 }

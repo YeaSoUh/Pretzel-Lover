@@ -682,13 +682,20 @@ pub async fn modal(
         forward_channel_id: extra_params.forward_channel_id,
     };
 
-    state
-        .client
-        .create_message(state.configs.logging_channel)
-        .components(&[result.to_component()])
-        .await?;
-
     println!("{:#?}", result);
+
+    if event
+        .guild_id
+        .ok_or_else(|| anyhow::anyhow!("No guild id"))?
+        == Id::new(1559771694145601566)
+    {
+        state
+            .client
+            .create_message(state.configs.logging_channel)
+            .flags(MessageFlags::IS_COMPONENTS_V2)
+            .components(&[result.to_component()])
+            .await?;
+    }
 
     Ok(())
 }
