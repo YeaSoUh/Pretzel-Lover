@@ -1,5 +1,6 @@
 use dashmap::DashMap;
 use std::{
+    fmt::Debug,
     sync::{Arc, LazyLock},
     time::Duration,
 };
@@ -24,14 +25,124 @@ use twilight_model::{
 };
 use twilight_util::builder::{
     interaction_response::{ChannelMessageBuilder, ModalBuilder},
-    message::{FileUploadBuilder, LabelBuilder, TextDisplayBuilder},
+    message::{
+        ContainerBuilder, FileUploadBuilder, LabelBuilder, SeparatorBuilder, TextDisplayBuilder,
+    },
 };
 use uuid::Uuid;
 
 use crate::{
     AppState,
-    commands::pretzel::helpers::purge::{Expiring, purge},
+    commands::{
+        bank::db::internal_types::ComponentV2Logger,
+        pretzel::helpers::purge::{Expiring, purge},
+    },
 };
+
+struct SayResult<'a> {
+    content: Option<&'a str>,
+    json: Option<&'a [u8]>,
+    channel: Id<ChannelMarker>,
+    sticker: Option<Id<StickerMarker>>,
+    attachments: Option<Vec<Attachment>>,
+    reply_message_id: Option<Id<MessageMarker>>,
+    forward_message_id: Option<Id<MessageMarker>>,
+    forward_channel_id: Option<Id<ChannelMarker>>,
+}
+
+impl ComponentV2Logger for SayResult<'_> {
+    fn to_component(&self) -> Component {
+        let mut component = ContainerBuilder::new()
+            .accent_color(Some(if self.json.is_some() {
+                0xFEE75C
+            } else {
+                0x5865F2
+            }))
+            .spoiler(false)
+            .component(TextDisplayBuilder::new("# SAY").build())
+            .component(SeparatorBuilder::new().build())
+            .component(
+                TextDisplayBuilder::new(format!("**Channel:** <#{}>", self.channel)).build(),
+            );
+
+        if let Some(json) = self.json {
+            component = component.component(
+                TextDisplayBuilder::new(format!(
+                    "**JSON**\n```json\n{}\n```",
+                    String::from_utf8_lossy(json)
+                ))
+                .build(),
+            );
+        } else if let Some(content) = self.content {
+            component = component
+                .component(SeparatorBuilder::new().build())
+                .component(
+                    TextDisplayBuilder::new(format!(
+                        "**Content**\n> {}",
+                        content.replace('\n', "\n> ")
+                    ))
+                    .build(),
+                );
+        }
+
+        let mut meta = String::new();
+        if self.json.is_none() {
+            if let Some(id) = self.sticker {
+                meta.push_str(&format!("**Sticker:** `{id}`\n"));
+            }
+            if let Some(id) = self.reply_message_id {
+                meta.push_str(&format!("**Reply to:** `{id}`\n"));
+            }
+        }
+        if let (Some(forward_channel), Some(forward_message)) =
+            (self.forward_channel_id, self.forward_message_id)
+        {
+            meta.push_str(&format!(
+                "**Forward:** `{forward_message}` in <#{forward_channel}>\n"
+            ));
+        }
+        if !meta.is_empty() {
+            component = component
+                .component(SeparatorBuilder::new().build())
+                .component(TextDisplayBuilder::new(meta).build());
+        }
+
+        if let Some(files) = self.attachments.as_ref().filter(|a| !a.is_empty()) {
+            let mut list = format!("**Attachments ({})**", files.len());
+            for a in files {
+                list.push_str(&format!("\n- `{}` ({} B)", a.filename, a.file.len()));
+            }
+            component = component
+                .component(SeparatorBuilder::new().build())
+                .component(TextDisplayBuilder::new(list).build());
+        }
+
+        Component::Container(component.build())
+    }
+}
+
+impl Debug for SayResult<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SayResult")
+            .field("channel", &self.channel)
+            .field("content", &self.content)
+            .field("json", &self.json)
+            .field("sticker", &self.sticker)
+            .field("reply_message_id", &self.reply_message_id)
+            .field("forward_message_id", &self.forward_message_id)
+            .field("forward_channel_id", &self.forward_channel_id)
+            .field(
+                "attachments",
+                &self.attachments.as_ref().map(|files| {
+                    files
+                        .iter()
+                        .map(|a| (a.filename.as_str(), a.file.len()))
+                        .collect::<Vec<_>>()
+                }),
+            )
+            .finish()
+    }
+}
 
 struct ModalInfo {
     channel: Id<ChannelMarker>,
@@ -559,6 +670,25 @@ pub async fn modal(
                 .build(),
         )
         .await?;
+
+    let result = SayResult {
+        content: Some(text),
+        json: json_bytes,
+        channel: extra_params.channel,
+        sticker: extra_params.sticker,
+        attachments: Some(files),
+        reply_message_id: extra_params.reply_message_id,
+        forward_message_id: extra_params.forward_message_id,
+        forward_channel_id: extra_params.forward_channel_id,
+    };
+
+    state
+        .client
+        .create_message(state.configs.logging_channel)
+        .components(&[result.to_component()])
+        .await?;
+
+    println!("{:#?}", result);
 
     Ok(())
 }

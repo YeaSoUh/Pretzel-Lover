@@ -31,12 +31,12 @@ use crate::{
     helpers::sync_configs::{get_receiver, set_watch},
 };
 
-#[derive(Deserialize, Clone, Default, Debug)]
+#[derive(Deserialize, Clone, Debug)]
 pub struct Configs {
     token: String,
     users_blacklist: Vec<Id<UserMarker>>,
     allowed_channels: Vec<Id<ChannelMarker>>,
-    #[allow(dead_code)]
+    logging_channel: Id<ChannelMarker>,
     database_url: String,
     stickers: Vec<(String, String)>,
     message_replies: HashMap<String, String>,

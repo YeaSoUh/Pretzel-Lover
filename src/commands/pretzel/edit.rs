@@ -1,5 +1,6 @@
 use dashmap::DashMap;
 use std::{
+    fmt::Debug,
     sync::{Arc, LazyLock},
     time::Duration,
 };
@@ -23,15 +24,94 @@ use twilight_model::{
     },
 };
 use twilight_util::builder::{
-    interaction_response::{ChannelMessageBuilder, ModalBuilder},
-    message::{FileUploadBuilder, LabelBuilder, TextDisplayBuilder},
+    interaction_response::{ChannelMessageBuilder, ModalBuilder}, message::{ContainerBuilder, FileUploadBuilder, LabelBuilder, SeparatorBuilder, TextDisplayBuilder},
 };
 use uuid::Uuid;
 
 use crate::{
-    AppState,
-    commands::pretzel::helpers::purge::{Expiring, purge},
+    AppState, commands::{bank::db::internal_types::ComponentV2Logger, pretzel::helpers::purge::{Expiring, purge}},
 };
+
+struct EditResult<'a> {
+    message_id: Id<MessageMarker>,
+    message_channel_id: Id<ChannelMarker>,
+    content: Option<&'a str>,
+    json: Option<&'a [u8]>,
+    attachments: Option<Vec<Attachment>>,
+}
+
+impl ComponentV2Logger for EditResult<'_> {
+    fn to_component(&self) -> Component {
+        let mut component = ContainerBuilder::new()
+            .accent_color(Some(if self.json.is_some() {
+                0xFEE75C
+            } else {
+                0x5865F2
+            }))
+            .spoiler(false)
+            .component(TextDisplayBuilder::new("# EDIT").build())
+            .component(SeparatorBuilder::new().build())
+            .component(
+                TextDisplayBuilder::new(format!(
+                    "**Channel:** <#{}>\n**Message:** `{}`",
+                    self.message_channel_id, self.message_id
+                ))
+                .build(),
+            );
+
+        if let Some(json) = self.json {
+            component = component.component(
+                TextDisplayBuilder::new(format!(
+                    "**JSON**\n```json\n{}\n```",
+                    String::from_utf8_lossy(json)
+                ))
+                .build(),
+            );
+        } else if let Some(content) = self.content {
+            component = component
+                .component(SeparatorBuilder::new().build())
+                .component(
+                    TextDisplayBuilder::new(format!(
+                        "**Content**\n> {}",
+                        content.replace('\n', "\n> ")
+                    ))
+                    .build(),
+                );
+        }
+
+        if let Some(files) = self.attachments.as_ref().filter(|a| !a.is_empty()) {
+            let mut list = format!("**Attachments ({})**", files.len());
+            for a in files {
+                list.push_str(&format!("\n- `{}` ({} B)", a.filename, a.file.len()));
+            }
+            component = component
+                .component(SeparatorBuilder::new().build())
+                .component(TextDisplayBuilder::new(list).build());
+        }
+
+        Component::Container(component.build())
+    }
+}
+
+impl Debug for EditResult<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("EditResult")
+            .field("message_id", &self.message_id)
+            .field("message_channel_id", &self.message_channel_id)
+            .field("content", &self.content)
+            .field("json", &self.json)
+            .field(
+                "attachments",
+                &self.attachments.as_ref().map(|files| {
+                    files
+                        .iter()
+                        .map(|a| (a.filename.as_str(), a.file.len()))
+                        .collect::<Vec<_>>()
+                }),
+            )
+            .finish()
+    }
+}
 
 struct ModalInfo {
     message_id: Id<MessageMarker>,
@@ -360,6 +440,22 @@ pub async fn modal(
                 .build(),
         )
         .await?;
+
+    let result = EditResult {
+        message_id: extra_params.message_id,
+        message_channel_id: extra_params.message_channel_id,
+        content: text,
+        json: json_bytes,
+        attachments: Some(files)
+    };
+
+    state
+        .client
+        .create_message(state.configs.logging_channel)
+        .components(&[result.to_component()])
+        .await?;
+
+    println!("{:#?}", result);
 
     Ok(())
 }

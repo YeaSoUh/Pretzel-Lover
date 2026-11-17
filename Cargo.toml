@@ -16,7 +16,7 @@ twilight-model = "0.18"
 twilight-http = { version = "0.18", features = ["simd-json"] }
 twilight-gateway = { version = "0.18", features = ["simd-json"] }
 twilight-util = { version = "0.18", features = ["builder"] }
-turso = "0.8"
+turso = "0.9.0-pre.5"
 chrono = "0.4"
 sea-query = { version = "1.0", features = ["derive", "backend-sqlite"] }
 uuid = { version = "1.29", features = ["v4", "v7"] }
