@@ -12,16 +12,13 @@ use twilight_model::{
         Interaction,
         application_command::{CommandData, CommandOptionValue},
         modal::{ModalInteractionComponent, ModalInteractionData},
-    },
-    channel::message::{
+    }, channel::message::{
         AllowedMentions, Component, MentionType, MessageFlags,
         component::{TextInput, TextInputStyle},
-    },
-    http::attachment::Attachment,
-    id::{
+    }, http::attachment::Attachment, id::{
         Id,
         marker::{ChannelMarker, MessageMarker, StickerMarker},
-    },
+    }, user::User,
 };
 use twilight_util::builder::{
     interaction_response::{ChannelMessageBuilder, ModalBuilder},
@@ -40,6 +37,7 @@ use crate::{
 };
 
 struct SayResult<'a> {
+    user: &'a User,
     content: Option<&'a str>,
     json: Option<&'a [u8]>,
     channel: Id<ChannelMarker>,
@@ -62,7 +60,7 @@ impl ComponentV2Logger for SayResult<'_> {
             .component(TextDisplayBuilder::new("# SAY").build())
             .component(SeparatorBuilder::new().build())
             .component(
-                TextDisplayBuilder::new(format!("**Channel:** <#{}>", self.channel)).build(),
+                TextDisplayBuilder::new(format!("**User:** {}\n**Channel:** <#{}>", self.channel, self.user.name)).build(),
             );
 
         if let Some(json) = self.json {
@@ -124,6 +122,7 @@ impl ComponentV2Logger for SayResult<'_> {
 impl Debug for SayResult<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("SayResult")
+            .field("user_id", &self.user.id)
             .field("channel", &self.channel)
             .field("content", &self.content)
             .field("json", &self.json)
@@ -672,6 +671,7 @@ pub async fn modal(
         .await?;
 
     let result = SayResult {
+        user: event.author().ok_or_else(|| anyhow::anyhow!("No author"))?,
         content: Some(text),
         json: json_bytes,
         channel: extra_params.channel,

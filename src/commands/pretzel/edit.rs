@@ -12,16 +12,13 @@ use twilight_model::{
         Interaction,
         application_command::{CommandData, CommandOptionValue},
         modal::{ModalInteractionComponent, ModalInteractionData},
-    },
-    channel::message::{
+    }, channel::message::{
         AllowedMentions, Component, MentionType, MessageFlags,
         component::{TextInput, TextInputStyle},
-    },
-    http::attachment::Attachment,
-    id::{
+    }, http::attachment::Attachment, id::{
         Id,
         marker::{ChannelMarker, MessageMarker},
-    },
+    }, user::User,
 };
 use twilight_util::builder::{
     interaction_response::{ChannelMessageBuilder, ModalBuilder},
@@ -40,6 +37,7 @@ use crate::{
 };
 
 struct EditResult<'a> {
+    user: &'a User,
     message_id: Id<MessageMarker>,
     message_channel_id: Id<ChannelMarker>,
     content: Option<&'a str>,
@@ -60,8 +58,8 @@ impl ComponentV2Logger for EditResult<'_> {
             .component(SeparatorBuilder::new().build())
             .component(
                 TextDisplayBuilder::new(format!(
-                    "**Channel:** <#{}>\n**Message:** `{}`",
-                    self.message_channel_id, self.message_id
+                    "**User:** {}\n**Channel:** <#{}>\n**Message:** `{}`",
+                    self.message_channel_id, self.message_id, self.user.name
                 ))
                 .build(),
             );
@@ -103,6 +101,7 @@ impl ComponentV2Logger for EditResult<'_> {
 impl Debug for EditResult<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("EditResult")
+            .field("user_id", &self.user.name)
             .field("message_id", &self.message_id)
             .field("message_channel_id", &self.message_channel_id)
             .field("content", &self.content)
@@ -449,6 +448,7 @@ pub async fn modal(
         .await?;
 
     let result = EditResult {
+        user: event.author().ok_or_else(|| anyhow::anyhow!("No author"))?,
         message_id: extra_params.message_id,
         message_channel_id: extra_params.message_channel_id,
         content: text,
