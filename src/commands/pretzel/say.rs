@@ -60,7 +60,7 @@ impl ComponentV2Logger for SayResult<'_> {
             .component(TextDisplayBuilder::new("# SAY").build())
             .component(SeparatorBuilder::new().build())
             .component(
-                TextDisplayBuilder::new(format!("**User:** {}\n**Channel:** <#{}>", self.channel, self.user.name)).build(),
+                TextDisplayBuilder::new(format!("**User:** {}\n**Channel:** <#{}>", self.user.name, self.channel)).build(),
             );
 
         if let Some(json) = self.json {

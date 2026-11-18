@@ -59,7 +59,7 @@ impl ComponentV2Logger for EditResult<'_> {
             .component(
                 TextDisplayBuilder::new(format!(
                     "**User:** {}\n**Channel:** <#{}>\n**Message:** `{}`",
-                    self.message_channel_id, self.message_id, self.user.name
+                    self.user.name, self.message_channel_id, self.message_id
                 ))
                 .build(),
             );
