@@ -1,17 +1,17 @@
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
 use tracing::instrument;
+use twilight_model::channel::message::MessageFlags;
 
-use crate::commands::bank::db::{
+use crate::{AppState, commands::bank::db::{
     connection::{
         edit_salary_instruction, get_bank_account, get_coming_salary, remove_salary_instruction,
         transfer_pretzels_instruction,
-    },
-    internal_types::{BankAccount, DbTransaction, Salary, SalaryState::Wait},
-};
+    }, internal_types::{BankAccount, ComponentV2Logger, DbTransaction, Salary, SalaryState::Wait},
+}};
 
 #[instrument(err)]
-pub async fn establish_salaries() -> anyhow::Result<()> {
+pub async fn establish_salaries(state: Arc<AppState>) -> anyhow::Result<()> {
     loop {
         let upcoming_salary_option;
         if let Ok(upcoming_salary_ok) = get_coming_salary().await {
@@ -47,7 +47,7 @@ pub async fn establish_salaries() -> anyhow::Result<()> {
                     continue;
                 }
 
-                if upcoming_salary.amount > from_account.amount
+                if upcoming_salary.amount > from_account.amount as i64
                     || from_account.frozen
                     || to_account.frozen
                 {
@@ -56,7 +56,7 @@ pub async fn establish_salaries() -> anyhow::Result<()> {
                         .await?;
                     continue;
                 }
-                let result = pay_salary(&upcoming_salary, &from_account, &to_account).await;
+                let result = pay_salary(Arc::clone(&state), &upcoming_salary, &from_account, &to_account).await;
                 if result.is_err() {
                     tokio::time::sleep(Duration::from_secs(10)).await
                 }
@@ -67,6 +67,7 @@ pub async fn establish_salaries() -> anyhow::Result<()> {
 }
 
 async fn pay_salary(
+    state: Arc<AppState>,
     salary: &Salary,
     from_account: &BankAccount,
     to_account: &BankAccount,
@@ -87,6 +88,13 @@ async fn pay_salary(
         &mut transfer_pretzels_instruction(&from_account, &to_account, salary.amount).await?,
     );
     DbTransaction::new(instructions).run().await?;
+
+    state
+        .client
+        .create_message(state.configs.logging_channel)
+        .flags(MessageFlags::IS_COMPONENTS_V2)
+        .components(&[salary.to_component()])
+        .await?;
 
     Ok(())
 }

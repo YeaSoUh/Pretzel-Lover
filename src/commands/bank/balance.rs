@@ -17,20 +17,11 @@ pub async fn run(
     event: Interaction,
     data: CommandData,
 ) -> anyhow::Result<()> {
-    defer(state.clone(), &event, false).await?;
+    defer(state.clone(), &event, event.authorizing_integration_owners.guild.is_none()).await?;
 
     let author_id = event
         .author_id()
         .ok_or_else(|| anyhow::anyhow!("No author id"))?;
-
-    if event
-        .channel
-        .as_ref()
-        .is_none_or(|chn| !state.configs.allowed_channels.contains(&chn.id))
-    {
-        respond(state.clone(), &event.token, "Outside of allowed channels").await?;
-        return Ok(());
-    }
 
     let mut user_id = None;
 

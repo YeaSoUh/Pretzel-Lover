@@ -29,15 +29,6 @@ pub async fn run(
         .author_id()
         .ok_or_else(|| anyhow::anyhow!("No author id"))?;
 
-    if event
-        .channel
-        .as_ref()
-        .is_none_or(|chn| !state.configs.allowed_channels.contains(&chn.id))
-    {
-        respond(state.clone(), &event.token, "Outside of allowed channels").await?;
-        return Ok(());
-    }
-
     let mut user_id = None;
 
     for option in &data.options {

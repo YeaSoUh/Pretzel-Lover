@@ -26,17 +26,8 @@ pub async fn run(
     event: Interaction,
     data: CommandData,
 ) -> anyhow::Result<()> {
-    defer(state.clone(), &event, false).await?;
-
-    if event
-        .channel
-        .as_ref()
-        .is_none_or(|chn| !state.configs.allowed_channels.contains(&chn.id))
-    {
-        respond(state.clone(), &event.token, "Outside of allowed channels").await?;
-        return Ok(());
-    }
-
+    defer(state.clone(), &event, event.authorizing_integration_owners.guild.is_none()).await?;
+    
     let user_id_from = event
         .author_id()
         .ok_or_else(|| anyhow::anyhow!("No author id"))?;
@@ -93,7 +84,7 @@ pub async fn run(
 
         return Ok(());
     }
-    if amount_to_transfer < 0 {
+    if amount_to_transfer <= 0 {
         respond(state.clone(), &event.token, "Can't have negative amount").await?;
 
         return Ok(());
@@ -109,7 +100,7 @@ pub async fn run(
         from_account: user_id_from,
         to_account: user_id_to,
         interval_hours: interval_hours,
-        amount: amount_to_transfer,
+        amount: amount_to_transfer * 100,
         run_at: chrono::Utc::now() + chrono::Duration::hours(interval_hours),
     };
 

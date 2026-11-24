@@ -35,8 +35,9 @@ use crate::{
 pub struct Configs {
     token: String,
     users_blacklist: Vec<Id<UserMarker>>,
-    allowed_channels: Vec<Id<ChannelMarker>>,
     logging_channel: Id<ChannelMarker>,
+    #[allow(dead_code)]
+    orders_channel: Id<ChannelMarker>,
     database_url: String,
     stickers: Vec<(String, String)>,
     message_replies: HashMap<String, String>,
@@ -82,17 +83,18 @@ async fn main() -> anyhow::Result<()> {
         .set_global_commands(&get_commands(&configs)?)
         .await?;
 
-    commands::pretzel::say::run_once();
-    commands::pretzel::edit::run_once();
-
-    establish_database(&configs.database_url).await?;
-    tokio::spawn(establish_salaries());
-
-    set_watch(Arc::new(AppState {
+    let state = Arc::new(AppState {
         client: Arc::clone(&client),
         configs: Arc::new(configs),
         application_id: application_id,
-    }))?;
+    });
+
+    commands::pretzel::say::run_once();
+    commands::pretzel::edit::run_once();
+
+    establish_database(&state.configs.database_url).await?;
+    tokio::spawn(establish_salaries(Arc::clone(&state)));
+    set_watch(Arc::clone(&state))?;
 
     let state_rx = get_receiver().ok_or_else(|| anyhow::anyhow!("State watch wasn't initiated"))?;
 

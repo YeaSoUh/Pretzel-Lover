@@ -77,7 +77,7 @@ pub async fn run(
 
     let new_bank_account = BankAccount {
         account_id: user_id,
-        amount: old_bank_account.amount - amount_to_remove,
+        amount: old_bank_account.amount - (amount_to_remove * 100),
         frozen: old_bank_account.frozen,
     };
     DbTransaction::new(vec![

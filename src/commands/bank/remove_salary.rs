@@ -24,16 +24,7 @@ pub async fn run(
     event: Interaction,
     data: CommandData,
 ) -> anyhow::Result<()> {
-    defer(state.clone(), &event, false).await?;
-
-    if event
-        .channel
-        .as_ref()
-        .is_none_or(|chn| !state.configs.allowed_channels.contains(&chn.id))
-    {
-        respond(state.clone(), &event.token, "Outside of allowed channels").await?;
-        return Ok(());
-    }
+    defer(state.clone(), &event, event.authorizing_integration_owners.guild.is_none()).await?;
 
     if data.options.is_empty() {
         anyhow::bail!("No options")

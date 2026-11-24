@@ -66,7 +66,7 @@ impl ComponentV2Logger for BankAccount {
                     TextDisplayBuilder::new(format!("Account ID: {}", self.account_id)).build(),
                 )
                 .component(SeparatorBuilder::new().build())
-                .component(TextDisplayBuilder::new(format!("Amount: {}", self.amount)).build())
+                .component(TextDisplayBuilder::new(format!("Amount: {}", self.amount / 100)).build())
                 .component(SeparatorBuilder::new().build())
                 .component(TextDisplayBuilder::new(format!("Frozen: {}", self.frozen)).build())
                 .build(),
@@ -155,7 +155,7 @@ impl ComponentV2Logger for Salary {
                 .component(SeparatorBuilder::new().build())
                 .component(TextDisplayBuilder::new(format!("To: {}", self.to_account)).build())
                 .component(SeparatorBuilder::new().build())
-                .component(TextDisplayBuilder::new(format!("Amount: {}", self.amount)).build())
+                .component(TextDisplayBuilder::new(format!("Amount: {}", self.amount / 100)).build())
                 .component(SeparatorBuilder::new().build())
                 .component(
                     TextDisplayBuilder::new(format!("Every: {} hour(s)", self.interval_hours))
@@ -255,7 +255,7 @@ impl Payment {
             ));
         }
 
-        if from_account.amount - self.amount < 0 {
+        if from_account.amount - self.amount * 100 < 0 {
             anyhow::bail!("Not enough money to transfer");
         }
         if from_account.frozen || to_account.frozen {
@@ -286,7 +286,7 @@ impl ComponentV2Logger for Payment {
                 .component(SeparatorBuilder::new().build())
                 .component(TextDisplayBuilder::new(format!("To: {}", self.to_account)).build())
                 .component(SeparatorBuilder::new().build())
-                .component(TextDisplayBuilder::new(format!("Amount: {}", self.amount)).build())
+                .component(TextDisplayBuilder::new(format!("Amount: {}", self.amount / 100)).build())
                 .component(SeparatorBuilder::new().build())
                 .component(
                     TextDisplayBuilder::new(format!(

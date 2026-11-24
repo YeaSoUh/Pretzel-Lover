@@ -1,14 +1,20 @@
 use std::sync::Arc;
 
 use tracing::instrument;
-use twilight_model::application::interaction::{
-    Interaction,
-    application_command::{CommandData, CommandOptionValue},
+use twilight_model::{
+    application::interaction::{
+        Interaction,
+        application_command::{CommandData, CommandOptionValue},
+    },
+    channel::message::MessageFlags,
 };
 
 use crate::{
     AppState,
-    commands::{bank::db::internal_types::Payment, defer, respond},
+    commands::{
+        bank::db::internal_types::{ComponentV2Logger, Payment},
+        defer, respond,
+    },
 };
 
 #[instrument(skip_all, err)]
@@ -17,16 +23,7 @@ pub async fn run(
     event: Interaction,
     data: CommandData,
 ) -> anyhow::Result<()> {
-    defer(state.clone(), &event, false).await?;
-
-    if event
-        .channel
-        .as_ref()
-        .is_none_or(|chn| !state.configs.allowed_channels.contains(&chn.id))
-    {
-        respond(state.clone(), &event.token, "Outside of allowed channels").await?;
-        return Ok(());
-    }
+    defer(state.clone(), &event, event.authorizing_integration_owners.guild.is_none()).await?;
 
     let user_id_from = event
         .author_id()
@@ -62,7 +59,7 @@ pub async fn run(
     if user_id_from == user_id_to {
         anyhow::bail!("Can't give yourself money")
     }
-    if amount_to_transfer < 0 {
+    if amount_to_transfer <= 0 {
         anyhow::bail!("Can't have negative amount")
     }
 
@@ -80,6 +77,13 @@ pub async fn run(
 
         return Err(e);
     }
+
+    state
+        .client
+        .create_message(state.configs.logging_channel)
+        .flags(MessageFlags::IS_COMPONENTS_V2)
+        .components(&[payment.to_component()])
+        .await?;
 
     respond(
         state.clone(),
