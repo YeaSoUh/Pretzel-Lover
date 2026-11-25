@@ -87,7 +87,7 @@ pub async fn run(
     respond(
         state.clone(),
         &event.token,
-        "Transaction has been completed successfully",
+        &format!("Successfully sent {} magells", payment.amount),
     )
     .await?;
 
