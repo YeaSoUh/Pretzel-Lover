@@ -65,7 +65,7 @@ impl ComponentV2Logger for BankAccount {
                     TextDisplayBuilder::new(format!("Account ID: {}", self.account_id)).build(),
                 )
                 .component(SeparatorBuilder::new().build())
-                .component(TextDisplayBuilder::new(format!("Amount: {}", self.amount.whole())).build())
+                .component(TextDisplayBuilder::new(format!("Amount: {:#}", self.amount)).build())
                 .component(SeparatorBuilder::new().build())
                 .component(TextDisplayBuilder::new(format!("Frozen: {}", self.frozen)).build())
                 .build(),
@@ -154,7 +154,7 @@ impl ComponentV2Logger for Salary {
                 .component(SeparatorBuilder::new().build())
                 .component(TextDisplayBuilder::new(format!("To: <@{}>", self.to_account)).build())
                 .component(SeparatorBuilder::new().build())
-                .component(TextDisplayBuilder::new(format!("Amount: {}", self.amount.whole())).build())
+                .component(TextDisplayBuilder::new(format!("Amount: {:#}", self.amount)).build())
                 .component(SeparatorBuilder::new().build())
                 .component(
                     TextDisplayBuilder::new(format!("Every: {} hour(s)", self.interval_hours))
@@ -285,7 +285,7 @@ impl ComponentV2Logger for Payment {
                 .component(SeparatorBuilder::new().build())
                 .component(TextDisplayBuilder::new(format!("To: <@{}>", self.to_account)).build())
                 .component(SeparatorBuilder::new().build())
-                .component(TextDisplayBuilder::new(format!("Amount: {}", self.amount.whole())).build())
+                .component(TextDisplayBuilder::new(format!("Amount: {:#}", self.amount)).build())
                 .component(SeparatorBuilder::new().build())
                 .component(
                     TextDisplayBuilder::new(format!(

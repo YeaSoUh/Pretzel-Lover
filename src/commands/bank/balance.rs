@@ -55,7 +55,7 @@ pub async fn run(
     respond(
         state.clone(),
         &event.token,
-        &format!("Balance of the user is {} magells", bank_account.amount),
+        &format!("Balance of the user is {:#} magells", bank_account.amount),
     )
     .await?;
 

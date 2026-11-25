@@ -124,7 +124,8 @@ impl Neg for Cash {
 impl Mul<i64> for Cash {
     type Output = Self;
     fn mul(self, k: i64) -> Self {
-        self.checked_mul_int(k).expect("Cash multiplication overflowed")
+        self.checked_mul_int(k)
+            .expect("Cash multiplication overflowed")
     }
 }
 
@@ -159,6 +160,14 @@ impl fmt::Display for Cash {
         // unsigned_abs so i64::MIN doesn't blow up
         let abs = self.0.unsigned_abs();
         let scale = SCALE as u64;
+
+        if f.alternate() {
+            // {:#} -> whole part only, truncated: 12.99 -> "12"
+            let whole = abs / scale;
+            // `|| whole == 0` avoids printing "-0" for values like -0.50
+            return f.pad_integral(self.0 >= 0 || whole == 0, "", &whole.to_string());
+        }
+
         let digits = format!("{}.{:02}", abs / scale, abs % scale);
         // pad_integral handles sign, `{:+}`, width, and zero-padding for us
         f.pad_integral(self.0 >= 0, "", &digits)
