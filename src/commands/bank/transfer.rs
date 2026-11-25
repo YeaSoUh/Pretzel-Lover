@@ -10,11 +10,10 @@ use twilight_model::{
 };
 
 use crate::{
-    AppState,
-    commands::{
+    AppState, commands::{
         bank::db::internal_types::{ComponentV2Logger, Payment},
         defer, respond,
-    },
+    }, helpers::cash::Cash,
 };
 
 #[instrument(skip_all, err)]
@@ -66,7 +65,7 @@ pub async fn run(
     let payment = Payment {
         from_account: user_id_from,
         to_account: user_id_to,
-        amount: amount_to_transfer,
+        amount: Cash::from_whole(amount_to_transfer).ok_or_else(|| anyhow::anyhow!("Overflow"))?,
         reason: reason,
     };
 

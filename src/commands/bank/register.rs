@@ -4,14 +4,13 @@ use tracing::instrument;
 use twilight_model::application::interaction::{Interaction, application_command::CommandData};
 
 use crate::{
-    AppState,
-    commands::{
+    AppState, commands::{
         bank::db::{
             connection::edit_bank_account_instruction,
             internal_types::{BankAccount, DbTransaction},
         },
         defer, respond,
-    },
+    }, helpers::cash::Cash,
 };
 
 #[instrument(skip_all, err)]
@@ -37,7 +36,7 @@ pub async fn run(
 
     let bank_account = BankAccount {
         account_id: user_id,
-        amount: 0,
+        amount: Cash::from_raw(0),
         frozen: false,
     };
 

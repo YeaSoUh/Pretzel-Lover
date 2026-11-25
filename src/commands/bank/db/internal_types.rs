@@ -10,11 +10,10 @@ use twilight_util::builder::message::{ContainerBuilder, SeparatorBuilder, TextDi
 use uuid::Uuid;
 
 use crate::{
-    commands::bank::db::connection::{get_bank_account, get_db, transfer_pretzels_instruction},
-    db::{
+    commands::bank::db::connection::{get_bank_account, get_db, transfer_pretzels_instruction}, db::{
         helpers::execute,
         types::{DbInstruction, DbResults},
-    },
+    }, helpers::cash::Cash,
 };
 
 pub trait ComponentV2Logger {
@@ -50,7 +49,7 @@ pub(in crate::commands::bank::db) enum BankAccounts {
 #[derive(Debug)]
 pub struct BankAccount {
     pub account_id: Id<UserMarker>,
-    pub amount: i64,
+    pub amount: Cash,
     pub frozen: bool,
 }
 
@@ -66,7 +65,7 @@ impl ComponentV2Logger for BankAccount {
                     TextDisplayBuilder::new(format!("Account ID: {}", self.account_id)).build(),
                 )
                 .component(SeparatorBuilder::new().build())
-                .component(TextDisplayBuilder::new(format!("Amount: {}", self.amount / 100)).build())
+                .component(TextDisplayBuilder::new(format!("Amount: {}", self.amount.whole())).build())
                 .component(SeparatorBuilder::new().build())
                 .component(TextDisplayBuilder::new(format!("Frozen: {}", self.frozen)).build())
                 .build(),
@@ -94,7 +93,7 @@ impl TryFrom<&Row> for BankAccount {
                 .try_into()?,
             )
             .ok_or_else(|| anyhow::anyhow!("Bank user has a zero id"))?,
-            amount: row.get(next())?,
+            amount: Cash::from_raw(row.get(next())?),
             frozen: row.get(next())?,
         })
     }
@@ -130,7 +129,7 @@ pub struct Salary {
     pub id: Uuid,
     pub from_account: Id<UserMarker>,
     pub to_account: Id<UserMarker>,
-    pub amount: i64,
+    pub amount: Cash,
     pub interval_hours: i64,
     pub run_at: DateTime<Utc>,
 }
@@ -151,11 +150,11 @@ impl ComponentV2Logger for Salary {
                 .spoiler(false)
                 .component(TextDisplayBuilder::new("# SALARY PROCESS").build())
                 .component(SeparatorBuilder::new().build())
-                .component(TextDisplayBuilder::new(format!("From: {}", self.from_account)).build())
+                .component(TextDisplayBuilder::new(format!("From: <@{}>", self.from_account)).build())
                 .component(SeparatorBuilder::new().build())
-                .component(TextDisplayBuilder::new(format!("To: {}", self.to_account)).build())
+                .component(TextDisplayBuilder::new(format!("To: <@{}>", self.to_account)).build())
                 .component(SeparatorBuilder::new().build())
-                .component(TextDisplayBuilder::new(format!("Amount: {}", self.amount / 100)).build())
+                .component(TextDisplayBuilder::new(format!("Amount: {}", self.amount.whole())).build())
                 .component(SeparatorBuilder::new().build())
                 .component(
                     TextDisplayBuilder::new(format!("Every: {} hour(s)", self.interval_hours))
@@ -205,7 +204,7 @@ impl TryFrom<&Row> for Salary {
                 .try_into()?,
             )
             .ok_or_else(|| anyhow::anyhow!("User receving salary has a zero id"))?,
-            amount: row.get(next())?,
+            amount: Cash::from_raw(row.get(next())?),
             interval_hours: row.get(next())?,
             // changed from reading as UTC to reading it as NaiveDate because turso decodes it without a timezone
             run_at: NaiveDateTime::parse_from_str(
@@ -228,7 +227,7 @@ impl TryFrom<Row> for Salary {
 pub struct Payment {
     pub from_account: Id<UserMarker>,
     pub to_account: Id<UserMarker>,
-    pub amount: i64,
+    pub amount: Cash,
     pub reason: Option<String>,
 }
 
@@ -255,7 +254,7 @@ impl Payment {
             ));
         }
 
-        if from_account.amount - self.amount * 100 < 0 {
+        if from_account.amount - self.amount < Cash::from_raw(0) {
             anyhow::bail!("Not enough money to transfer");
         }
         if from_account.frozen || to_account.frozen {
@@ -282,11 +281,11 @@ impl ComponentV2Logger for Payment {
                 .spoiler(false)
                 .component(TextDisplayBuilder::new("# PAYMENT PROCESS").build())
                 .component(SeparatorBuilder::new().build())
-                .component(TextDisplayBuilder::new(format!("From: {}", self.from_account)).build())
+                .component(TextDisplayBuilder::new(format!("From: <@{}>", self.from_account)).build())
                 .component(SeparatorBuilder::new().build())
-                .component(TextDisplayBuilder::new(format!("To: {}", self.to_account)).build())
+                .component(TextDisplayBuilder::new(format!("To: <@{}>", self.to_account)).build())
                 .component(SeparatorBuilder::new().build())
-                .component(TextDisplayBuilder::new(format!("Amount: {}", self.amount / 100)).build())
+                .component(TextDisplayBuilder::new(format!("Amount: {}", self.amount.whole())).build())
                 .component(SeparatorBuilder::new().build())
                 .component(
                     TextDisplayBuilder::new(format!(
@@ -328,7 +327,7 @@ impl TryFrom<&Row> for Payment {
                 .try_into()?,
             )
             .ok_or_else(|| anyhow::anyhow!("User receving a payment has a zero id"))?,
-            amount: row.get(next())?,
+            amount: Cash::from_raw(row.get(next())?),
             reason: row.get(next())?,
         })
     }

@@ -47,7 +47,7 @@ pub async fn establish_salaries(state: Arc<AppState>) -> anyhow::Result<()> {
                     continue;
                 }
 
-                if upcoming_salary.amount > from_account.amount as i64
+                if upcoming_salary.amount > from_account.amount
                     || from_account.frozen
                     || to_account.frozen
                 {

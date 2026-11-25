@@ -367,16 +367,16 @@ fn salaries_list_container(
     for (i, salary) in salaries.iter().enumerate() {
         let content = match &salary.from_account {
             id if id.get() == owner.get() => format!(
-                "Sending {} magells salary to {} every {} hours(s), next payment in <t:{}:R>. Id of the salary: {}",
-                salary.amount / 100,
+                "Sending {} magells salary to <@{}> every {} hours(s), next payment in <t:{}:R>. Id of the salary: {}",
+                salary.amount.whole(),
                 salary.to_account,
                 salary.interval_hours,
                 salary.run_at.timestamp(),
                 salary.id.to_string()
             ),
             _ => format!(
-                "Getting {} magells salary from {} every {} hour(s), next payment in {}.",
-                salary.amount / 100,
+                "Getting {} magells salary from <@{}> every {} hour(s), next payment in {}.",
+                salary.amount.whole(),
                 salary.from_account,
                 salary.interval_hours,
                 salary.run_at.timestamp()

@@ -10,14 +10,13 @@ use twilight_model::{
 };
 
 use crate::{
-    AppState,
-    commands::{
+    AppState, commands::{
         bank::db::{
             connection::{edit_bank_account_instruction, get_bank_account},
             internal_types::{BankAccount, DbTransaction},
         },
         defer, respond,
-    },
+    }, helpers::cash::Cash,
 };
 
 #[instrument(skip_all, err)]
@@ -86,7 +85,7 @@ pub async fn run(
 
     let new_bank_account = BankAccount {
         account_id: user_id,
-        amount: (amount_to_add * 100) + old_bank_account.amount,
+        amount: Cash::from_whole(amount_to_add).ok_or_else(|| anyhow::anyhow!("Overflow"))? + old_bank_account.amount,
         frozen: old_bank_account.frozen,
     };
     DbTransaction::new(vec![

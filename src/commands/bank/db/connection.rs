@@ -9,11 +9,10 @@ use turso::Builder;
 use twilight_model::id::{Id, marker::UserMarker};
 
 use crate::{
-    commands::bank::db::internal_types::{BankAccount, BankAccounts, Salaries, Salary},
-    db::{
+    commands::bank::db::internal_types::{BankAccount, BankAccounts, Salaries, Salary}, db::{
         helpers::execute,
         types::{DatabaseStruct, DbInstruction},
-    },
+    }, helpers::cash::Cash,
 };
 
 static DB: OnceLock<DatabaseStruct> = OnceLock::new();
@@ -218,7 +217,7 @@ pub async fn edit_bank_account_instruction(
             BankAccounts::Amount,
             BankAccounts::Frozen,
         ];
-        let values: Vec<sea_query::SimpleExpr> = vec![
+        let values: Vec<sea_query::Expr> = vec![
             bank_account.account_id.get().into(),
             bank_account.amount.into(),
             bank_account.frozen.into(),
@@ -306,7 +305,7 @@ pub async fn delete_bank_account_instruction(
 pub async fn transfer_pretzels_instruction(
     from: &BankAccount,
     to: &BankAccount,
-    amount: i64,
+    amount: Cash,
 ) -> anyhow::Result<Vec<DbInstruction>> {
     let ((from_sql, from_query_values), (to_sql, to_query_values)) = {
         let columns = vec![
@@ -314,7 +313,7 @@ pub async fn transfer_pretzels_instruction(
             BankAccounts::Amount,
             BankAccounts::Frozen,
         ];
-        let values: Vec<sea_query::SimpleExpr> = vec![
+        let values: Vec<sea_query::Expr> = vec![
             from.account_id.get().into(),
             from.amount.into(),
             from.frozen.into(),
@@ -341,7 +340,7 @@ pub async fn transfer_pretzels_instruction(
             BankAccounts::Amount,
             BankAccounts::Frozen,
         ];
-        let values: Vec<sea_query::SimpleExpr> = vec![
+        let values: Vec<sea_query::Expr> = vec![
             to.account_id.get().into(),
             to.amount.into(),
             to.frozen.into(),

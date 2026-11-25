@@ -10,14 +10,13 @@ use twilight_model::application::interaction::{
 };
 
 use crate::{
-    AppState,
-    commands::{
+    AppState, commands::{
         bank::db::{
             connection::edit_salary_instruction,
             internal_types::{DbTransaction, Salary},
         },
         defer, respond,
-    },
+    }, helpers::cash::Cash,
 };
 
 #[instrument(skip_all, err)]
@@ -100,7 +99,7 @@ pub async fn run(
         from_account: user_id_from,
         to_account: user_id_to,
         interval_hours: interval_hours,
-        amount: amount_to_transfer * 100,
+        amount: Cash::from_whole(amount_to_transfer).ok_or_else(|| anyhow::anyhow!("Overflow"))?,
         run_at: chrono::Utc::now() + chrono::Duration::hours(interval_hours),
     };
 
