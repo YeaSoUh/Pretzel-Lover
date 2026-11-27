@@ -48,7 +48,7 @@ pub async fn get_salary(id: uuid::Uuid) -> anyhow::Result<Option<Salary>> {
         .ok_or_else(|| anyhow::anyhow!("DB is not initialized"))?;
 
     let payments = execute(
-        &db,
+        &mut db.get_conn().await?,
         vec![DbInstruction::Query {
             query: Cow::Borrowed("SELECT * FROM salaries WHERE id = ?1 LIMIT 1"),
             params: vec![id.as_bytes().as_slice().into()],
@@ -74,7 +74,7 @@ pub async fn get_coming_salary() -> anyhow::Result<Option<Salary>> {
         .ok_or_else(|| anyhow::anyhow!("DB is not initialized"))?;
 
     let payments = execute(
-        &db,
+        &mut db.get_conn().await?,
         vec![DbInstruction::Query {
             query: Cow::Borrowed("SELECT * FROM salaries ORDER BY run_at ASC LIMIT 1"),
             params: Vec::new(),
@@ -110,7 +110,7 @@ pub async fn search_salaries(
     let offset = (page - 1) * per_page;
 
     let payments = execute(
-        &db,
+        &mut db.get_conn().await?,
         vec![DbInstruction::Query {
             query: Cow::Borrowed(
                 "SELECT * FROM salaries WHERE from_account = ?1 LIMIT ?2 OFFSET ?3",
@@ -264,7 +264,7 @@ pub async fn get_bank_account(account_id: Id<UserMarker>) -> anyhow::Result<Opti
         .ok_or_else(|| anyhow::anyhow!("DB is not initialized"))?;
 
     let accounts = execute(
-        &db,
+        &mut db.get_conn().await?,
         vec![DbInstruction::Query {
             query: Cow::Borrowed("SELECT * FROM bank_accounts WHERE account_id = ?1 LIMIT 1"),
             params: vec![(account_id.get() as i64).into()],

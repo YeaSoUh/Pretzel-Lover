@@ -5,7 +5,7 @@ use std::{
     time::Duration,
 };
 
-use turso::{Connection, Database, Rows, Value};
+use turso::{Connection, Database, Rows, Value, transaction::Transaction};
 
 pub struct DatabaseStruct {
     pub(crate) database: Arc<Database>,
@@ -93,6 +93,17 @@ pub enum DbInstruction {
 
 impl DbInstruction {
     pub async fn run(&self, conn: &Connection) -> Result<DbResult, turso::Error> {
+        Ok(match self {
+            DbInstruction::Execute { execute, params } => {
+                DbResult::Execute(conn.execute(execute.as_ref(), params.clone()).await?)
+            }
+            DbInstruction::Query { query, params } => {
+                DbResult::Query(conn.query(query.as_ref(), params.clone()).await?)
+            }
+        })
+    }
+
+    pub async fn run_tx(&self, conn: &Transaction<'_>) -> Result<DbResult, turso::Error> {
         Ok(match self {
             DbInstruction::Execute { execute, params } => {
                 DbResult::Execute(conn.execute(execute.as_ref(), params.clone()).await?)

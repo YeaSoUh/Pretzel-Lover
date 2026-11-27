@@ -34,7 +34,7 @@ impl DbTransaction {
     pub async fn run(&self) -> anyhow::Result<DbResults> {
         let db = get_db()?;
 
-        Ok(execute(db, self.instructions.as_slice()).await?)
+        Ok(execute(&mut db.get_conn().await?, self.instructions.as_slice()).await?)
     }
 }
 
@@ -262,7 +262,7 @@ impl Payment {
         }
 
         execute(
-            db,
+            &mut db.get_conn().await?,
             transfer_pretzels_instruction(&from_account, &to_account, self.amount)
                 .await?
                 .as_slice(),
